@@ -28,16 +28,24 @@ jobs:
         uses: r-lib/actions/setup-pandoc@v2
 
       - name: Install package dependencies
-        uses: r-lib/actions/setup-r-dependencies@v2
-        with:
-          needs: |
-            check
+        run: |
+          install.packages(c(
+            "yaml",
+            "ggplot2",
+            "igraph",
+            "ggraph",
+            "ape",
+            "testthat",
+            "quarto",
+            "knitr",
+            "rmarkdown",
+            "rcmdcheck"
+          ))
+        shell: Rscript {0}
 
       - name: Check package
-        uses: r-lib/actions/check-r-package@v2
-        with:
-          args: 'c("--no-manual")'
-          error-on: '"error"'
+        run: rcmdcheck::rcmdcheck(args = "--no-manual", error_on = "error")
+        shell: Rscript {0}
 
       - name: Smoke-test installed package
         run: Rscript tools/smoke-installed-package.R .
