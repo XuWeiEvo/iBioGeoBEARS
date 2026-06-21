@@ -17,6 +17,18 @@ It currently supports an end-to-end MVP workflow:
 - render Quarto reports;
 - keep the R package backend separate from any future Shiny GUI wrapper.
 
+## Installation
+
+Install the development version from GitHub:
+
+```r
+install.packages("remotes")
+remotes::install_github("XuWeiEvo/iBioGeoBEARS")
+```
+
+BioGeoBEARS must be installed separately; it is not bundled with
+`iBiogeobears`. Quarto is required only when rendering reports.
+
 ## BioGeoBEARS Dependency
 
 `iBiogeobears` does not bundle BioGeoBEARS. Users must install BioGeoBEARS
@@ -39,6 +51,28 @@ You can inspect the local BioGeoBEARS status with:
 
 ```r
 check_biogeobears(required = FALSE)
+```
+
+## Quick Start
+
+This creates a self-contained example project, runs the bundled example data,
+and renders an HTML report:
+
+```r
+library(iBiogeobears)
+
+example <- tempfile("ibgb-example-")
+project <- create_example_project(example)
+
+result <- run_workflow(project$config, dry_run = FALSE)
+render_report(result, format = "html")
+```
+
+For a no-BioGeoBEARS smoke test that only validates inputs and creates the
+output scaffold:
+
+```r
+result <- run_workflow(project$config, dry_run = TRUE, require_biogeobears = FALSE)
 ```
 
 ## Minimal Workflow
@@ -154,6 +188,7 @@ results/example_clade/
     model_run_status.csv
     model_fit_raw.csv
     model_comparison.csv
+    model_sensitivity.csv
     model_parameters.csv
     ancestral_state_probabilities.csv
     root_state_probabilities.csv
@@ -186,6 +221,8 @@ The main derived tables are:
   and error messages when present.
 - `model_comparison.csv`: model family, `+J` status, log-likelihood, parameter
   count, AIC/AICc, weights, caution flags, and interpretation notes.
+- `model_sensitivity.csv`: user-readable `+J` sensitivity summary and
+  methodological guardrail checks.
 - `model_parameters.csv`: standardized BioGeoBEARS parameter table per model.
 - `ancestral_state_probabilities.csv`: long-format node/state probabilities.
 - `root_state_probabilities.csv`: root state probability table per model.
