@@ -30,6 +30,7 @@ if (is.null(model_status)) {
   model_status <- read_table_if_exists("model_run_plan.csv")
 }
 model_comparison <- read_table_if_exists("model_comparison.csv")
+model_sensitivity <- read_table_if_exists("model_sensitivity.csv")
 model_parameters <- read_table_if_exists("model_parameters.csv")
 root_state_probabilities <- read_table_if_exists("root_state_probabilities.csv")
 
@@ -114,6 +115,23 @@ if (!is.null(model_comparison)) {
 model_comparison_png <- figure_path("model_comparison")
 if (!is.null(model_comparison_png)) {
   knitr::include_graphics(model_comparison_png)
+}
+```
+
+## Model Sensitivity Summary
+
+This section summarizes `+J` sensitivity checks in plain language. It is meant
+to guide interpretation, not to automatically declare a biological conclusion.
+
+```{r}
+sensitivity_cols <- c(
+  "summary_item", "answer", "models", "model_count", "evidence",
+  "interpretation_note"
+)
+if (!is.null(model_sensitivity)) {
+  print_table(model_sensitivity[intersect(sensitivity_cols, names(model_sensitivity))])
+} else {
+  print_table(NULL)
 }
 ```
 
