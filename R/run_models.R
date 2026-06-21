@@ -9,8 +9,8 @@
 #' @param execute Logical. If `FALSE`, return a run plan without executing.
 #' @return A data frame describing planned or executed model runs. Executed
 #'   runs also write raw `.rds` outputs, logs, `model_fit_raw.csv`,
-#'   `model_comparison.csv`, `model_sensitivity.rds`, and warning summaries in
-#'   `model_run_status.csv`.
+#'   `model_comparison.csv`, `model_sensitivity.csv`,
+#'   `model_sensitivity.rds`, and warning summaries in `model_run_status.csv`.
 #' @export
 run_models <- function(config, project_paths, execute = FALSE) {
   models <- config$models$run %||% valid_models()
@@ -88,10 +88,13 @@ run_models <- function(config, project_paths, execute = FALSE) {
   row.names(comparison) <- NULL
 
   sensitivity <- assess_model_sensitivity(comparison)
+  sensitivity_table <- model_sensitivity_summary_table(comparison, sensitivity)
   saveRDS(sensitivity, file.path(project_paths$tables, "model_sensitivity.rds"))
+  write_csv_base(sensitivity_table, file.path(project_paths$tables, "model_sensitivity.csv"))
   write_csv_base(comparison, file.path(project_paths$tables, "model_comparison.csv"))
 
   attr(comparison, "sensitivity") <- sensitivity
+  attr(comparison, "sensitivity_table") <- sensitivity_table
   attr(comparison, "run_status") <- raw_table
   attr(comparison, "standardized_tables") <- standardized_tables
   comparison

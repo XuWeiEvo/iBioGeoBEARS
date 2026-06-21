@@ -68,6 +68,7 @@ test_that("run_workflow exposes model comparison when BioGeoBEARS is available",
   expect_equal(result$model_comparison$model, "DEC")
   expect_equal(result$model_run_status$status, "completed")
   expect_false(is.null(result$model_sensitivity))
+  expect_false(is.null(result$model_sensitivity_table))
   expect_false(is.null(result$figure_manifest))
   expect_true(any(result$figure_manifest$figure == "model_comparison" & result$figure_manifest$status == "created"))
   expect_true(all(c(
@@ -77,6 +78,11 @@ test_that("run_workflow exposes model comparison when BioGeoBEARS is available",
   ) %in% names(result$standardized_tables)))
   expect_true(file.exists(file.path(out, "tables", "model_run_status.csv")))
   expect_true(file.exists(file.path(out, "tables", "model_comparison.csv")))
+  expect_true(file.exists(file.path(out, "tables", "model_sensitivity.csv")))
   expect_true(file.exists(file.path(out, "tables", "model_parameters.csv")))
   expect_true(file.exists(file.path(out, "figures", "model_comparison.png")))
+
+  sensitivity <- utils::read.csv(file.path(out, "tables", "model_sensitivity.csv"), check.names = FALSE)
+  expect_true("best_overall_is_plus_j" %in% sensitivity$summary_item)
+  expect_true("auto_declare_best_model" %in% sensitivity$summary_item)
 })
