@@ -72,9 +72,12 @@ test_that("run_workflow exposes model comparison when BioGeoBEARS is available",
   expect_false(is.null(result$figure_manifest))
   expect_true(any(result$figure_manifest$figure == "model_comparison" & result$figure_manifest$status == "created"))
   expect_true(all(c(
+    "geographic_states",
+    "tree_nodes",
     "parameter_table",
     "ancestral_state_probabilities",
-    "root_state_probabilities"
+    "root_state_probabilities",
+    "node_state_summary"
   ) %in% names(result$standardized_tables)))
   expect_true(file.exists(file.path(out, "tables", "model_run_status.csv")))
   expect_true(file.exists(file.path(out, "tables", "model_comparison.csv")))

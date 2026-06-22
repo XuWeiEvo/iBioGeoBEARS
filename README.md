@@ -211,9 +211,12 @@ results/example_clade/
     model_fit_raw.csv
     model_comparison.csv
     model_sensitivity.csv
+    geographic_states.csv
+    tree_nodes.csv
     model_parameters.csv
     ancestral_state_probabilities.csv
     root_state_probabilities.csv
+    node_state_summary.csv
     model_sensitivity.rds
   figures/
     figure_manifest.csv
@@ -245,9 +248,15 @@ The main derived tables are:
   count, AIC/AICc, weights, caution flags, and interpretation notes.
 - `model_sensitivity.csv`: user-readable `+J` sensitivity summary and
   methodological guardrail checks.
+- `geographic_states.csv`: state-space definition with state index, area
+  composition, area count, and null-range flag.
+- `tree_nodes.csv`: node metadata with node index, tip/internal status, labels,
+  parent node, edge length, and root flag.
 - `model_parameters.csv`: standardized BioGeoBEARS parameter table per model.
 - `ancestral_state_probabilities.csv`: long-format node/state probabilities.
 - `root_state_probabilities.csv`: root state probability table per model.
+- `node_state_summary.csv`: highest-probability state per model, node, and
+  probability location.
 
 ## Figures
 

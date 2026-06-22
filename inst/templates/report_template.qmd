@@ -32,6 +32,7 @@ if (is.null(model_status)) {
 model_comparison <- read_table_if_exists("model_comparison.csv")
 model_sensitivity <- read_table_if_exists("model_sensitivity.csv")
 model_parameters <- read_table_if_exists("model_parameters.csv")
+node_state_summary <- read_table_if_exists("node_state_summary.csv")
 root_state_probabilities <- read_table_if_exists("root_state_probabilities.csv")
 
 figure_path <- function(name) {
@@ -251,6 +252,26 @@ if (!is.null(root_state_probabilities)) {
 root_state_png <- figure_path("root_state_probabilities")
 if (!is.null(root_state_png)) {
   knitr::include_graphics(root_state_png)
+}
+```
+
+## Node State Summary
+
+This table reports the highest-probability range state per model, node, and
+BioGeoBEARS probability location. It is a compact node-level interface for
+downstream plotting and future Shiny views.
+
+```{r}
+node_summary_cols <- c(
+  "model", "location", "node_index", "node_type", "node_label",
+  "best_state", "best_probability", "state_count"
+)
+if (!is.null(node_state_summary)) {
+  node_rows <- node_state_summary[order(node_state_summary$model, node_state_summary$location, node_state_summary$node_index), , drop = FALSE]
+  node_rows <- utils::head(node_rows, 20L)
+  print_table(node_rows[intersect(node_summary_cols, names(node_rows))])
+} else {
+  print_table(NULL)
 }
 ```
 
