@@ -5,9 +5,9 @@ citEntry(
   title = "iBiogeobears: Reproducible BioGeoBEARS Workflows, Synthesis, Visualization, and Reporting",
   author = personList(as.person("Wei Xu")),
   year = "2026",
-  note = "R package version 0.1.0",
+  note = "R package version 0.1.0.9000",
   textVersion = paste(
     "Xu W. 2026. iBiogeobears: Reproducible BioGeoBEARS Workflows,",
-    "Synthesis, Visualization, and Reporting. R package version 0.1.0."
+    "Synthesis, Visualization, and Reporting. R package version 0.1.0.9000."
   )
 )
