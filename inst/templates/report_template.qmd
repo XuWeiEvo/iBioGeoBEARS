@@ -262,6 +262,13 @@ BioGeoBEARS probability location. It is a compact node-level interface for
 downstream plotting and future Shiny views.
 
 ```{r}
+node_state_png <- figure_path("node_state_summary")
+if (!is.null(node_state_png)) {
+  knitr::include_graphics(node_state_png)
+}
+```
+
+```{r}
 node_summary_cols <- c(
   "model", "location", "node_index", "node_type", "node_label",
   "best_state", "best_probability", "state_count"

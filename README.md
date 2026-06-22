@@ -226,6 +226,9 @@ results/example_clade/
     root_state_probabilities.png
     root_state_probabilities.pdf
     root_state_probabilities.svg
+    node_state_summary.png
+    node_state_summary.pdf
+    node_state_summary.svg
   reports/
     summary_report.qmd
     summary_report.html
@@ -264,6 +267,8 @@ Workflow execution generates:
 
 - `model_comparison`: Delta AICc by model, with `+J` models marked separately.
 - `root_state_probabilities`: highest-probability root range states by model.
+- `node_state_summary`: best ancestral range state and probability on the tree
+  for the top-ranked statistical model.
 
 Figures are written in the formats configured by:
 

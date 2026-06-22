@@ -116,10 +116,95 @@ plot_root_state_probabilities <- function(root_state_probabilities, top_n = 8L) 
     ggplot2::theme(panel.grid.major.y = ggplot2::element_blank())
 }
 
+#' Plot best ancestral range state by tree node
+#'
+#' @param tree_nodes Tree node metadata table from
+#'   `standardized_tables$tree_nodes`.
+#' @param node_state_summary Node-state summary table from
+#'   `standardized_tables$node_state_summary`.
+#' @param model Optional model name to plot. Defaults to the first model in
+#'   `node_state_summary`.
+#' @param location BioGeoBEARS probability location to plot. Defaults to
+#'   `"branch_top_at_node"` when available.
+#' @return A ggplot object.
+#' @export
+plot_node_state_summary <- function(tree_nodes, node_state_summary, model = NULL, location = "branch_top_at_node") {
+  node_required <- c("node_index", "node_type", "node_label", "parent_node_index", "edge_length")
+  summary_required <- c("model", "location", "node_index", "best_state", "best_probability")
+  missing_nodes <- setdiff(node_required, names(tree_nodes))
+  missing_summary <- setdiff(summary_required, names(node_state_summary))
+  if (length(missing_nodes) > 0L) {
+    stop("tree_nodes is missing required columns: ", paste(missing_nodes, collapse = ", "), call. = FALSE)
+  }
+  if (length(missing_summary) > 0L) {
+    stop("node_state_summary is missing required columns: ", paste(missing_summary, collapse = ", "), call. = FALSE)
+  }
+  if (nrow(tree_nodes) == 0L || nrow(node_state_summary) == 0L) {
+    stop("tree_nodes and node_state_summary must contain at least one row.", call. = FALSE)
+  }
+
+  if (is.null(model)) {
+    model <- unique(node_state_summary$model)[1L]
+  }
+  available_locations <- unique(node_state_summary$location[node_state_summary$model == model])
+  if (!location %in% available_locations) {
+    location <- available_locations[1L]
+  }
+
+  layout <- layout_tree_nodes(tree_nodes)
+  summary_rows <- node_state_summary[
+    node_state_summary$model == model & node_state_summary$location == location,
+    c("node_index", "best_state", "best_probability"),
+    drop = FALSE
+  ]
+  plot_data <- merge(layout, summary_rows, by = "node_index", all.x = TRUE, sort = FALSE)
+  plot_data$plot_probability <- ifelse(is.na(plot_data$best_probability), 0, plot_data$best_probability)
+
+  edges <- plot_data[!is.na(plot_data$parent_node_index), , drop = FALSE]
+  edges <- edges[!is.na(edges$parent_x) & !is.na(edges$parent_y), , drop = FALSE]
+  tip_labels <- plot_data[plot_data$node_type == "tip", , drop = FALSE]
+
+  ggplot2::ggplot() +
+    ggplot2::geom_segment(
+      data = edges,
+      ggplot2::aes(x = parent_x, y = parent_y, xend = x, yend = y),
+      linewidth = 0.35,
+      colour = "grey45"
+    ) +
+    ggplot2::geom_point(
+      data = plot_data,
+      ggplot2::aes(x = x, y = y, fill = best_state, size = plot_probability),
+      shape = 21,
+      colour = "grey20",
+      stroke = 0.25,
+      alpha = 0.9
+    ) +
+    ggplot2::geom_text(
+      data = tip_labels,
+      ggplot2::aes(x = x, y = y, label = node_label),
+      hjust = -0.08,
+      size = 3
+    ) +
+    ggplot2::scale_size_continuous(limits = c(0, 1), range = c(1.8, 5.8), name = "Best-state probability") +
+    ggplot2::labs(
+      title = paste(model, location, sep = " - "),
+      x = "Distance from root",
+      y = NULL,
+      fill = "Best state"
+    ) +
+    ggplot2::theme_minimal(base_size = 11) +
+    ggplot2::theme(
+      panel.grid.major.y = ggplot2::element_blank(),
+      panel.grid.minor = ggplot2::element_blank(),
+      axis.text.y = ggplot2::element_blank(),
+      legend.position = "bottom"
+    )
+}
+
 #' Generate workflow figures
 #'
-#' Saves model comparison and root-state probability figures for a completed
-#' workflow run.
+#' Saves model comparison, root-state probability, and node-state summary
+#' figures for a completed workflow run.
 #'
 #' @param model_comparison Model comparison table returned by [compare_models()].
 #' @param standardized_tables List of standardized output tables from
@@ -139,6 +224,16 @@ generate_figures <- function(model_comparison, standardized_tables, project_path
   root_table <- standardized_tables$root_state_probabilities %||% data.frame()
   if (nrow(root_table) > 0L) {
     plots$root_state_probabilities <- plot_root_state_probabilities(root_table)
+  }
+
+  node_table <- standardized_tables$node_state_summary %||% data.frame()
+  tree_nodes <- standardized_tables$tree_nodes %||% data.frame()
+  if (nrow(node_table) > 0L && nrow(tree_nodes) > 0L) {
+    plots$node_state_summary <- plot_node_state_summary(
+      tree_nodes = tree_nodes,
+      node_state_summary = node_table,
+      model = model_comparison$model[1L]
+    )
   }
 
   manifest <- do.call(rbind, lapply(names(plots), function(name) {
@@ -183,4 +278,71 @@ save_plot_outputs <- function(plot, name, figures_dir, formats) {
       stringsAsFactors = FALSE
     )
   }))
+}
+
+layout_tree_nodes <- function(tree_nodes) {
+  layout <- tree_nodes[order(tree_nodes$node_index), , drop = FALSE]
+  layout$node_index <- as.integer(layout$node_index)
+  layout$parent_node_index <- as.integer(layout$parent_node_index)
+  layout$edge_length <- suppressWarnings(as.numeric(layout$edge_length))
+
+  node_ids <- layout$node_index
+  children <- split(
+    layout$node_index[!is.na(layout$parent_node_index)],
+    layout$parent_node_index[!is.na(layout$parent_node_index)]
+  )
+
+  y <- rep(NA_real_, nrow(layout))
+  tip_rows <- which(layout$node_type == "tip")
+  y[tip_rows] <- seq_along(tip_rows)
+
+  unresolved <- which(is.na(y))
+  while (length(unresolved) > 0L) {
+    changed <- FALSE
+    for (row in unresolved) {
+      child_ids <- children[[as.character(layout$node_index[row])]]
+      child_rows <- match(child_ids, node_ids)
+      child_y <- y[child_rows]
+      if (length(child_y) > 0L && all(!is.na(child_y))) {
+        y[row] <- mean(child_y)
+        changed <- TRUE
+      }
+    }
+    if (!changed) {
+      y[unresolved] <- seq_along(unresolved) + max(y, na.rm = TRUE)
+      break
+    }
+    unresolved <- which(is.na(y))
+  }
+
+  x <- rep(NA_real_, nrow(layout))
+  root_rows <- which(is.na(layout$parent_node_index))
+  x[root_rows] <- 0
+  unresolved <- which(is.na(x))
+  while (length(unresolved) > 0L) {
+    changed <- FALSE
+    for (row in unresolved) {
+      parent_row <- match(layout$parent_node_index[row], node_ids)
+      if (!is.na(parent_row) && !is.na(x[parent_row])) {
+        branch_length <- layout$edge_length[row]
+        if (is.na(branch_length) || !is.finite(branch_length)) {
+          branch_length <- 1
+        }
+        x[row] <- x[parent_row] + branch_length
+        changed <- TRUE
+      }
+    }
+    if (!changed) {
+      x[unresolved] <- 0
+      break
+    }
+    unresolved <- which(is.na(x))
+  }
+
+  layout$x <- x
+  layout$y <- y
+  parent_rows <- match(layout$parent_node_index, node_ids)
+  layout$parent_x <- x[parent_rows]
+  layout$parent_y <- y[parent_rows]
+  layout
 }

@@ -5,6 +5,8 @@ Development version after the 0.1.0 alpha release.
 - Added standardized `geographic_states.csv`, `tree_nodes.csv`, and
   `node_state_summary.csv` tables for downstream plotting and future Shiny
   views.
+- Added `plot_node_state_summary()` and automatic `node_state_summary` workflow
+  figures.
 
 # iBiogeobears 0.1.0
 
