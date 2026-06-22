@@ -36,6 +36,24 @@ test_that("run warnings are summarized for status tables", {
   expect_equal(summary$messages, "optimizer warning")
 })
 
+test_that("state and node metadata tables have stable schemas", {
+  states <- make_state_table(c("A", "B"), max_range_size = 2L, include_null_range = TRUE)
+  expect_equal(states$state, c("null", "A", "B", "AB"))
+  expect_equal(states$area_count, c(0L, 1L, 1L, 2L))
+  expect_true(states$is_null_range[1L])
+
+  nodes <- make_node_lookup(system.file("example_data", "tree.nwk", package = "iBiogeobears"))
+  expect_true(all(c(
+    "node_index",
+    "node_type",
+    "node_label",
+    "parent_node_index",
+    "edge_length",
+    "is_root"
+  ) %in% names(nodes)))
+  expect_equal(sum(nodes$is_root), 1L)
+})
+
 test_that("run_models executes a DEC smoke run when BioGeoBEARS is available", {
   testthat::skip_if_not_installed("BioGeoBEARS")
   testthat::skip_if_not_installed("ape")
@@ -64,10 +82,16 @@ test_that("run_models executes a DEC smoke run when BioGeoBEARS is available", {
   expect_true(is.finite(result$logLik))
   expect_true(all(c("warning_count", "warning_messages") %in% names(attr(result, "run_status"))))
   expect_true(file.exists(file.path(paths$tables, "model_comparison.csv")))
+  expect_true(file.exists(file.path(paths$tables, "geographic_states.csv")))
+  expect_true(file.exists(file.path(paths$tables, "tree_nodes.csv")))
   expect_true(file.exists(file.path(paths$tables, "model_parameters.csv")))
   expect_true(file.exists(file.path(paths$tables, "ancestral_state_probabilities.csv")))
   expect_true(file.exists(file.path(paths$tables, "root_state_probabilities.csv")))
+  expect_true(file.exists(file.path(paths$tables, "node_state_summary.csv")))
 
   run_status <- utils::read.csv(file.path(paths$tables, "model_run_status.csv"), check.names = FALSE)
   expect_true(all(c("warning_count", "warning_messages") %in% names(run_status)))
+
+  node_summary <- utils::read.csv(file.path(paths$tables, "node_state_summary.csv"), check.names = FALSE)
+  expect_true(all(c("model", "node_index", "best_state", "best_probability") %in% names(node_summary)))
 })
