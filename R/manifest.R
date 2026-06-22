@@ -1,0 +1,143 @@
+#' Create a workflow output manifest
+#'
+#' @param result_or_path A workflow result returned by [run_workflow()] or a
+#'   path to a workflow output directory.
+#' @param write Logical. If `TRUE`, write `tables/workflow_manifest.csv`.
+#' @return A data frame listing files in the workflow output directory.
+#' @export
+create_workflow_manifest <- function(result_or_path, write = TRUE) {
+  root <- workflow_root_path(result_or_path)
+  if (!dir.exists(root)) {
+    stop("Workflow output directory does not exist: ", root, call. = FALSE)
+  }
+
+  manifest <- collect_workflow_manifest(root)
+  if (isTRUE(write)) {
+    tables_dir <- file.path(root, "tables")
+    dir.create(tables_dir, recursive = TRUE, showWarnings = FALSE)
+    manifest_path <- file.path(tables_dir, "workflow_manifest.csv")
+    write_csv_base(manifest, manifest_path)
+    manifest <- collect_workflow_manifest(root)
+    write_csv_base(manifest, manifest_path)
+  }
+  manifest
+}
+
+#' Bundle workflow results into a zip archive
+#'
+#' @param result_or_path A workflow result returned by [run_workflow()] or a
+#'   path to a workflow output directory.
+#' @param bundle_file Optional output `.zip` path. Defaults to a zip file next
+#'   to the workflow output directory.
+#' @param include_raw Logical. If `FALSE`, omit `raw_biogeobears/` files.
+#' @param overwrite Logical. If `FALSE`, stop when `bundle_file` exists.
+#' @param refresh_manifest Logical. If `TRUE`, rewrite
+#'   `tables/workflow_manifest.csv` before bundling.
+#' @return Path to the created zip archive.
+#' @export
+bundle_results <- function(result_or_path, bundle_file = NULL, include_raw = TRUE, overwrite = FALSE, refresh_manifest = TRUE) {
+  root <- workflow_root_path(result_or_path)
+  if (!dir.exists(root)) {
+    stop("Workflow output directory does not exist: ", root, call. = FALSE)
+  }
+
+  if (is.null(bundle_file)) {
+    bundle_file <- file.path(dirname(root), paste0(basename(root), "_results.zip"))
+  }
+  bundle_file <- as_path(bundle_file)
+  if (file.exists(bundle_file) && !isTRUE(overwrite)) {
+    stop("Bundle file already exists: ", bundle_file, call. = FALSE)
+  }
+
+  manifest <- create_workflow_manifest(root, write = isTRUE(refresh_manifest))
+  if (!isTRUE(include_raw)) {
+    manifest <- manifest[manifest$category != "raw_biogeobears", , drop = FALSE]
+  }
+  if (nrow(manifest) == 0L) {
+    stop("No workflow output files are available to bundle.", call. = FALSE)
+  }
+
+  old_wd <- getwd()
+  on.exit(setwd(old_wd), add = TRUE)
+  setwd(root)
+
+  files <- manifest$relative_path
+  zip_error <- NULL
+  status <- NULL
+  invisible(utils::capture.output({
+    status <- tryCatch(
+      utils::zip(zipfile = bundle_file, files = files, flags = "-qr9X"),
+      error = function(e) {
+        zip_error <<- e
+        NA_integer_
+      }
+    )
+  }))
+  if (!is.null(zip_error) || (!is.null(status) && !identical(status, 0L))) {
+    stop(
+      "Unable to create zip archive. Ensure a zip utility is available to R, or provide a writable bundle_file path.",
+      call. = FALSE
+    )
+  }
+
+  as_path(bundle_file)
+}
+
+collect_workflow_manifest <- function(root) {
+  root <- normalizePath(root, winslash = "/", mustWork = TRUE)
+  files <- list.files(root, recursive = TRUE, all.files = FALSE, full.names = TRUE, no.. = TRUE)
+  if (length(files) == 0L) {
+    return(empty_workflow_manifest())
+  }
+
+  info <- file.info(files)
+  files <- files[!is.na(info$isdir) & !info$isdir]
+  if (length(files) == 0L) {
+    return(empty_workflow_manifest())
+  }
+
+  files <- normalizePath(files, winslash = "/", mustWork = FALSE)
+  info <- file.info(files)
+  relative_path <- substring(files, nchar(root) + 2L)
+  category <- workflow_manifest_category(relative_path)
+  out <- data.frame(
+    category = category,
+    relative_path = relative_path,
+    file_name = basename(files),
+    extension = tolower(tools::file_ext(files)),
+    size_bytes = as.numeric(info$size),
+    modified_time = format(info$mtime, "%Y-%m-%d %H:%M:%S %z"),
+    stringsAsFactors = FALSE
+  )
+  out <- out[order(out$category, out$relative_path), , drop = FALSE]
+  row.names(out) <- NULL
+  out
+}
+
+workflow_manifest_category <- function(relative_path) {
+  first <- ifelse(grepl("/", relative_path, fixed = TRUE), sub("/.*$", "", relative_path), relative_path)
+  known <- c("inputs", "raw_biogeobears", "tables", "figures", "reports", "logs")
+  ifelse(first %in% known, first, ifelse(relative_path == "config_used.yml", "config", "root"))
+}
+
+workflow_root_path <- function(result_or_path) {
+  if (is.list(result_or_path) && !is.null(result_or_path$project_paths$root)) {
+    return(as_path(result_or_path$project_paths$root))
+  }
+  if (is.character(result_or_path) && length(result_or_path) == 1L) {
+    return(as_path(result_or_path))
+  }
+  stop("Expected a workflow result or a workflow output directory path.", call. = FALSE)
+}
+
+empty_workflow_manifest <- function() {
+  data.frame(
+    category = character(),
+    relative_path = character(),
+    file_name = character(),
+    extension = character(),
+    size_bytes = numeric(),
+    modified_time = character(),
+    stringsAsFactors = FALSE
+  )
+}

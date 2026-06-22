@@ -7,8 +7,10 @@ test_that("run_workflow returns structured dry-run outputs", {
   expect_s3_class(result, "iBGB_workflow_result")
   expect_true(all(c("model_plan", "model_run_status") %in% names(result)))
   expect_true(is.null(result$model_comparison))
+  expect_false(is.null(result$workflow_manifest))
   expect_equal(result$model_plan$status[1], "planned")
   expect_true(file.exists(file.path(out, "tables", "model_run_plan.csv")))
+  expect_true(file.exists(file.path(out, "tables", "workflow_manifest.csv")))
 })
 
 test_that("run_workflow blocks execution when validation fails", {
@@ -86,6 +88,7 @@ test_that("run_workflow exposes model comparison when BioGeoBEARS is available",
   expect_true(file.exists(file.path(out, "tables", "model_sensitivity.csv")))
   expect_true(file.exists(file.path(out, "tables", "node_state_sensitivity.csv")))
   expect_true(file.exists(file.path(out, "tables", "model_parameters.csv")))
+  expect_true(file.exists(file.path(out, "tables", "workflow_manifest.csv")))
   expect_true(file.exists(file.path(out, "figures", "model_comparison.png")))
 
   sensitivity <- utils::read.csv(file.path(out, "tables", "model_sensitivity.csv"), check.names = FALSE)
