@@ -2,13 +2,22 @@
 % Please edit documentation in R/shiny_app.R
 \name{launch_app}
 \alias{launch_app}
-\title{Launch the future iBiogeobears Shiny application}
+\title{Launch the iBiogeobears Shiny application}
 \usage{
-launch_app()
+launch_app(config = NULL, output_dir = NULL, launch.browser = TRUE, ...)
+}
+\arguments{
+\item{config}{Optional path to an \code{analysis.yml} file.}
+
+\item{output_dir}{Optional workflow output directory override.}
+
+\item{launch.browser}{Passed to \code{\link[shiny:runApp]{shiny::runApp()}}.}
+
+\item{...}{Additional arguments passed to \code{\link[shiny:runApp]{shiny::runApp()}}.}
 }
 \value{
-Invisibly returns \code{NULL}.
+The value returned by \code{\link[shiny:runApp]{shiny::runApp()}}.
 }
 \description{
-Launch the future iBiogeobears Shiny application
+Launch the iBiogeobears Shiny application
 }

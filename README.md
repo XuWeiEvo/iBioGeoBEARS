@@ -20,6 +20,7 @@ It currently supports:
 - compare models with methodological cautions around `+J`;
 - generate publication-oriented figures;
 - render Quarto reports;
+- launch a thin Shiny workflow runner;
 - keep the R package backend separate from any future Shiny GUI wrapper.
 
 ## Installation
@@ -124,6 +125,17 @@ Render a report:
 
 ```r
 report <- render_report(result, format = "html")
+```
+
+## Shiny Workflow Runner
+
+The Shiny entrypoint is a thin wrapper around the package backend. It validates
+the YAML config, runs `run_workflow()`, renders reports, and bundles results
+without moving scientific logic into Shiny server code.
+
+```r
+install.packages("shiny")
+launch_app()
 ```
 
 If validation fails, real execution is blocked by default. Review:
