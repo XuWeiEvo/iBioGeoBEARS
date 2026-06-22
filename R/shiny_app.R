@@ -55,6 +55,7 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
         ),
         shiny::mainPanel(
           shiny::uiOutput("status"),
+          shiny::tableOutput("summary_table"),
           shiny::tabsetPanel(
             shiny::tabPanel("Validation", shiny::tableOutput("validation_table")),
             shiny::tabPanel("Models", shiny::tableOutput("model_table")),
@@ -203,6 +204,10 @@ iBGB_shiny_server <- function(input, output, session) {
       output$status <- shiny::renderUI({
         shiny::tags$div(class = paste("ibgb-status", state$status_type), state$message)
       })
+
+      output$summary_table <- shiny::renderTable({
+        shiny_summary_table(state)
+      }, striped = TRUE, bordered = TRUE, na = "")
 
       output$validation_table <- shiny::renderTable({
         state$validation
@@ -353,6 +358,46 @@ copy_download_file <- function(src, dest) {
     stop("Unable to prepare download file: ", src, call. = FALSE)
   }
   invisible(dest)
+}
+
+shiny_summary_table <- function(state) {
+  validation_status <- "not run"
+  if (!is.null(state$validation) && nrow(state$validation) > 0L) {
+    validation_status <- if (all(state$validation$ok)) "passed" else "failed"
+  }
+
+  run_status <- "not run"
+  run_mode <- "not run"
+  completed_models <- "not available"
+  warning_count <- "not available"
+  if (!is.null(state$result)) {
+    run_mode <- if (isTRUE(state$result$dry_run)) "dry run" else "executed"
+    run_status <- if (isTRUE(state$result$validation_failed)) "validation failed" else "completed"
+  }
+  if (!is.null(state$model_table) && nrow(state$model_table) > 0L) {
+    if ("status" %in% names(state$model_table)) {
+      completed_models <- paste0(sum(state$model_table$status == "completed", na.rm = TRUE), " of ", nrow(state$model_table))
+    } else {
+      completed_models <- as.character(nrow(state$model_table))
+    }
+    if ("warning_count" %in% names(state$model_table)) {
+      warning_count <- as.character(sum(state$model_table$warning_count, na.rm = TRUE))
+    }
+  }
+
+  data.frame(
+    item = c("Validation", "Run mode", "Run status", "Completed models", "Warning count", "Report", "Bundle"),
+    value = c(
+      validation_status,
+      run_mode,
+      run_status,
+      completed_models,
+      warning_count,
+      if (!is.null(report_preview_path(state))) "available" else "not available",
+      if (!is.null(state$bundle) && file.exists(state$bundle)) "available" else "not available"
+    ),
+    stringsAsFactors = FALSE
+  )
 }
 
 update_table_preview_choices <- function(session, state) {

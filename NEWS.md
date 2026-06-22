@@ -28,6 +28,8 @@ Development version after the 0.1.0 alpha release.
   directory.
 - Added Shiny report path display and an open-report action for rendered
   reports.
+- Added a compact Shiny workflow status summary for validation, run status,
+  completed models, warnings, report, and bundle availability.
 - Updated GitHub Actions to treat optional `Suggests` packages as optional
   during dry-run CI checks.
 
