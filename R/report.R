@@ -15,6 +15,7 @@ render_report <- function(result, template = NULL, format = "html") {
   file.copy(template, report_src, overwrite = TRUE)
 
   if (format %in% c("source", "qmd")) {
+    create_workflow_manifest(result, write = TRUE)
     return(report_src)
   }
 
@@ -28,8 +29,10 @@ render_report <- function(result, template = NULL, format = "html") {
   if (!is.null(output_ext)) {
     rendered <- file.path(result$project_paths$reports, paste0("summary_report.", output_ext))
     if (file.exists(rendered)) {
+      create_workflow_manifest(result, write = TRUE)
       return(rendered)
     }
   }
+  create_workflow_manifest(result, write = TRUE)
   report_src
 }

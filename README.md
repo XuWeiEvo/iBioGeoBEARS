@@ -207,6 +207,7 @@ results/example_clade/
     BAYAREALIKE+J/
   tables/
     input_validation.csv
+    workflow_manifest.csv
     model_run_status.csv
     model_fit_raw.csv
     model_comparison.csv
@@ -247,12 +248,26 @@ results/example_clade/
 Raw BioGeoBEARS outputs remain separate from derived tables, figures, and
 reports.
 
+Create a portable zip archive of a completed run with:
+
+```r
+bundle <- bundle_results(result)
+```
+
+To share derived outputs without raw BioGeoBEARS objects:
+
+```r
+bundle <- bundle_results(result, include_raw = FALSE)
+```
+
 ## Standard Tables
 
 The main derived tables are:
 
 - `model_run_status.csv`: per-model completion status, raw result path, log path,
   and error messages when present.
+- `workflow_manifest.csv`: inventory of output files by category, relative path,
+  extension, size, and modification time.
 - `model_comparison.csv`: model family, `+J` status, log-likelihood, parameter
   count, AIC/AICc, weights, caution flags, and interpretation notes.
 - `model_sensitivity.csv`: user-readable `+J` sensitivity summary and

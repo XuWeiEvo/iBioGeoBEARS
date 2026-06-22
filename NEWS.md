@@ -13,6 +13,8 @@ Development version after the 0.1.0 alpha release.
   node-state summaries.
 - Added `plot_node_state_sensitivity()` and automatic node-state sensitivity
   figures for report-level +J interpretation.
+- Added `workflow_manifest.csv` plus `create_workflow_manifest()` and
+  `bundle_results()` for portable result sharing.
 
 # iBiogeobears 0.1.0
 

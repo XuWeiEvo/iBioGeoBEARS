@@ -47,6 +47,7 @@ run_workflow <- function(config, output_dir = NULL, dry_run = TRUE, require_biog
 
   utils::write.csv(model_run_status, file.path(project_paths$tables, "model_run_plan.csv"), row.names = FALSE)
   writeLines(bgb_check$citation %||% "", file.path(project_paths$logs, "biogeobears_citation.txt"))
+  workflow_manifest <- create_workflow_manifest(project_paths$root, write = TRUE)
 
   result <- list(
     config = cfg,
@@ -61,6 +62,7 @@ run_workflow <- function(config, output_dir = NULL, dry_run = TRUE, require_biog
     node_state_sensitivity = node_state_sensitivity,
     standardized_tables = standardized_tables,
     figure_manifest = figure_manifest,
+    workflow_manifest = workflow_manifest,
     dry_run = dry_run,
     force = force,
     validation_failed = any(!validation$ok)

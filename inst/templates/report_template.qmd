@@ -35,6 +35,7 @@ model_parameters <- read_table_if_exists("model_parameters.csv")
 node_state_summary <- read_table_if_exists("node_state_summary.csv")
 node_state_sensitivity <- read_table_if_exists("node_state_sensitivity.csv")
 root_state_probabilities <- read_table_if_exists("root_state_probabilities.csv")
+workflow_manifest <- read_table_if_exists("workflow_manifest.csv")
 
 figure_path <- function(name) {
   path <- file.path(figures_dir, paste0(name, ".png"))
@@ -137,6 +138,22 @@ print_table(executive_summary)
 
 ```{r}
 print_table(input_validation)
+```
+
+## Output Manifest
+
+```{r}
+if (!is.null(workflow_manifest) && nrow(workflow_manifest) > 0L) {
+  manifest_counts <- stats::aggregate(
+    relative_path ~ category,
+    data = workflow_manifest,
+    FUN = length
+  )
+  names(manifest_counts) <- c("category", "file_count")
+  print_table(manifest_counts)
+} else {
+  cat("Workflow manifest was not available for this run.\n")
+}
 ```
 
 ## Model Run Status
