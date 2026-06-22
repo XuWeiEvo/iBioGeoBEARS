@@ -81,7 +81,10 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
           shiny::tableOutput("summary_table"),
           shiny::tabsetPanel(
             shiny::tabPanel("Validation", shiny::tableOutput("validation_table")),
-            shiny::tabPanel("Models", shiny::tableOutput("model_table")),
+            shiny::tabPanel("Run Status", shiny::tableOutput("model_table")),
+            shiny::tabPanel("Model Comparison", shiny::tableOutput("model_comparison_table")),
+            shiny::tabPanel("+J Sensitivity", shiny::tableOutput("model_sensitivity_table")),
+            shiny::tabPanel("Warnings", shiny::tableOutput("warnings_table")),
             shiny::tabPanel("Manifest", shiny::tableOutput("manifest_table")),
             shiny::tabPanel("Report", shiny::verbatimTextOutput("report_path_text")),
             shiny::tabPanel(
@@ -250,6 +253,18 @@ iBGB_shiny_server <- function(input, output, session) {
 
       output$model_table <- shiny::renderTable({
         table_head(state$model_table, 20L)
+      }, striped = TRUE, bordered = TRUE, na = "")
+
+      output$model_comparison_table <- shiny::renderTable({
+        table_head(shiny_model_comparison_table(state), 30L)
+      }, striped = TRUE, bordered = TRUE, na = "")
+
+      output$model_sensitivity_table <- shiny::renderTable({
+        table_head(shiny_model_sensitivity_table(state), 30L)
+      }, striped = TRUE, bordered = TRUE, na = "")
+
+      output$warnings_table <- shiny::renderTable({
+        table_head(shiny_warnings_table(state), 30L)
       }, striped = TRUE, bordered = TRUE, na = "")
 
       output$manifest_table <- shiny::renderTable({
@@ -433,6 +448,52 @@ shiny_summary_table <- function(state) {
     ),
     stringsAsFactors = FALSE
   )
+}
+
+shiny_model_comparison_table <- function(state) {
+  table <- state$result$model_comparison %||% read_workflow_table(state$result, "model_comparison.csv")
+  if (is.null(table) || nrow(table) == 0L) {
+    return(data.frame())
+  }
+  cols <- c(
+    "model", "model_family", "has_j", "logLik", "num_params", "AIC",
+    "AICc", "delta_aicc", "aicc_weight", "caution_flag",
+    "interpretation_note"
+  )
+  table[, intersect(cols, names(table)), drop = FALSE]
+}
+
+shiny_model_sensitivity_table <- function(state) {
+  table <- state$result$model_sensitivity_table %||% read_workflow_table(state$result, "model_sensitivity.csv")
+  if (is.null(table) || nrow(table) == 0L) {
+    return(data.frame())
+  }
+  cols <- c("section", "display_label", "answer", "models", "model_count", "evidence", "interpretation_note")
+  table[, intersect(cols, names(table)), drop = FALSE]
+}
+
+shiny_warnings_table <- function(state) {
+  table <- state$model_table %||% read_workflow_table(state$result, "model_run_status.csv")
+  if (is.null(table) || nrow(table) == 0L || !"warning_count" %in% names(table)) {
+    return(data.frame())
+  }
+  rows <- table[!is.na(table$warning_count) & table$warning_count > 0L, , drop = FALSE]
+  if (nrow(rows) == 0L) {
+    return(data.frame(model = "No captured warnings", warning_count = 0L, warning_messages = ""))
+  }
+  cols <- c("model", "status", "warning_count", "warning_messages", "log_file")
+  rows[, intersect(cols, names(rows)), drop = FALSE]
+}
+
+read_workflow_table <- function(result, filename) {
+  if (is.null(result) || is.null(result$project_paths$tables)) {
+    return(NULL)
+  }
+  path <- file.path(result$project_paths$tables, filename)
+  if (!file.exists(path)) {
+    return(NULL)
+  }
+  utils::read.csv(path, check.names = FALSE, stringsAsFactors = FALSE)
 }
 
 update_table_preview_choices <- function(session, state) {
