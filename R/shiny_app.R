@@ -25,7 +25,8 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
           ".container-fluid{max-width:1180px} .well{border-radius:4px} ",
           ".btn{border-radius:4px} .ibgb-status{font-weight:600;margin:8px 0} ",
           ".ibgb-status.info{color:#22577a} .ibgb-status.error{color:#b00020} ",
-          ".ibgb-downloads{margin:10px 0 16px 0} .ibgb-downloads .btn{margin-right:6px}"
+          ".ibgb-downloads{margin:10px 0 16px 0} .ibgb-downloads .btn{margin-right:6px} ",
+          ".ibgb-preview img{max-width:100%;height:auto;border:1px solid #ddd}"
         ))
       ),
       shiny::titlePanel("iBiogeobears"),
@@ -57,6 +58,12 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
             shiny::tabPanel("Validation", shiny::tableOutput("validation_table")),
             shiny::tabPanel("Models", shiny::tableOutput("model_table")),
             shiny::tabPanel("Manifest", shiny::tableOutput("manifest_table")),
+            shiny::tabPanel(
+              "Figures",
+              shiny::selectInput("figure_preview", "Figure", choices = c("No PNG figures available" = "")),
+              shiny::div(class = "ibgb-preview", shiny::imageOutput("figure_image")),
+              shiny::verbatimTextOutput("figure_path_text")
+            ),
             shiny::tabPanel("Paths", shiny::verbatimTextOutput("paths_text")),
             shiny::tabPanel("Messages", shiny::verbatimTextOutput("messages_text"))
           )
@@ -132,6 +139,7 @@ iBGB_shiny_server <- function(input, output, session) {
           state$validation <- result$validation
           state$model_table <- result$model_run_status
           state$manifest <- result$workflow_manifest
+          update_figure_preview_choices(session, state)
           append_app_message(state, if (isTRUE(result$dry_run)) "Dry run completed." else "Workflow completed.")
           shiny::incProgress(1)
           })
@@ -144,6 +152,7 @@ iBGB_shiny_server <- function(input, output, session) {
           shiny::withProgress(message = "Rendering report", value = 0, {
           state$report <- render_report(state$result, format = input$report_format)
           state$manifest <- create_workflow_manifest(state$result, write = TRUE)
+          update_figure_preview_choices(session, state)
           append_app_message(state, paste("Report:", state$report))
           shiny::incProgress(1)
           })
@@ -156,6 +165,7 @@ iBGB_shiny_server <- function(input, output, session) {
           shiny::withProgress(message = "Bundling results", value = 0, {
           state$bundle <- bundle_results(state$result, overwrite = TRUE)
           state$manifest <- create_workflow_manifest(state$result, write = TRUE)
+          update_figure_preview_choices(session, state)
           append_app_message(state, paste("Bundle:", state$bundle))
           shiny::incProgress(1)
           })
@@ -196,6 +206,28 @@ iBGB_shiny_server <- function(input, output, session) {
 
       output$messages_text <- shiny::renderText({
         paste(state$messages, collapse = "\n")
+      })
+
+      output$figure_image <- shiny::renderImage({
+        path <- resolve_figure_preview_path(input, state)
+        if (is.null(path)) {
+          return(NULL)
+        }
+        list(
+          src = path,
+          contentType = "image/png",
+          alt = basename(path),
+          width = "100%"
+        )
+      }, deleteFile = FALSE)
+
+      output$figure_path_text <- shiny::renderText({
+        path <- resolve_figure_preview_path(input, state)
+        if (is.null(path)) {
+          "No PNG figure is available for preview."
+        } else {
+          path
+        }
       })
 
       output$download_report <- shiny::downloadHandler(
@@ -272,6 +304,65 @@ copy_download_file <- function(src, dest) {
     stop("Unable to prepare download file: ", src, call. = FALSE)
   }
   invisible(dest)
+}
+
+update_figure_preview_choices <- function(session, state) {
+  choices <- figure_preview_choices(state$result, state$manifest)
+  if (length(choices) == 0L) {
+    shiny::updateSelectInput(session, "figure_preview", choices = c("No PNG figures available" = ""), selected = "")
+  } else {
+    shiny::updateSelectInput(session, "figure_preview", choices = choices, selected = choices[[1L]])
+  }
+  invisible(choices)
+}
+
+figure_preview_choices <- function(result, manifest = NULL) {
+  if (is.null(result) || is.null(result$project_paths$root)) {
+    return(stats::setNames(character(), character()))
+  }
+  root <- result$project_paths$root
+  paths <- character()
+  labels <- character()
+
+  if (!is.null(manifest) && nrow(manifest) > 0L && all(c("category", "relative_path") %in% names(manifest))) {
+    rows <- manifest[
+      manifest$category == "figures" & grepl("[.]png$", manifest$relative_path, ignore.case = TRUE),
+      ,
+      drop = FALSE
+    ]
+    if (nrow(rows) > 0L) {
+      paths <- file.path(root, rows$relative_path)
+      labels <- rows$relative_path
+    }
+  }
+
+  if (length(paths) == 0L) {
+    figure_dir <- result$project_paths$figures %||% file.path(root, "figures")
+    paths <- list.files(figure_dir, pattern = "[.]png$", full.names = TRUE)
+    labels <- file.path("figures", basename(paths))
+  }
+
+  exists <- file.exists(paths)
+  paths <- as_path(paths[exists])
+  labels <- labels[exists]
+  if (length(paths) == 0L) {
+    return(stats::setNames(character(), character()))
+  }
+  paths <- paths[order(labels)]
+  labels <- labels[order(labels)]
+  stats::setNames(paths, labels)
+}
+
+resolve_figure_preview_path <- function(input, state) {
+  selected <- input$figure_preview %||% ""
+  if (nzchar(selected) && file.exists(selected)) {
+    return(as_path(selected))
+  }
+  choices <- figure_preview_choices(state$result, state$manifest)
+  if (length(choices) == 0L) {
+    return(NULL)
+  }
+  as_path(choices[[1L]])
 }
 
 check_shiny_available <- function() {

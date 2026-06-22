@@ -83,6 +83,41 @@ test_that("download file helper reports missing files clearly", {
   )
 })
 
+test_that("figure preview helpers discover PNG outputs", {
+  out <- tempfile("ibgb-shiny-figures-")
+  paths <- create_project(out)
+  png_path <- file.path(paths$figures, "model_comparison.png")
+  writeBin(as.raw(c(0x89, 0x50, 0x4e, 0x47)), png_path)
+  manifest <- data.frame(
+    category = "figures",
+    relative_path = "figures/model_comparison.png",
+    file_name = "model_comparison.png",
+    extension = "png",
+    stringsAsFactors = FALSE
+  )
+  result <- list(project_paths = paths)
+
+  choices <- figure_preview_choices(result, manifest)
+  state <- new.env(parent = emptyenv())
+  state$result <- result
+  state$manifest <- manifest
+  input <- list(figure_preview = unname(choices[[1L]]))
+
+  expect_equal(names(choices), "figures/model_comparison.png")
+  expect_equal(resolve_figure_preview_path(input, state), as_path(png_path))
+})
+
+test_that("figure preview helpers return NULL when no figures exist", {
+  paths <- create_project(tempfile("ibgb-shiny-no-figures-"))
+  state <- new.env(parent = emptyenv())
+  state$result <- list(project_paths = paths)
+  state$manifest <- data.frame()
+  input <- list(figure_preview = "")
+
+  expect_length(figure_preview_choices(state$result, state$manifest), 0L)
+  expect_null(resolve_figure_preview_path(input, state))
+})
+
 test_that("Shiny server validates and dry-runs a workflow", {
   testthat::skip_if_not_installed("shiny")
 
