@@ -1,5 +1,7 @@
 # iBiogeobears
 
+[![R-CMD-check](https://github.com/XuWeiEvo/iBioGeoBEARS/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/XuWeiEvo/iBioGeoBEARS/actions/workflows/R-CMD-check.yaml)
+
 `iBiogeobears` is a reproducible workflow, synthesis, visualization, and
 reporting layer for single-clade BioGeoBEARS analyses.
 
@@ -28,6 +30,16 @@ remotes::install_github("XuWeiEvo/iBioGeoBEARS")
 
 BioGeoBEARS must be installed separately; it is not bundled with
 `iBiogeobears`. Quarto is required only when rendering reports.
+
+## Continuous Integration
+
+GitHub Actions runs `R CMD check --no-manual` and an installed-package smoke
+test on every push and pull request to `main`.
+
+The CI workflow intentionally does not install or execute BioGeoBEARS. It
+verifies package installation, exported APIs, bundled templates, bundled example
+data, and the dry-run workflow. Real BioGeoBEARS model execution should be
+validated on a local machine where BioGeoBEARS is installed.
 
 ## BioGeoBEARS Dependency
 
