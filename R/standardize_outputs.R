@@ -261,6 +261,90 @@ summarize_top_node_states <- function(ancestral_state_probabilities) {
   out[order(out$model, out$location, out$node_index), , drop = FALSE]
 }
 
+compare_node_state_sensitivity <- function(node_state_summary, comparison) {
+  empty <- empty_node_state_sensitivity_table()
+  if (is.null(node_state_summary) || nrow(node_state_summary) == 0L ||
+      is.null(comparison) || nrow(comparison) == 0L) {
+    return(empty)
+  }
+  if (!"has_j" %in% names(comparison)) {
+    comparison$has_j <- is_j_model(comparison$model)
+  }
+  if (!"AICc" %in% names(comparison)) {
+    return(empty)
+  }
+
+  non_j <- comparison[!comparison$has_j, , drop = FALSE]
+  plus_j <- comparison[comparison$has_j, , drop = FALSE]
+  if (nrow(non_j) == 0L || nrow(plus_j) == 0L) {
+    return(empty)
+  }
+
+  best_non_j <- non_j$model[which.min(non_j$AICc)]
+  best_plus_j <- plus_j$model[which.min(plus_j$AICc)]
+  if (identical(best_non_j, best_plus_j)) {
+    return(empty)
+  }
+
+  non_j_rows <- node_state_summary[node_state_summary$model == best_non_j, , drop = FALSE]
+  plus_j_rows <- node_state_summary[node_state_summary$model == best_plus_j, , drop = FALSE]
+  if (nrow(non_j_rows) == 0L || nrow(plus_j_rows) == 0L) {
+    return(empty)
+  }
+
+  key_cols <- c("location", "node_index")
+  merged <- merge(
+    non_j_rows,
+    plus_j_rows,
+    by = key_cols,
+    suffixes = c("_non_j", "_plus_j"),
+    all = FALSE,
+    sort = FALSE
+  )
+  if (nrow(merged) == 0L) {
+    return(empty)
+  }
+
+  out <- data.frame(
+    location = merged$location,
+    node_index = merged$node_index,
+    node_type = merged$node_type_non_j,
+    node_label = merged$node_label_non_j,
+    non_j_model = best_non_j,
+    non_j_state = merged$best_state_non_j,
+    non_j_probability = merged$best_probability_non_j,
+    plus_j_model = best_plus_j,
+    plus_j_state = merged$best_state_plus_j,
+    plus_j_probability = merged$best_probability_plus_j,
+    state_differs = merged$best_state_non_j != merged$best_state_plus_j,
+    probability_difference = merged$best_probability_plus_j - merged$best_probability_non_j,
+    probability_difference_abs = abs(merged$best_probability_plus_j - merged$best_probability_non_j),
+    stringsAsFactors = FALSE
+  )
+  out <- out[order(out$location, out$node_index), , drop = FALSE]
+  row.names(out) <- NULL
+  out
+}
+
+empty_node_state_sensitivity_table <- function() {
+  data.frame(
+    location = character(),
+    node_index = integer(),
+    node_type = character(),
+    node_label = character(),
+    non_j_model = character(),
+    non_j_state = character(),
+    non_j_probability = numeric(),
+    plus_j_model = character(),
+    plus_j_state = character(),
+    plus_j_probability = numeric(),
+    state_differs = logical(),
+    probability_difference = numeric(),
+    probability_difference_abs = numeric(),
+    stringsAsFactors = FALSE
+  )
+}
+
 identical_or_na <- function(x, value) {
   out <- x == value
   out[is.na(out)] <- FALSE

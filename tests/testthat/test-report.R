@@ -16,6 +16,8 @@ test_that("render_report writes report source when quarto is unavailable", {
   expect_match(report_source, "Model Sensitivity Summary", fixed = TRUE)
   expect_match(report_source, "Node State Summary", fixed = TRUE)
   expect_match(report_source, "node_state_summary.csv", fixed = TRUE)
+  expect_match(report_source, "Node State Sensitivity", fixed = TRUE)
+  expect_match(report_source, "node_state_sensitivity.csv", fixed = TRUE)
   expect_match(report_source, "node_state_summary_best_model", fixed = TRUE)
   expect_match(report_source, "node_state_summary_best_non_j", fixed = TRUE)
   expect_match(report_source, "node_state_summary_best_plus_j", fixed = TRUE)

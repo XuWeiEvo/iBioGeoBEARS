@@ -33,6 +33,7 @@ model_comparison <- read_table_if_exists("model_comparison.csv")
 model_sensitivity <- read_table_if_exists("model_sensitivity.csv")
 model_parameters <- read_table_if_exists("model_parameters.csv")
 node_state_summary <- read_table_if_exists("node_state_summary.csv")
+node_state_sensitivity <- read_table_if_exists("node_state_sensitivity.csv")
 root_state_probabilities <- read_table_if_exists("root_state_probabilities.csv")
 
 figure_path <- function(name) {
@@ -296,6 +297,32 @@ if (!is.null(node_state_summary)) {
   print_table(node_rows[intersect(node_summary_cols, names(node_rows))])
 } else {
   print_table(NULL)
+}
+```
+
+## Node State Sensitivity
+
+This table compares the best non-`+J` model with the best `+J` model at each
+node. Rows with different best states or large probability differences are the
+most useful places to inspect biological sensitivity.
+
+```{r}
+node_sensitivity_cols <- c(
+  "location", "node_index", "node_type", "node_label",
+  "non_j_model", "non_j_state", "non_j_probability",
+  "plus_j_model", "plus_j_state", "plus_j_probability",
+  "state_differs", "probability_difference_abs"
+)
+if (!is.null(node_state_sensitivity) && nrow(node_state_sensitivity) > 0L) {
+  sensitivity_rows <- node_state_sensitivity[
+    order(-node_state_sensitivity$state_differs, -node_state_sensitivity$probability_difference_abs),
+    ,
+    drop = FALSE
+  ]
+  sensitivity_rows <- utils::head(sensitivity_rows, 20L)
+  print_table(sensitivity_rows[intersect(node_sensitivity_cols, names(sensitivity_rows))])
+} else {
+  cat("Node-state sensitivity comparison is not available because both +J and non-+J completed models are required.\n")
 }
 ```
 

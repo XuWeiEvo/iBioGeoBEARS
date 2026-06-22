@@ -217,6 +217,7 @@ results/example_clade/
     ancestral_state_probabilities.csv
     root_state_probabilities.csv
     node_state_summary.csv
+    node_state_sensitivity.csv
     model_sensitivity.rds
   figures/
     figure_manifest.csv
@@ -262,6 +263,9 @@ The main derived tables are:
 - `root_state_probabilities.csv`: root state probability table per model.
 - `node_state_summary.csv`: highest-probability state per model, node, and
   probability location.
+- `node_state_sensitivity.csv`: node-by-node comparison between the best
+  non-`+J` and best `+J` models, including best-state changes and probability
+  differences.
 
 ## Figures
 

@@ -9,6 +9,8 @@ Development version after the 0.1.0 alpha release.
   figures.
 - Added automatic best-overall, best-non-+J, and best-+J node-state figures
   where those model classes are available.
+- Added `node_state_sensitivity.csv` to compare best non-+J and best +J
+  node-state summaries.
 
 # iBiogeobears 0.1.0
 
