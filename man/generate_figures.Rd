@@ -25,6 +25,6 @@ BioGeoBEARS results.}
 A data frame manifest describing the generated figure files.
 }
 \description{
-Saves model comparison and root-state probability figures for a completed
-workflow run.
+Saves model comparison, root-state probability, and node-state summary
+figures for a completed workflow run.
 }
