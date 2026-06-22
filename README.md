@@ -5,7 +5,10 @@
 `iBiogeobears` is a reproducible workflow, synthesis, visualization, and
 reporting layer for single-clade BioGeoBEARS analyses.
 
-It currently supports an end-to-end MVP workflow:
+Current status: `0.1.0` alpha. The package supports a single-clade MVP workflow
+and should be treated as an actively developing research workflow layer.
+
+It currently supports:
 
 - read a simple YAML configuration file;
 - validate tree, geography, region metadata, model settings, constraint files,
