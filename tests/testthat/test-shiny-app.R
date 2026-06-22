@@ -88,6 +88,31 @@ test_that("download file helper reports missing files clearly", {
   expect_null(report_preview_path(state))
 })
 
+test_that("shiny_summary_table reports workflow status", {
+  out <- tempfile("ibgb-shiny-summary-")
+  paths <- create_project(out)
+  report <- file.path(paths$reports, "summary_report.html")
+  bundle <- tempfile(fileext = ".zip")
+  writeLines("<html></html>", report)
+  writeLines("zip", bundle)
+
+  state <- new.env(parent = emptyenv())
+  state$validation <- data.frame(check = c("a", "b"), ok = c(TRUE, TRUE))
+  state$model_table <- data.frame(status = c("completed", "planned"), warning_count = c(2L, 0L))
+  state$result <- list(project_paths = paths, dry_run = FALSE, validation_failed = FALSE)
+  state$report <- report
+  state$bundle <- bundle
+
+  summary <- shiny_summary_table(state)
+
+  expect_equal(summary$value[match("Validation", summary$item)], "passed")
+  expect_equal(summary$value[match("Run mode", summary$item)], "executed")
+  expect_equal(summary$value[match("Completed models", summary$item)], "1 of 2")
+  expect_equal(summary$value[match("Warning count", summary$item)], "2")
+  expect_equal(summary$value[match("Report", summary$item)], "available")
+  expect_equal(summary$value[match("Bundle", summary$item)], "available")
+})
+
 test_that("table preview helpers discover and read CSV outputs", {
   out <- tempfile("ibgb-shiny-tables-")
   paths <- create_project(out)
