@@ -15,6 +15,8 @@ Development version after the 0.1.0 alpha release.
   figures for report-level +J interpretation.
 - Added `workflow_manifest.csv` plus `create_workflow_manifest()` and
   `bundle_results()` for portable result sharing.
+- Added a minimal Shiny workflow runner through `launch_app()` for validation,
+  workflow execution, report rendering, and result bundling.
 
 # iBiogeobears 0.1.0
 
