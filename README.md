@@ -133,13 +133,21 @@ The Shiny entrypoint is a thin wrapper around the package backend. It validates
 the YAML config, runs `run_workflow()`, renders reports, and bundles results
 without moving scientific logic into Shiny server code. The app also exposes
 grouped project, workflow, report, and export controls; the output manifest; a
-workflow status summary; report paths; table previews; figure previews; status
-messages; report downloads; and result bundle downloads. Users can upload a
-YAML config or create the bundled example project directly from the GUI.
+workflow status summary; dedicated model-comparison, `+J` sensitivity, and
+warning panels; report paths; table previews; figure previews; status messages;
+report downloads; and result bundle downloads. Users can upload a YAML config
+or create the bundled example project directly from the GUI.
 
 ```r
 install.packages("shiny")
 launch_app()
+```
+
+For a browser-level GUI smoke test, install `shinytest2` and run:
+
+```r
+install.packages("shinytest2")
+source("tools/smoke-shiny-browser.R")
 ```
 
 If validation fails, real execution is blocked by default. Review:

@@ -32,6 +32,9 @@ Development version after the 0.1.0 alpha release.
   completed models, warnings, report, and bundle availability.
 - Grouped Shiny sidebar controls into project, run-option, workflow, and
   report/export sections.
+- Added dedicated Shiny result panels for model comparison, `+J` sensitivity,
+  and captured model warnings.
+- Added a `shinytest2` browser smoke script for the Shiny workflow runner.
 - Updated GitHub Actions to treat optional `Suggests` packages as optional
   during dry-run CI checks.
 

@@ -129,6 +129,75 @@ test_that("shiny_summary_table reports workflow status", {
   expect_equal(summary$value[match("Bundle", summary$item)], "available")
 })
 
+test_that("Shiny result helpers expose comparison, sensitivity, and warnings", {
+  state <- new.env(parent = emptyenv())
+  state$result <- list(
+    model_comparison = data.frame(
+      model = c("DEC", "DEC+J"),
+      model_family = c("DEC", "DEC"),
+      has_j = c(FALSE, TRUE),
+      AICc = c(10, 9),
+      delta_aicc = c(1, 0),
+      caution_flag = c("none", "plus_j_supported_check_sensitivity"),
+      interpretation_note = c("baseline", "check sensitivity")
+    ),
+    model_sensitivity_table = data.frame(
+      section = "Caution",
+      display_label = "Best model includes +J",
+      answer = "yes",
+      models = "DEC+J",
+      model_count = 1L,
+      evidence = "delta AICc = 0",
+      interpretation_note = "Report sensitivity."
+    )
+  )
+  state$model_table <- data.frame(
+    model = c("DEC", "DEC+J"),
+    status = c("completed", "completed"),
+    warning_count = c(0L, 2L),
+    warning_messages = c(NA, "optimizer warning"),
+    log_file = c("dec.log", "decj.log")
+  )
+
+  comparison <- shiny_model_comparison_table(state)
+  sensitivity <- shiny_model_sensitivity_table(state)
+  warnings <- shiny_warnings_table(state)
+
+  expect_equal(comparison$model, c("DEC", "DEC+J"))
+  expect_true("interpretation_note" %in% names(comparison))
+  expect_equal(sensitivity$display_label, "Best model includes +J")
+  expect_equal(warnings$model, "DEC+J")
+  expect_equal(warnings$warning_count, 2L)
+})
+
+test_that("Shiny result helpers can read workflow CSV tables", {
+  out <- tempfile("ibgb-shiny-result-tables-")
+  paths <- create_project(out)
+  utils::write.csv(
+    data.frame(model = "DEC", AICc = 10, delta_aicc = 0, interpretation_note = "ok"),
+    file.path(paths$tables, "model_comparison.csv"),
+    row.names = FALSE
+  )
+  utils::write.csv(
+    data.frame(section = "Summary", display_label = "Best model", answer = "DEC"),
+    file.path(paths$tables, "model_sensitivity.csv"),
+    row.names = FALSE
+  )
+  utils::write.csv(
+    data.frame(model = "DEC", status = "completed", warning_count = 0L, warning_messages = NA),
+    file.path(paths$tables, "model_run_status.csv"),
+    row.names = FALSE
+  )
+
+  state <- new.env(parent = emptyenv())
+  state$result <- list(project_paths = paths)
+  state$model_table <- NULL
+
+  expect_equal(shiny_model_comparison_table(state)$model, "DEC")
+  expect_equal(shiny_model_sensitivity_table(state)$answer, "DEC")
+  expect_equal(shiny_warnings_table(state)$model, "No captured warnings")
+})
+
 test_that("table preview helpers discover and read CSV outputs", {
   out <- tempfile("ibgb-shiny-tables-")
   paths <- create_project(out)
