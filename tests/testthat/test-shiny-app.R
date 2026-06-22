@@ -74,6 +74,7 @@ test_that("download file helpers resolve and copy report files", {
 
   expect_equal(basename(resolved), "summary_report.html")
   expect_true(file.exists(copied))
+  expect_equal(report_preview_path(state), as_path(report))
 })
 
 test_that("download file helper reports missing files clearly", {
@@ -81,6 +82,10 @@ test_that("download file helper reports missing files clearly", {
     require_existing_file(NULL, "missing file"),
     "missing file"
   )
+  state <- new.env(parent = emptyenv())
+  state$report <- NULL
+  state$result <- NULL
+  expect_null(report_preview_path(state))
 })
 
 test_that("table preview helpers discover and read CSV outputs", {
@@ -233,6 +238,7 @@ test_that("Shiny server renders reports and bundles dry-run results", {
     session$setInputs(render_report = 1)
     expect_true(file.exists(state$report))
     expect_match(state$message, "Report:", fixed = TRUE)
+    expect_equal(report_preview_path(state), as_path(state$report))
 
     session$setInputs(bundle = 1)
     expect_true(file.exists(state$bundle))
