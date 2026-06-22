@@ -30,6 +30,8 @@ Development version after the 0.1.0 alpha release.
   reports.
 - Added a compact Shiny workflow status summary for validation, run status,
   completed models, warnings, report, and bundle availability.
+- Grouped Shiny sidebar controls into project, run-option, workflow, and
+  report/export sections.
 - Updated GitHub Actions to treat optional `Suggests` packages as optional
   during dry-run CI checks.
 

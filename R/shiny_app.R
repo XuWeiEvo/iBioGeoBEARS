@@ -25,32 +25,55 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
           ".container-fluid{max-width:1180px} .well{border-radius:4px} ",
           ".btn{border-radius:4px} .ibgb-status{font-weight:600;margin:8px 0} ",
           ".ibgb-status.info{color:#22577a} .ibgb-status.error{color:#b00020} ",
-          ".ibgb-downloads{margin:10px 0 16px 0} .ibgb-downloads .btn{margin-right:6px} ",
+          ".ibgb-control-section{border-top:1px solid #ddd;margin-top:14px;padding-top:12px} ",
+          ".ibgb-control-section:first-child{border-top:0;margin-top:0;padding-top:0} ",
+          ".ibgb-control-title{font-weight:600;margin-bottom:8px} ",
+          ".ibgb-action-grid{display:grid;grid-template-columns:1fr;gap:7px} ",
+          ".ibgb-action-grid .btn{width:100%;text-align:left} ",
+          ".ibgb-downloads{margin:0} .ibgb-downloads .btn{width:100%;text-align:left;margin-bottom:7px} ",
           ".ibgb-preview img{max-width:100%;height:auto;border:1px solid #ddd}"
         ))
       ),
       shiny::titlePanel("iBiogeobears"),
       shiny::sidebarLayout(
         shiny::sidebarPanel(
-          shiny::textInput("config_path", "analysis.yml", value = default_config),
-          shiny::fileInput("config_upload", "Upload analysis.yml", accept = c(".yml", ".yaml")),
-          shiny::textInput("output_dir", "Output directory", value = default_output),
-          shiny::textInput("example_project_dir", "Example project directory", value = ""),
-          shiny::actionButton("create_example", "Create example project"),
-          shiny::checkboxInput("dry_run", "Dry run", value = TRUE),
-          shiny::checkboxInput("require_biogeobears", "Require BioGeoBEARS", value = FALSE),
-          shiny::checkboxInput("force", "Force execution after validation failure", value = FALSE),
-          shiny::selectInput("report_format", "Report format", choices = c("source", "html", "pdf"), selected = "html"),
-          shiny::actionButton("validate", "Validate"),
-          shiny::actionButton("run", "Run workflow"),
-          shiny::actionButton("render_report", "Render report"),
-          shiny::actionButton("open_report", "Open report"),
-          shiny::actionButton("bundle", "Bundle results"),
-          shiny::actionButton("open_output", "Open output directory"),
-          shiny::tags$div(
-            class = "ibgb-downloads",
-            shiny::downloadButton("download_report", "Download report"),
-            shiny::downloadButton("download_bundle", "Download bundle")
+          shiny_control_section(
+            "Project",
+            shiny::textInput("config_path", "analysis.yml", value = default_config),
+            shiny::fileInput("config_upload", "Upload analysis.yml", accept = c(".yml", ".yaml")),
+            shiny::textInput("output_dir", "Output directory", value = default_output),
+            shiny::textInput("example_project_dir", "Example project directory", value = ""),
+            shiny_action_grid(
+              shiny::actionButton("create_example", "Create example project")
+            )
+          ),
+          shiny_control_section(
+            "Run options",
+            shiny::checkboxInput("dry_run", "Dry run", value = TRUE),
+            shiny::checkboxInput("require_biogeobears", "Require BioGeoBEARS", value = FALSE),
+            shiny::checkboxInput("force", "Force execution after validation failure", value = FALSE)
+          ),
+          shiny_control_section(
+            "Workflow",
+            shiny_action_grid(
+              shiny::actionButton("validate", "Validate"),
+              shiny::actionButton("run", "Run workflow"),
+              shiny::actionButton("open_output", "Open output directory")
+            )
+          ),
+          shiny_control_section(
+            "Report and export",
+            shiny::selectInput("report_format", "Report format", choices = c("source", "html", "pdf"), selected = "html"),
+            shiny_action_grid(
+              shiny::actionButton("render_report", "Render report"),
+              shiny::actionButton("open_report", "Open report"),
+              shiny::actionButton("bundle", "Bundle results")
+            ),
+            shiny::tags$div(
+              class = "ibgb-downloads",
+              shiny::downloadButton("download_report", "Download report"),
+              shiny::downloadButton("download_bundle", "Download bundle")
+            )
           )
         ),
         shiny::mainPanel(
@@ -81,6 +104,18 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
     ),
     server = iBGB_shiny_server
   )
+}
+
+shiny_control_section <- function(title, ...) {
+  shiny::tags$div(
+    class = "ibgb-control-section",
+    shiny::tags$div(class = "ibgb-control-title", title),
+    ...
+  )
+}
+
+shiny_action_grid <- function(...) {
+  shiny::tags$div(class = "ibgb-action-grid", ...)
 }
 
 iBGB_shiny_server <- function(input, output, session) {
