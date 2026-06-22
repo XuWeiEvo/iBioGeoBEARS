@@ -17,6 +17,22 @@ test_that("create_iBGB_shiny_app builds a Shiny app when shiny is installed", {
   expect_s3_class(app, "shiny.appobj")
 })
 
+test_that("Shiny sidebar helper builds grouped controls", {
+  testthat::skip_if_not_installed("shiny")
+
+  section <- shiny_control_section(
+    "Workflow",
+    shiny_action_grid(shiny::actionButton("validate", "Validate"))
+  )
+
+  html <- as.character(section)
+
+  expect_match(html, "ibgb-control-section", fixed = TRUE)
+  expect_match(html, "ibgb-control-title", fixed = TRUE)
+  expect_match(html, "ibgb-action-grid", fixed = TRUE)
+  expect_match(html, "Workflow", fixed = TRUE)
+})
+
 test_that("resolve_shiny_config_path prefers uploaded YAML files", {
   uploaded <- tempfile(fileext = ".yml")
   writeLines("project:\n  name: uploaded", uploaded)
