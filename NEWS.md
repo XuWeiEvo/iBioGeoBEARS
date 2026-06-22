@@ -26,6 +26,8 @@ Development version after the 0.1.0 alpha release.
   directory.
 - Added Shiny CSV table previews from the workflow manifest or tables
   directory.
+- Added Shiny report path display and an open-report action for rendered
+  reports.
 - Updated GitHub Actions to treat optional `Suggests` packages as optional
   during dry-run CI checks.
 

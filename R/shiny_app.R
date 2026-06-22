@@ -44,6 +44,7 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
           shiny::actionButton("validate", "Validate"),
           shiny::actionButton("run", "Run workflow"),
           shiny::actionButton("render_report", "Render report"),
+          shiny::actionButton("open_report", "Open report"),
           shiny::actionButton("bundle", "Bundle results"),
           shiny::actionButton("open_output", "Open output directory"),
           shiny::tags$div(
@@ -58,6 +59,7 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
             shiny::tabPanel("Validation", shiny::tableOutput("validation_table")),
             shiny::tabPanel("Models", shiny::tableOutput("model_table")),
             shiny::tabPanel("Manifest", shiny::tableOutput("manifest_table")),
+            shiny::tabPanel("Report", shiny::verbatimTextOutput("report_path_text")),
             shiny::tabPanel(
               "Tables",
               shiny::selectInput("table_preview", "Table", choices = c("No CSV tables available" = "")),
@@ -181,6 +183,14 @@ iBGB_shiny_server <- function(input, output, session) {
         })
       })
 
+      shiny::observeEvent(input$open_report, {
+        run_app_action(state, {
+          report <- resolve_report_file(state)
+          utils::browseURL(report)
+          append_app_message(state, paste("Opened report:", report))
+        })
+      })
+
       shiny::observeEvent(input$open_output, {
         run_app_action(state, {
           require_workflow_result(state$result)
@@ -215,6 +225,15 @@ iBGB_shiny_server <- function(input, output, session) {
 
       output$messages_text <- shiny::renderText({
         paste(state$messages, collapse = "\n")
+      })
+
+      output$report_path_text <- shiny::renderText({
+        path <- report_preview_path(state)
+        if (is.null(path)) {
+          "No report has been rendered yet."
+        } else {
+          path
+        }
       })
 
       output$table_preview_output <- shiny::renderTable({
@@ -296,13 +315,21 @@ append_app_message <- function(state, message, status_type = "info") {
 }
 
 resolve_report_file <- function(state) {
+  path <- report_preview_path(state)
+  require_existing_file(path, "Render a report before downloading it.")
+}
+
+report_preview_path <- function(state) {
   path <- state$report
   if (is.null(path) && !is.null(state$result)) {
     candidates <- file.path(state$result$project_paths$reports, c("summary_report.html", "summary_report.pdf", "summary_report.qmd"))
     candidates <- candidates[file.exists(candidates)]
     path <- candidates[1L] %||% NULL
   }
-  require_existing_file(path, "Render a report before downloading it.")
+  if (is.null(path) || length(path) == 0L || is.na(path) || !file.exists(path)) {
+    return(NULL)
+  }
+  as_path(path)
 }
 
 resolve_bundle_file <- function(state) {
