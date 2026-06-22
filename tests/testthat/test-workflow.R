@@ -69,6 +69,7 @@ test_that("run_workflow exposes model comparison when BioGeoBEARS is available",
   expect_equal(result$model_run_status$status, "completed")
   expect_false(is.null(result$model_sensitivity))
   expect_false(is.null(result$model_sensitivity_table))
+  expect_false(is.null(result$node_state_sensitivity))
   expect_false(is.null(result$figure_manifest))
   expect_true(any(result$figure_manifest$figure == "model_comparison" & result$figure_manifest$status == "created"))
   expect_true(any(result$figure_manifest$figure == "node_state_summary_best_model" & result$figure_manifest$status == "created"))
@@ -83,6 +84,7 @@ test_that("run_workflow exposes model comparison when BioGeoBEARS is available",
   expect_true(file.exists(file.path(out, "tables", "model_run_status.csv")))
   expect_true(file.exists(file.path(out, "tables", "model_comparison.csv")))
   expect_true(file.exists(file.path(out, "tables", "model_sensitivity.csv")))
+  expect_true(file.exists(file.path(out, "tables", "node_state_sensitivity.csv")))
   expect_true(file.exists(file.path(out, "tables", "model_parameters.csv")))
   expect_true(file.exists(file.path(out, "figures", "model_comparison.png")))
 

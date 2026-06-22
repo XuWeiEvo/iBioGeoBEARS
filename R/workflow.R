@@ -31,6 +31,7 @@ run_workflow <- function(config, output_dir = NULL, dry_run = TRUE, require_biog
   model_run_status <- attr(model_result, "run_status") %||% model_result
   model_sensitivity <- attr(model_result, "sensitivity")
   model_sensitivity_table <- attr(model_result, "sensitivity_table")
+  node_state_sensitivity <- attr(model_result, "node_state_sensitivity")
   standardized_tables <- attr(model_result, "standardized_tables")
   model_comparison <- if (isTRUE(dry_run)) NULL else model_result
   figure_manifest <- if (!isTRUE(dry_run) && !is.null(model_comparison)) {
@@ -57,6 +58,7 @@ run_workflow <- function(config, output_dir = NULL, dry_run = TRUE, require_biog
     model_comparison = model_comparison,
     model_sensitivity = model_sensitivity,
     model_sensitivity_table = model_sensitivity_table,
+    node_state_sensitivity = node_state_sensitivity,
     standardized_tables = standardized_tables,
     figure_manifest = figure_manifest,
     dry_run = dry_run,
