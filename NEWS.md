@@ -22,6 +22,8 @@ Development version after the 0.1.0 alpha release.
 - Added Shiny server-level tests for validation, dry-run workflow execution,
   report rendering, and result bundling.
 - Added Shiny config upload support and GUI-driven example project creation.
+- Added Shiny PNG figure previews from the workflow manifest or figures
+  directory.
 - Updated GitHub Actions to treat optional `Suggests` packages as optional
   during dry-run CI checks.
 
