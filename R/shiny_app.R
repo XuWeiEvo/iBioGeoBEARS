@@ -78,7 +78,8 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
             shiny_action_grid(
               shiny::actionButton("render_report", "Render report"),
               shiny::actionButton("open_report", "Open report"),
-              shiny::actionButton("bundle", "Bundle results")
+              shiny::actionButton("refresh_key_files", "Refresh key files"),
+              shiny::actionButton("bundle", "Create bundle if missing")
             ),
             shiny::tags$div(
               class = "ibgb-downloads",
@@ -267,11 +268,24 @@ iBGB_shiny_server <- function(input, output, session) {
           require_workflow_result(state$result)
           shiny::withProgress(message = "Bundling results", value = 0, {
           refresh_shiny_result_exports(session, state)
-          state$bundle <- bundle_results(state$result, overwrite = TRUE)
-          state$manifest <- create_workflow_manifest(state$result, write = TRUE)
-          update_table_preview_choices(session, state)
-          update_figure_preview_choices(session, state)
+          if (is.null(state$bundle) || !file.exists(state$bundle)) {
+            state$bundle <- bundle_results(state$result, overwrite = TRUE)
+            state$manifest <- create_workflow_manifest(state$result, write = TRUE)
+            update_table_preview_choices(session, state)
+            update_figure_preview_choices(session, state)
+          }
           append_app_message(state, paste("Bundle:", state$bundle))
+          shiny::incProgress(1)
+          })
+        })
+      })
+
+      shiny::observeEvent(input$refresh_key_files, {
+        run_app_action(state, {
+          require_workflow_result(state$result)
+          shiny::withProgress(message = "Refreshing key files", value = 0, {
+          refresh_shiny_result_exports(session, state)
+          append_app_message(state, "Key files refreshed.")
           shiny::incProgress(1)
           })
         })
