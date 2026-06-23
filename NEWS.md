@@ -34,6 +34,8 @@ Development version after the 0.1.0 alpha release.
   report/export sections.
 - Added dedicated Shiny result panels for model comparison, `+J` sensitivity,
   and captured model warnings.
+- Added dedicated Shiny result panels for node-state summaries and node-state
+  `+J` sensitivity comparisons.
 - Added a `shinytest2` browser smoke script for the Shiny workflow runner.
 - Updated GitHub Actions to treat optional `Suggests` packages as optional
   during dry-run CI checks.

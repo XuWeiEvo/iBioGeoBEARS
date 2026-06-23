@@ -36,7 +36,8 @@ on.exit(app$stop(), add = TRUE)
 body_text <- app$get_text("body")
 required_initial_text <- c(
   "Project", "Run options", "Workflow", "Report and export",
-  "Model Comparison", "+J Sensitivity", "Warnings"
+  "Model Comparison", "+J Sensitivity", "Warnings",
+  "Node States", "Node Sensitivity"
 )
 missing_initial <- required_initial_text[!vapply(required_initial_text, grepl, logical(1), x = body_text, fixed = TRUE)]
 if (length(missing_initial) > 0L) {
