@@ -48,7 +48,8 @@ required_initial_text <- c(
   "Run Summary",
   "Model Comparison", "+J Sensitivity", "Warnings",
   "Node States", "Node Sensitivity", "Figure Dashboard",
-  "Load existing results", "Download run summary", "Key files"
+  "Load existing results", "Download run summary", "Key files",
+  "Refresh key files", "Create bundle if missing"
 )
 missing_initial <- required_initial_text[!vapply(required_initial_text, grepl, logical(1), x = body_text, fixed = TRUE)]
 if (length(missing_initial) > 0L) {
