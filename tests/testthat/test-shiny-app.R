@@ -149,6 +149,33 @@ test_that("Shiny result helpers expose comparison, sensitivity, and warnings", {
       model_count = 1L,
       evidence = "delta AICc = 0",
       interpretation_note = "Report sensitivity."
+    ),
+    standardized_tables = list(
+      node_state_summary = data.frame(
+        model = "DEC+J",
+        location = "branch_top_at_node",
+        node_index = 2L,
+        node_type = "internal",
+        node_label = "node_2",
+        best_state = "AB",
+        best_probability = 0.8,
+        state_count = 4L
+      )
+    ),
+    node_state_sensitivity = data.frame(
+      location = "branch_top_at_node",
+      node_index = 2L,
+      node_type = "internal",
+      node_label = "node_2",
+      non_j_model = "DEC",
+      non_j_state = "A",
+      non_j_probability = 0.7,
+      plus_j_model = "DEC+J",
+      plus_j_state = "AB",
+      plus_j_probability = 0.8,
+      state_differs = TRUE,
+      probability_difference = 0.1,
+      probability_difference_abs = 0.1
     )
   )
   state$model_table <- data.frame(
@@ -162,12 +189,16 @@ test_that("Shiny result helpers expose comparison, sensitivity, and warnings", {
   comparison <- shiny_model_comparison_table(state)
   sensitivity <- shiny_model_sensitivity_table(state)
   warnings <- shiny_warnings_table(state)
+  node_states <- shiny_node_state_summary_table(state)
+  node_sensitivity <- shiny_node_state_sensitivity_table(state)
 
   expect_equal(comparison$model, c("DEC", "DEC+J"))
   expect_true("interpretation_note" %in% names(comparison))
   expect_equal(sensitivity$display_label, "Best model includes +J")
   expect_equal(warnings$model, "DEC+J")
   expect_equal(warnings$warning_count, 2L)
+  expect_equal(node_states$best_state, "AB")
+  expect_equal(node_sensitivity$plus_j_state, "AB")
 })
 
 test_that("Shiny result helpers can read workflow CSV tables", {
@@ -188,6 +219,39 @@ test_that("Shiny result helpers can read workflow CSV tables", {
     file.path(paths$tables, "model_run_status.csv"),
     row.names = FALSE
   )
+  utils::write.csv(
+    data.frame(
+      model = "DEC",
+      location = "branch_top_at_node",
+      node_index = 1L,
+      node_type = "tip",
+      node_label = "sp1",
+      best_state = "A",
+      best_probability = 0.9,
+      state_count = 4L
+    ),
+    file.path(paths$tables, "node_state_summary.csv"),
+    row.names = FALSE
+  )
+  utils::write.csv(
+    data.frame(
+      location = "branch_top_at_node",
+      node_index = 1L,
+      node_type = "tip",
+      node_label = "sp1",
+      non_j_model = "DEC",
+      non_j_state = "A",
+      non_j_probability = 0.9,
+      plus_j_model = "DEC+J",
+      plus_j_state = "B",
+      plus_j_probability = 0.8,
+      state_differs = TRUE,
+      probability_difference = -0.1,
+      probability_difference_abs = 0.1
+    ),
+    file.path(paths$tables, "node_state_sensitivity.csv"),
+    row.names = FALSE
+  )
 
   state <- new.env(parent = emptyenv())
   state$result <- list(project_paths = paths)
@@ -196,6 +260,8 @@ test_that("Shiny result helpers can read workflow CSV tables", {
   expect_equal(shiny_model_comparison_table(state)$model, "DEC")
   expect_equal(shiny_model_sensitivity_table(state)$answer, "DEC")
   expect_equal(shiny_warnings_table(state)$model, "No captured warnings")
+  expect_equal(shiny_node_state_summary_table(state)$best_state, "A")
+  expect_equal(shiny_node_state_sensitivity_table(state)$plus_j_state, "B")
 })
 
 test_that("table preview helpers discover and read CSV outputs", {

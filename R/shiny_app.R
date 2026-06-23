@@ -85,6 +85,8 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
             shiny::tabPanel("Model Comparison", shiny::tableOutput("model_comparison_table")),
             shiny::tabPanel("+J Sensitivity", shiny::tableOutput("model_sensitivity_table")),
             shiny::tabPanel("Warnings", shiny::tableOutput("warnings_table")),
+            shiny::tabPanel("Node States", shiny::tableOutput("node_state_summary_table")),
+            shiny::tabPanel("Node Sensitivity", shiny::tableOutput("node_state_sensitivity_table")),
             shiny::tabPanel("Manifest", shiny::tableOutput("manifest_table")),
             shiny::tabPanel("Report", shiny::verbatimTextOutput("report_path_text")),
             shiny::tabPanel(
@@ -265,6 +267,14 @@ iBGB_shiny_server <- function(input, output, session) {
 
       output$warnings_table <- shiny::renderTable({
         table_head(shiny_warnings_table(state), 30L)
+      }, striped = TRUE, bordered = TRUE, na = "")
+
+      output$node_state_summary_table <- shiny::renderTable({
+        table_head(shiny_node_state_summary_table(state), 50L)
+      }, striped = TRUE, bordered = TRUE, na = "")
+
+      output$node_state_sensitivity_table <- shiny::renderTable({
+        table_head(shiny_node_state_sensitivity_table(state), 50L)
       }, striped = TRUE, bordered = TRUE, na = "")
 
       output$manifest_table <- shiny::renderTable({
@@ -483,6 +493,41 @@ shiny_warnings_table <- function(state) {
   }
   cols <- c("model", "status", "warning_count", "warning_messages", "log_file")
   rows[, intersect(cols, names(rows)), drop = FALSE]
+}
+
+shiny_node_state_summary_table <- function(state) {
+  table <- state$result$standardized_tables$node_state_summary %||%
+    read_workflow_table(state$result, "node_state_summary.csv")
+  if (is.null(table) || nrow(table) == 0L) {
+    return(data.frame())
+  }
+  if (all(c("model", "location", "node_index") %in% names(table))) {
+    table <- table[order(table$model, table$location, table$node_index), , drop = FALSE]
+  }
+  cols <- c(
+    "model", "location", "node_index", "node_type", "node_label",
+    "best_state", "best_probability", "state_count"
+  )
+  table[, intersect(cols, names(table)), drop = FALSE]
+}
+
+shiny_node_state_sensitivity_table <- function(state) {
+  table <- state$result$node_state_sensitivity %||%
+    state$result$standardized_tables$node_state_sensitivity %||%
+    read_workflow_table(state$result, "node_state_sensitivity.csv")
+  if (is.null(table) || nrow(table) == 0L) {
+    return(data.frame())
+  }
+  if (all(c("state_differs", "probability_difference_abs") %in% names(table))) {
+    table <- table[order(-table$state_differs, -table$probability_difference_abs), , drop = FALSE]
+  }
+  cols <- c(
+    "location", "node_index", "node_type", "node_label",
+    "non_j_model", "non_j_state", "non_j_probability",
+    "plus_j_model", "plus_j_state", "plus_j_probability",
+    "state_differs", "probability_difference", "probability_difference_abs"
+  )
+  table[, intersect(cols, names(table)), drop = FALSE]
 }
 
 read_workflow_table <- function(result, filename) {
