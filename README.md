@@ -135,9 +135,9 @@ without moving scientific logic into Shiny server code. The app also exposes
 grouped project, workflow, report, and export controls; the output manifest; a
 workflow status summary; dedicated model-comparison, `+J` sensitivity, warning,
 node-state, and node-sensitivity panels; report paths; table previews; figure
-previews; status messages; report downloads; and result bundle downloads. Users
-can upload a YAML config or create the bundled example project directly from
-the GUI.
+previews; a figure dashboard for standard workflow graphics; status messages;
+report downloads; and result bundle downloads. Users can upload a YAML config
+or create the bundled example project directly from the GUI.
 
 ```r
 install.packages("shiny")
