@@ -31,7 +31,10 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
           ".ibgb-action-grid{display:grid;grid-template-columns:1fr;gap:7px} ",
           ".ibgb-action-grid .btn{width:100%;text-align:left} ",
           ".ibgb-downloads{margin:0} .ibgb-downloads .btn{width:100%;text-align:left;margin-bottom:7px} ",
-          ".ibgb-preview img{max-width:100%;height:auto;border:1px solid #ddd}"
+          ".ibgb-preview img{max-width:100%;height:auto;border:1px solid #ddd} ",
+          ".ibgb-figure-dashboard{display:grid;grid-template-columns:1fr;gap:18px} ",
+          ".ibgb-figure-dashboard h4{margin:6px 0 8px 0} ",
+          ".ibgb-figure-dashboard img{max-width:100%;height:auto;border:1px solid #ddd}"
         ))
       ),
       shiny::titlePanel("iBiogeobears"),
@@ -90,6 +93,19 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
             shiny::tabPanel("Manifest", shiny::tableOutput("manifest_table")),
             shiny::tabPanel("Report", shiny::verbatimTextOutput("report_path_text")),
             shiny::tabPanel(
+              "Figure Dashboard",
+              shiny::tableOutput("figure_dashboard_table"),
+              shiny::tags$div(
+                class = "ibgb-figure-dashboard",
+                shiny_figure_panel("Model Comparison", "figure_model_comparison"),
+                shiny_figure_panel("Root State Probabilities", "figure_root_states"),
+                shiny_figure_panel("Best Model Node States", "figure_node_best"),
+                shiny_figure_panel("Best Non-+J Node States", "figure_node_non_j"),
+                shiny_figure_panel("Best +J Node States", "figure_node_plus_j"),
+                shiny_figure_panel("Node-State Sensitivity", "figure_node_sensitivity")
+              )
+            ),
+            shiny::tabPanel(
               "Tables",
               shiny::selectInput("table_preview", "Table", choices = c("No CSV tables available" = "")),
               shiny::tableOutput("table_preview_output"),
@@ -121,6 +137,13 @@ shiny_control_section <- function(title, ...) {
 
 shiny_action_grid <- function(...) {
   shiny::tags$div(class = "ibgb-action-grid", ...)
+}
+
+shiny_figure_panel <- function(title, output_id) {
+  shiny::tags$section(
+    shiny::tags$h4(title),
+    shiny::imageOutput(output_id)
+  )
 }
 
 iBGB_shiny_server <- function(input, output, session) {
@@ -300,6 +323,34 @@ iBGB_shiny_server <- function(input, output, session) {
           path
         }
       })
+
+      output$figure_dashboard_table <- shiny::renderTable({
+        shiny_figure_dashboard_table(state)
+      }, striped = TRUE, bordered = TRUE, na = "")
+
+      output$figure_model_comparison <- shiny::renderImage({
+        shiny_named_figure_image(state, "model_comparison")
+      }, deleteFile = FALSE)
+
+      output$figure_root_states <- shiny::renderImage({
+        shiny_named_figure_image(state, "root_state_probabilities")
+      }, deleteFile = FALSE)
+
+      output$figure_node_best <- shiny::renderImage({
+        shiny_named_figure_image(state, "node_state_summary_best_model")
+      }, deleteFile = FALSE)
+
+      output$figure_node_non_j <- shiny::renderImage({
+        shiny_named_figure_image(state, "node_state_summary_best_non_j")
+      }, deleteFile = FALSE)
+
+      output$figure_node_plus_j <- shiny::renderImage({
+        shiny_named_figure_image(state, "node_state_summary_best_plus_j")
+      }, deleteFile = FALSE)
+
+      output$figure_node_sensitivity <- shiny::renderImage({
+        shiny_named_figure_image(state, "node_state_sensitivity")
+      }, deleteFile = FALSE)
 
       output$table_preview_output <- shiny::renderTable({
         table_head(read_table_preview(input, state), 50L)
@@ -539,6 +590,94 @@ read_workflow_table <- function(result, filename) {
     return(NULL)
   }
   utils::read.csv(path, check.names = FALSE, stringsAsFactors = FALSE)
+}
+
+shiny_figure_dashboard_table <- function(state) {
+  figures <- shiny_dashboard_figures()
+  paths <- vapply(figures$figure, function(figure) {
+    shiny_named_figure_path(state, figure) %||% NA_character_
+  }, character(1))
+  data.frame(
+    figure = figures$display_label,
+    status = ifelse(is.na(paths), "not available", "available"),
+    path = paths,
+    stringsAsFactors = FALSE
+  )
+}
+
+shiny_dashboard_figures <- function() {
+  data.frame(
+    figure = c(
+      "model_comparison",
+      "root_state_probabilities",
+      "node_state_summary_best_model",
+      "node_state_summary_best_non_j",
+      "node_state_summary_best_plus_j",
+      "node_state_sensitivity"
+    ),
+    display_label = c(
+      "Model Comparison",
+      "Root State Probabilities",
+      "Best Model Node States",
+      "Best Non-+J Node States",
+      "Best +J Node States",
+      "Node-State Sensitivity"
+    ),
+    stringsAsFactors = FALSE
+  )
+}
+
+shiny_named_figure_image <- function(state, figure) {
+  path <- shiny_named_figure_path(state, figure)
+  if (is.null(path)) {
+    return(NULL)
+  }
+  list(
+    src = path,
+    contentType = "image/png",
+    alt = figure,
+    width = "100%"
+  )
+}
+
+shiny_named_figure_path <- function(state, figure) {
+  result <- state$result
+  if (is.null(result)) {
+    return(NULL)
+  }
+
+  manifest <- result$figure_manifest
+  if (!is.null(manifest) && nrow(manifest) > 0L &&
+      all(c("figure", "format", "status", "path") %in% names(manifest))) {
+    rows <- manifest[
+      manifest$figure == figure & manifest$format == "png" &
+        manifest$status == "created" & file.exists(manifest$path),
+      ,
+      drop = FALSE
+    ]
+    if (nrow(rows) > 0L) {
+      return(as_path(rows$path[[1L]]))
+    }
+  }
+
+  figures_dir <- result$project_paths$figures %||% NULL
+  if (!is.null(figures_dir)) {
+    path <- file.path(figures_dir, paste0(figure, ".png"))
+    if (file.exists(path)) {
+      return(as_path(path))
+    }
+  }
+
+  choices <- figure_preview_choices(result, state$manifest)
+  if (length(choices) > 0L) {
+    basenames <- tools::file_path_sans_ext(basename(unname(choices)))
+    match_index <- match(figure, basenames)
+    if (!is.na(match_index) && file.exists(unname(choices)[[match_index]])) {
+      return(as_path(unname(choices)[[match_index]]))
+    }
+  }
+
+  NULL
 }
 
 update_table_preview_choices <- function(session, state) {

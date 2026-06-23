@@ -327,6 +327,35 @@ test_that("figure preview helpers discover PNG outputs", {
   expect_equal(resolve_figure_preview_path(input, state), as_path(png_path))
 })
 
+test_that("figure dashboard helpers expose named workflow figures", {
+  out <- tempfile("ibgb-shiny-figure-dashboard-")
+  paths <- create_project(out)
+  png_path <- file.path(paths$figures, "model_comparison.png")
+  writeBin(as.raw(c(0x89, 0x50, 0x4e, 0x47)), png_path)
+
+  state <- new.env(parent = emptyenv())
+  state$result <- list(
+    project_paths = paths,
+    figure_manifest = data.frame(
+      figure = "model_comparison",
+      format = "png",
+      path = png_path,
+      status = "created",
+      stringsAsFactors = FALSE
+    )
+  )
+  state$manifest <- NULL
+
+  dashboard <- shiny_figure_dashboard_table(state)
+  image <- shiny_named_figure_image(state, "model_comparison")
+
+  expect_equal(shiny_named_figure_path(state, "model_comparison"), as_path(png_path))
+  expect_equal(dashboard$status[match("Model Comparison", dashboard$figure)], "available")
+  expect_equal(dashboard$status[match("Root State Probabilities", dashboard$figure)], "not available")
+  expect_equal(image$src, as_path(png_path))
+  expect_equal(image$contentType, "image/png")
+})
+
 test_that("figure preview helpers return NULL when no figures exist", {
   paths <- create_project(tempfile("ibgb-shiny-no-figures-"))
   state <- new.env(parent = emptyenv())
