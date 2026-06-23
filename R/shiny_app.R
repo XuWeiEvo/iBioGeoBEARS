@@ -75,6 +75,7 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
             ),
             shiny::tags$div(
               class = "ibgb-downloads",
+              shiny::downloadButton("download_run_summary", "Download run summary"),
               shiny::downloadButton("download_report", "Download report"),
               shiny::downloadButton("download_bundle", "Download bundle")
             )
@@ -208,8 +209,7 @@ iBGB_shiny_server <- function(input, output, session) {
           state$model_table <- result$model_run_status
           state$manifest <- result$workflow_manifest
           state$report <- report_preview_path(state)
-          update_table_preview_choices(session, state)
-          update_figure_preview_choices(session, state)
+          refresh_shiny_result_exports(session, state)
           append_app_message(state, paste("Loaded existing results:", result$project_paths$root))
           shiny::incProgress(1)
           })
@@ -230,8 +230,7 @@ iBGB_shiny_server <- function(input, output, session) {
           state$validation <- result$validation
           state$model_table <- result$model_run_status
           state$manifest <- result$workflow_manifest
-          update_table_preview_choices(session, state)
-          update_figure_preview_choices(session, state)
+          refresh_shiny_result_exports(session, state)
           append_app_message(state, if (isTRUE(result$dry_run)) "Dry run completed." else "Workflow completed.")
           shiny::incProgress(1)
           })
@@ -243,9 +242,7 @@ iBGB_shiny_server <- function(input, output, session) {
           require_workflow_result(state$result)
           shiny::withProgress(message = "Rendering report", value = 0, {
           state$report <- render_report(state$result, format = input$report_format)
-          state$manifest <- create_workflow_manifest(state$result, write = TRUE)
-          update_table_preview_choices(session, state)
-          update_figure_preview_choices(session, state)
+          refresh_shiny_result_exports(session, state)
           append_app_message(state, paste("Report:", state$report))
           shiny::incProgress(1)
           })
@@ -256,6 +253,7 @@ iBGB_shiny_server <- function(input, output, session) {
         run_app_action(state, {
           require_workflow_result(state$result)
           shiny::withProgress(message = "Bundling results", value = 0, {
+          refresh_shiny_result_exports(session, state)
           state$bundle <- bundle_results(state$result, overwrite = TRUE)
           state$manifest <- create_workflow_manifest(state$result, write = TRUE)
           update_table_preview_choices(session, state)
@@ -420,6 +418,16 @@ iBGB_shiny_server <- function(input, output, session) {
         }
       )
 
+      output$download_run_summary <- shiny::downloadHandler(
+        filename = function() {
+          basename(resolve_run_summary_file(state))
+        },
+        content = function(file) {
+          src <- resolve_run_summary_file(state)
+          copy_download_file(src, file)
+        }
+      )
+
       output$download_bundle <- shiny::downloadHandler(
         filename = function() {
           basename(resolve_bundle_file(state))
@@ -492,6 +500,32 @@ copy_download_file <- function(src, dest) {
     stop("Unable to prepare download file: ", src, call. = FALSE)
   }
   invisible(dest)
+}
+
+resolve_run_summary_file <- function(state) {
+  path <- persist_shiny_run_summary(state)
+  require_existing_file(path, "Run or load workflow results before downloading the run summary.")
+}
+
+persist_shiny_run_summary <- function(state) {
+  if (is.null(state$result) || is.null(state$result$project_paths$tables)) {
+    return(NULL)
+  }
+  table <- shiny_run_summary_table(state)
+  path <- file.path(state$result$project_paths$tables, "shiny_run_summary.csv")
+  dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
+  write_csv_base(table, path)
+  as_path(path)
+}
+
+refresh_shiny_result_exports <- function(session, state) {
+  persist_shiny_run_summary(state)
+  if (!is.null(state$result)) {
+    state$manifest <- create_workflow_manifest(state$result, write = TRUE)
+  }
+  update_table_preview_choices(session, state)
+  update_figure_preview_choices(session, state)
+  invisible(state$manifest)
 }
 
 load_existing_workflow_result <- function(output_dir, refresh_manifest = TRUE) {

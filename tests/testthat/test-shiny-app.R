@@ -210,6 +210,15 @@ test_that("shiny_run_summary_table handles empty and fitted result states", {
   expect_equal(summary$value[match("Captured warnings", summary$item)], "3")
   expect_equal(summary$value[match("Report", summary$item)], as_path(report))
   expect_equal(summary$value[match("Output directory", summary$item)], paths$root)
+
+  summary_path <- persist_shiny_run_summary(state)
+  copied <- tempfile(fileext = ".csv")
+  copy_download_file(resolve_run_summary_file(state), copied)
+  summary_csv <- utils::read.csv(summary_path, stringsAsFactors = FALSE)
+
+  expect_equal(summary_path, file.path(paths$tables, "shiny_run_summary.csv"))
+  expect_true(file.exists(copied))
+  expect_equal(summary_csv$value[match("Best statistical model", summary_csv$item)], "DEC+J (delta AICc 0)")
 })
 
 test_that("Shiny result helpers expose comparison, sensitivity, and warnings", {
@@ -520,6 +529,8 @@ test_that("Shiny server loads existing result directories", {
     expect_equal(state$model_table$model, "DEC")
     expect_equal(state$result$model_comparison$model, "DEC")
     expect_true(any(state$manifest$relative_path == "tables/model_comparison.csv"))
+    expect_true(any(state$manifest$relative_path == "tables/shiny_run_summary.csv"))
+    expect_true(file.exists(file.path(paths$tables, "shiny_run_summary.csv")))
     expect_match(state$message, "Loaded existing results:", fixed = TRUE)
   })
 })
@@ -543,6 +554,7 @@ test_that("Shiny server renders reports and bundles dry-run results", {
     session$setInputs(run = 1)
     state <- session$userData$state
     expect_s3_class(state$result, "iBGB_workflow_result")
+    expect_true(file.exists(file.path(state$result$project_paths$tables, "shiny_run_summary.csv")))
 
     session$setInputs(render_report = 1)
     expect_true(file.exists(state$report))
