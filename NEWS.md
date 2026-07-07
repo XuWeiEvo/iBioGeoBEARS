@@ -49,6 +49,8 @@ Development version after the 0.1.0 alpha release.
 - Added a Shiny key-files table for common result CSVs, reports, and bundles.
 - Added Shiny controls to refresh key files and create result bundles only when
   missing.
+- Clarified Shiny key-file status wording with next-step hints for missing
+  reports, bundles, and result tables.
 - Added a `shinytest2` browser smoke script for the Shiny workflow runner.
 - Updated GitHub Actions to treat optional `Suggests` packages as optional
   during dry-run CI checks.

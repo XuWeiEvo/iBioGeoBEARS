@@ -776,10 +776,12 @@ shiny_key_files_table <- function(state) {
     resolve_key_file_path(state, relative_path) %||% NA_character_
   }, character(1))
   paths <- unname(paths)
+  available <- !is.na(paths)
 
   data.frame(
     file = specs$display_label,
-    status = ifelse(is.na(paths), "not available", "available"),
+    status = ifelse(available, "Available", "Missing"),
+    next_step = ifelse(available, "", specs$missing_action),
     path = paths,
     stringsAsFactors = FALSE
   )
@@ -802,6 +804,14 @@ shiny_key_file_specs <- function() {
       "tables/workflow_manifest.csv",
       "reports/summary_report.html",
       NA_character_
+    ),
+    missing_action = c(
+      "Run or load workflow results, then refresh key files.",
+      "Run or load workflow results.",
+      "Run or load workflow results.",
+      "Run or load workflow results, then refresh key files.",
+      "Click Render report.",
+      "Click Create bundle if missing."
     ),
     stringsAsFactors = FALSE
   )

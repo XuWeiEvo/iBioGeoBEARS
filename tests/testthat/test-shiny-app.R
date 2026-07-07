@@ -260,7 +260,9 @@ test_that("shiny_key_files_table lists common workflow outputs", {
   empty_state$bundle <- NULL
 
   empty_files <- shiny_key_files_table(empty_state)
-  expect_true(all(empty_files$status == "not available"))
+  expect_true(all(empty_files$status == "Missing"))
+  expect_equal(empty_files$next_step[match("Report", empty_files$file)], "Click Render report.")
+  expect_equal(empty_files$next_step[match("Result bundle", empty_files$file)], "Click Create bundle if missing.")
 
   out <- tempfile("ibgb-shiny-key-files-")
   paths <- create_project(out)
@@ -281,12 +283,13 @@ test_that("shiny_key_files_table lists common workflow outputs", {
 
   key_files <- shiny_key_files_table(state)
 
-  expect_equal(key_files$status[match("Run summary CSV", key_files$file)], "available")
-  expect_equal(key_files$status[match("Model comparison CSV", key_files$file)], "available")
-  expect_equal(key_files$status[match("+J sensitivity CSV", key_files$file)], "available")
-  expect_equal(key_files$status[match("Workflow manifest CSV", key_files$file)], "available")
-  expect_equal(key_files$status[match("Report", key_files$file)], "available")
-  expect_equal(key_files$status[match("Result bundle", key_files$file)], "available")
+  expect_equal(key_files$status[match("Run summary CSV", key_files$file)], "Available")
+  expect_equal(key_files$status[match("Model comparison CSV", key_files$file)], "Available")
+  expect_equal(key_files$status[match("+J sensitivity CSV", key_files$file)], "Available")
+  expect_equal(key_files$status[match("Workflow manifest CSV", key_files$file)], "Available")
+  expect_equal(key_files$status[match("Report", key_files$file)], "Available")
+  expect_equal(key_files$status[match("Result bundle", key_files$file)], "Available")
+  expect_equal(key_files$next_step[match("Report", key_files$file)], "")
   expect_equal(key_files$path[match("Report", key_files$file)], as_path(report))
   expect_equal(key_files$path[match("Result bundle", key_files$file)], as_path(bundle))
 })
