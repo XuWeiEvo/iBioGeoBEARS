@@ -83,13 +83,13 @@ if (!grepl("Dry run completed", app$get_text("body"), fixed = TRUE)) {
 
 app$click("render_report")
 app$wait_for_idle(timeout = 60000)
-if (!grepl("Report:", app$get_text("body"), fixed = TRUE)) {
+if (!grepl("Report ready:", app$get_text("body"), fixed = TRUE)) {
   stop("Report action did not report a rendered report path.", call. = FALSE)
 }
 
 app$click("bundle")
 app$wait_for_idle(timeout = 60000)
-if (!grepl("Bundle:", app$get_text("body"), fixed = TRUE)) {
+if (!grepl("Bundle ready:", app$get_text("body"), fixed = TRUE)) {
   stop("Bundle action did not report a bundle path.", call. = FALSE)
 }
 

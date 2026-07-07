@@ -51,6 +51,8 @@ Development version after the 0.1.0 alpha release.
   missing.
 - Clarified Shiny key-file status wording with next-step hints for missing
   reports, bundles, and result tables.
+- Standardized Shiny key-file action feedback with `Report ready:`,
+  `Bundle ready:`, and `Key files refreshed:` messages.
 - Added a `shinytest2` browser smoke script for the Shiny workflow runner.
 - Updated GitHub Actions to treat optional `Suggests` packages as optional
   during dry-run CI checks.

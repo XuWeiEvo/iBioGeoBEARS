@@ -631,19 +631,21 @@ test_that("Shiny server renders reports and bundles dry-run results", {
 
     session$setInputs(render_report = 1)
     expect_true(file.exists(state$report))
-    expect_match(state$message, "Report:", fixed = TRUE)
+    expect_match(state$message, "Report ready:", fixed = TRUE)
     expect_equal(report_preview_path(state), as_path(state$report))
+    expect_equal(shiny_key_files_table(state)$status[match("Report", shiny_key_files_table(state)$file)], "Available")
 
     session$setInputs(refresh_key_files = 1)
     expect_true(file.exists(file.path(state$result$project_paths$tables, "shiny_run_summary.csv")))
     expect_true(any(state$manifest$relative_path == "tables/shiny_run_summary.csv"))
     expect_null(state$bundle)
-    expect_match(state$message, "Key files refreshed", fixed = TRUE)
+    expect_match(state$message, "Key files refreshed:", fixed = TRUE)
 
     session$setInputs(bundle = 1)
     expect_true(file.exists(state$bundle))
     first_bundle <- state$bundle
-    expect_match(state$message, "Bundle:", fixed = TRUE)
+    expect_match(state$message, "Bundle ready:", fixed = TRUE)
+    expect_equal(shiny_key_files_table(state)$status[match("Result bundle", shiny_key_files_table(state)$file)], "Available")
 
     session$setInputs(bundle = 2)
     expect_equal(state$bundle, first_bundle)

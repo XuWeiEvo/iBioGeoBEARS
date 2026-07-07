@@ -257,7 +257,7 @@ iBGB_shiny_server <- function(input, output, session) {
           shiny::withProgress(message = "Rendering report", value = 0, {
           state$report <- render_report(state$result, format = input$report_format)
           refresh_shiny_result_exports(session, state)
-          append_app_message(state, paste("Report:", state$report))
+          append_app_message(state, paste("Report ready:", state$report))
           shiny::incProgress(1)
           })
         })
@@ -274,7 +274,7 @@ iBGB_shiny_server <- function(input, output, session) {
             update_table_preview_choices(session, state)
             update_figure_preview_choices(session, state)
           }
-          append_app_message(state, paste("Bundle:", state$bundle))
+          append_app_message(state, paste("Bundle ready:", state$bundle))
           shiny::incProgress(1)
           })
         })
@@ -285,7 +285,7 @@ iBGB_shiny_server <- function(input, output, session) {
           require_workflow_result(state$result)
           shiny::withProgress(message = "Refreshing key files", value = 0, {
           refresh_shiny_result_exports(session, state)
-          append_app_message(state, "Key files refreshed.")
+          append_app_message(state, "Key files refreshed: workflow manifest, run summary, table previews, and figure previews.")
           shiny::incProgress(1)
           })
         })
