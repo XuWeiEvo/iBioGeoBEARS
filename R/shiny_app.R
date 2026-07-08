@@ -176,6 +176,8 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
               "About/Citation",
               shiny::tags$div(class = "ibgb-key-files-title", "Software status"),
               shiny::tableOutput("about_table"),
+              shiny::tags$div(class = "ibgb-key-files-title", "Report environment"),
+              shiny::tableOutput("report_environment_table"),
               shiny::tags$div(class = "ibgb-key-files-title", "BioGeoBEARS citation"),
               shiny::verbatimTextOutput("citation_text")
             ),
@@ -562,6 +564,10 @@ iBGB_shiny_server <- function(input, output, session) {
         shiny_about_table(state)
       }, striped = TRUE, bordered = TRUE, na = "")
 
+      output$report_environment_table <- shiny::renderTable({
+        shiny_report_environment_table()
+      }, striped = TRUE, bordered = TRUE, na = "")
+
       output$citation_text <- shiny::renderText({
         shiny_biogeobears_citation_text()
       })
@@ -886,6 +892,18 @@ shiny_about_table <- function(state, bgb_check = check_biogeobears(required = FA
     ),
     stringsAsFactors = FALSE
   )
+}
+
+shiny_report_environment_table <- function(env = check_report_environment(c("source", "html", "pdf"))) {
+  if (is.null(env) || nrow(env) == 0L) {
+    return(data.frame())
+  }
+  out <- env
+  logical_cols <- intersect(c("available", "quarto_package", "quarto_cli", "latex_available"), names(out))
+  for (col in logical_cols) {
+    out[[col]] <- ifelse(isTRUE(out[[col]]) | out[[col]] == TRUE, "yes", "no")
+  }
+  out
 }
 
 shiny_text_or_not_available <- function(x) {

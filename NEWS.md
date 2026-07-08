@@ -61,6 +61,8 @@ Development version after the 0.1.0 alpha release.
   counts, missing reasons, and recommended next steps.
 - Added a Shiny About/Citation view for BioGeoBEARS availability, citation
   guidance, license, package version, and workflow log paths.
+- Added report-environment checks for source, HTML, and PDF output, including
+  Shiny visibility and fallback guidance when Quarto or LaTeX is unavailable.
 - Added staged Shiny progress messages for validation, workflow execution,
   output refresh, report rendering, and result bundling.
 - Added Shiny failed-model diagnostics in run summaries, warning summaries,

@@ -94,7 +94,9 @@ app$click(selector = "a[data-value='About/Citation']")
 app$wait_for_idle(timeout = 60000)
 about_text <- app$get_text("body")
 if (!grepl("GPL (>= 2)", about_text, fixed = TRUE) ||
-    !grepl("citation(\"BioGeoBEARS\")", about_text, fixed = TRUE)) {
+    !grepl("citation(\"BioGeoBEARS\")", about_text, fixed = TRUE) ||
+    !grepl("Report environment", about_text, fixed = TRUE) ||
+    !grepl("source", about_text, fixed = TRUE)) {
   stop("About/Citation tab did not render license and BioGeoBEARS citation guidance.", call. = FALSE)
 }
 

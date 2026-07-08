@@ -27,3 +27,18 @@ test_that("render_report writes report source when quarto is unavailable", {
   expect_match(report_source, "display_label", fixed = TRUE)
   expect_match(report_source, "model_sensitivity.csv", fixed = TRUE)
 })
+
+test_that("check_report_environment reports source, html, and pdf readiness", {
+  env <- check_report_environment(c("source", "html", "pdf"))
+
+  expect_equal(env$format, c("source", "html", "pdf"))
+  expect_true(env$available[env$format == "source"])
+  expect_true(all(c(
+    "quarto_package", "quarto_cli", "latex_available", "next_step"
+  ) %in% names(env)))
+  expect_true(all(nzchar(env$next_step)))
+})
+
+test_that("check_report_environment rejects unsupported formats", {
+  expect_error(check_report_environment("docx"), "Unsupported report format")
+})

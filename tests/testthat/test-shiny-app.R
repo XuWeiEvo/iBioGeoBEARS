@@ -224,6 +224,17 @@ test_that("shiny about and citation helpers expose software status", {
   )
 
   about <- shiny_about_table(state, bgb_check = fake_bgb)
+  report_env <- shiny_report_environment_table(data.frame(
+    format = c("source", "html"),
+    available = c(TRUE, FALSE),
+    quarto_package = c(TRUE, TRUE),
+    quarto_cli = c(TRUE, FALSE),
+    quarto_version = c("1.0.0", NA_character_),
+    latex_available = c(FALSE, FALSE),
+    latex_engines = c(NA_character_, NA_character_),
+    next_step = c("Ready.", "Install Quarto."),
+    stringsAsFactors = FALSE
+  ))
   citation <- shiny_biogeobears_citation_text(fake_bgb)
   missing <- shiny_biogeobears_citation_text(list(
     available = FALSE,
@@ -240,6 +251,9 @@ test_that("shiny about and citation helpers expose software status", {
   expect_equal(about$value[match("BioGeoBEARS citation command", about$item)], "citation(\"BioGeoBEARS\")")
   expect_equal(about$value[match("Session info log", about$item)], as_path(session_info))
   expect_equal(about$value[match("BioGeoBEARS citation log", about$item)], as_path(citation_log))
+  expect_equal(report_env$available, c("yes", "no"))
+  expect_equal(report_env$quarto_cli, c("yes", "no"))
+  expect_equal(report_env$format, c("source", "html"))
   expect_match(citation, "BioGeoBEARS citation text", fixed = TRUE)
   expect_match(missing, "BioGeoBEARS is not bundled", fixed = TRUE)
   expect_match(missing, "citation(\"BioGeoBEARS\")", fixed = TRUE)

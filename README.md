@@ -184,9 +184,15 @@ The Shiny result views are designed for triage:
 - `Tables`: key CSV availability, row and column counts, missing reasons, next
   steps, and CSV previews.
 - `About/Citation`: package version, GPL license, BioGeoBEARS availability,
-  citation guidance, and workflow log paths.
+  report rendering environment, citation guidance, and workflow log paths.
 - `Messages`: timestamped progress messages for validation, workflow
   execution, output refresh, report rendering, and result bundling.
+
+Use `check_report_environment()` or the Shiny `About/Citation` tab to confirm
+report readiness. HTML reports require the Quarto R package and Quarto command
+line tool. PDF reports also require a LaTeX engine such as TinyTeX, MiKTeX, or
+TeX Live. If those tools are unavailable, `render_report()` writes the
+`summary_report.qmd` source and returns that path.
 
 For a browser-level GUI smoke test, install `shinytest2` and run:
 
