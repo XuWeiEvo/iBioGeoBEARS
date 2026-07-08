@@ -50,7 +50,29 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
       shiny::sidebarLayout(
         shiny::sidebarPanel(
           shiny_control_section(
-            "Project",
+            "New project wizard",
+            shiny::textInput("wizard_project_name", "Project name", value = "my_clade"),
+            shiny::textInput("wizard_project_parent", "Save projects in", value = default_project_parent()),
+            shiny::fileInput(
+              "wizard_tree",
+              "Tree file",
+              accept = c(".nwk", ".newick", ".tree", ".tre")
+            ),
+            shiny::fileInput("wizard_geography", "Geography CSV", accept = ".csv"),
+            shiny::fileInput("wizard_regions", "Regions CSV", accept = ".csv"),
+            shiny::numericInput("wizard_max_range_size", "Maximum range size", value = 3L, min = 1L, step = 1L),
+            shiny::checkboxGroupInput(
+              "wizard_models",
+              "Models",
+              choices = valid_models(),
+              selected = valid_models()
+            ),
+            shiny_action_grid(
+              shiny::actionButton("create_analysis_project", "Create analysis project")
+            )
+          ),
+          shiny_control_section(
+            "Existing project",
             shiny::textInput("config_path", "analysis.yml", value = default_config),
             shiny::fileInput("config_upload", "Upload analysis.yml", accept = c(".yml", ".yaml")),
             shiny::textInput("output_dir", "Output directory", value = default_output),
@@ -326,6 +348,59 @@ iBGB_shiny_server <- function(input, output, session) {
         run_app_action(state, {
           state$installation <- check_installation()
           append_app_message(state, "Setup checks refreshed.")
+        })
+      })
+
+      shiny::observeEvent(input$create_analysis_project, {
+        run_app_action(state, {
+          project_name <- normalize_project_name(input$wizard_project_name)
+          parent <- trimws(input$wizard_project_parent %||% "")
+          if (!nzchar(parent)) {
+            parent <- default_project_parent()
+          }
+          target <- file.path(parent, project_name)
+          tree_file <- shiny_upload_path(input$wizard_tree, "Tree file")
+          geography_file <- shiny_upload_path(input$wizard_geography, "Geography CSV")
+          regions_file <- shiny_upload_path(input$wizard_regions, "Regions CSV")
+
+          append_app_stage(state, "Project wizard", "creating project", target)
+          project <- create_analysis_project(
+            path = target,
+            project_name = project_name,
+            tree_file = tree_file,
+            geography_file = geography_file,
+            regions_file = regions_file,
+            max_range_size = input$wizard_max_range_size,
+            models = input$wizard_models
+          )
+
+          shiny::updateTextInput(session, "config_path", value = project$config)
+          shiny::updateTextInput(session, "output_dir", value = project$output_dir)
+          shiny::updateTextInput(session, "project_name", value = project$project_name)
+          shiny::updateTextInput(session, "tree_file", value = file.path("data", basename(project$tree_file)))
+          shiny::updateTextInput(session, "geography_file", value = "data/geography.csv")
+          shiny::updateTextInput(session, "regions_file", value = "data/regions.csv")
+          shiny::updateTextInput(
+            session,
+            "max_range_size",
+            value = as.character(input$wizard_max_range_size)
+          )
+          shiny::updateCheckboxGroupInput(session, "models_run", selected = input$wizard_models)
+          shiny::updateCheckboxInput(session, "use_config_editor", value = FALSE)
+
+          state$result <- NULL
+          state$validation <- project$validation
+          state$model_table <- planned_model_table(read_config(project$config))
+          state$manifest <- NULL
+          state$report <- NULL
+          state$bundle <- NULL
+          state$diagnostic_bundle <- NULL
+          append_app_stage(
+            state,
+            "Project wizard",
+            if (all(project$validation$ok)) "project ready" else "project created with validation errors",
+            project$root
+          )
         })
       })
 
@@ -687,6 +762,21 @@ shiny_installation_table <- function(checks = check_installation()) {
   out <- checks
   names(out) <- c("Component", "Required for", "Required", "Status", "Version", "Next step")
   out
+}
+
+default_project_parent <- function() {
+  as_path(file.path(path.expand("~"), "iBiogeobears-projects"))
+}
+
+shiny_upload_path <- function(upload, label) {
+  if (is.null(upload) || nrow(upload) == 0L || !"datapath" %in% names(upload)) {
+    stop(label, " is required.", call. = FALSE)
+  }
+  path <- upload$datapath[[1L]]
+  if (is.null(path) || is.na(path) || !file.exists(path)) {
+    stop(label, " upload is not available.", call. = FALSE)
+  }
+  path
 }
 
 prepare_shiny_startup <- function(config = NULL, output_dir = NULL) {

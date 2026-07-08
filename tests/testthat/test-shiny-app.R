@@ -60,6 +60,22 @@ test_that("Shiny installation table uses readable labels", {
   expect_equal(table$Component, "BioGeoBEARS")
 })
 
+test_that("Shiny project wizard helpers resolve uploads and defaults", {
+  uploaded <- tempfile(fileext = ".csv")
+  writeLines("species,A\ntaxon_a,1", uploaded)
+  upload <- data.frame(
+    name = "geography.csv",
+    size = file.info(uploaded)$size,
+    type = "text/csv",
+    datapath = uploaded,
+    stringsAsFactors = FALSE
+  )
+
+  expect_equal(shiny_upload_path(upload, "Geography CSV"), uploaded)
+  expect_true(grepl("iBiogeobears-projects$", default_project_parent()))
+  expect_error(shiny_upload_path(NULL, "Tree file"), "Tree file is required")
+})
+
 test_that("Shiny sidebar helper builds grouped controls", {
   testthat::skip_if_not_installed("shiny")
 
@@ -954,6 +970,48 @@ test_that("Shiny server creates an example project from the GUI", {
 
     expect_true(all(state$validation$ok))
     expect_match(state$message, "Validation passed", fixed = TRUE)
+  })
+})
+
+test_that("Shiny project wizard creates and validates a user project", {
+  testthat::skip_if_not_installed("shiny")
+
+  source <- create_example_project(tempfile("ibgb-shiny-wizard-source-"))
+  parent <- tempfile("ibgb-shiny-wizard-parent-")
+  upload <- function(path, name, type) {
+    data.frame(
+      name = name,
+      size = file.info(path)$size,
+      type = type,
+      datapath = path,
+      stringsAsFactors = FALSE
+    )
+  }
+
+  shiny::testServer(iBGB_shiny_server, {
+    session$setInputs(
+      wizard_project_name = "Bird clade",
+      wizard_project_parent = parent,
+      wizard_tree = upload(source$tree_file, "tree.nwk", "text/plain"),
+      wizard_geography = upload(source$geography_file, "geography.csv", "text/csv"),
+      wizard_regions = upload(source$regions_file, "regions.csv", "text/csv"),
+      wizard_max_range_size = 2L,
+      wizard_models = c("DEC", "DEC+J")
+    )
+    session$setInputs(create_analysis_project = 1)
+
+    state <- session$userData$state
+    project_root <- file.path(parent, "Bird_clade")
+    config_path <- file.path(project_root, "analysis.yml")
+    cfg <- read_config(config_path)
+
+    expect_true(file.exists(config_path))
+    expect_true(all(state$validation$ok))
+    expect_equal(state$model_table$model, c("DEC", "DEC+J"))
+    expect_equal(cfg$project$name, "Bird_clade")
+    expect_equal(cfg$inputs$max_range_size, 2L)
+    expect_match(state$message, "Project wizard: project ready", fixed = TRUE)
+    expect_true(any(grepl("Project wizard: creating project", state$messages, fixed = TRUE)))
   })
 })
 

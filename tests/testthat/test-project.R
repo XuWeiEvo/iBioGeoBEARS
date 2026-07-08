@@ -32,6 +32,68 @@ test_that("create_example_project protects non-empty directories", {
   expect_error(create_example_project(out), "already contains files")
 })
 
+test_that("create_analysis_project copies inputs and writes valid config", {
+  source <- create_example_project(tempfile("ibgb-analysis-source-"))
+  target <- tempfile("ibgb-analysis-project-")
+
+  project <- create_analysis_project(
+    path = target,
+    project_name = "My clade study",
+    tree_file = source$tree_file,
+    geography_file = source$geography_file,
+    regions_file = source$regions_file,
+    max_range_size = 2,
+    models = c("DEC", "DEC+J")
+  )
+  cfg <- read_config(project$config)
+
+  expect_equal(project$project_name, "My_clade_study")
+  expect_equal(cfg$project$name, "My_clade_study")
+  expect_equal(cfg$inputs$max_range_size, 2L)
+  expect_equal(cfg$models$run, c("DEC", "DEC+J"))
+  expect_true(all(file.exists(c(
+    project$config, project$tree_file, project$geography_file, project$regions_file
+  ))))
+  expect_true(all(project$validation$ok))
+  expect_equal(cfg$project$output_dir, project$output_dir)
+})
+
+test_that("create_analysis_project rejects unsafe or incomplete requests", {
+  source <- create_example_project(tempfile("ibgb-analysis-invalid-source-"))
+
+  expect_error(
+    create_analysis_project(
+      tempfile("ibgb-analysis-invalid-"),
+      "***",
+      source$tree_file,
+      source$geography_file,
+      source$regions_file
+    ),
+    "Project name"
+  )
+  expect_error(
+    create_analysis_project(
+      tempfile("ibgb-analysis-invalid-"),
+      "study",
+      "missing-tree.nwk",
+      source$geography_file,
+      source$regions_file
+    ),
+    "tree_file"
+  )
+  expect_error(
+    create_analysis_project(
+      tempfile("ibgb-analysis-invalid-"),
+      "study",
+      source$tree_file,
+      source$geography_file,
+      source$regions_file,
+      models = "UNKNOWN"
+    ),
+    "Unsupported"
+  )
+})
+
 test_that("installed package exposes templates, example data, and public API", {
   expect_true(file.exists(system.file("templates", "analysis.yml", package = "iBiogeobears")))
   expect_true(file.exists(system.file("example_data", "tree.nwk", package = "iBiogeobears")))
@@ -43,6 +105,7 @@ test_that("installed package exposes templates, example data, and public API", {
     "bundle_diagnostics",
     "bundle_results",
     "create_workflow_manifest",
+    "create_analysis_project",
     "create_example_project",
     "run_workflow",
     "render_report",

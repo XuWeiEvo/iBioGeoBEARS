@@ -8,6 +8,9 @@ Development toward a stable, ordinary-user release.
   instead of a template with unresolved relative input paths.
 - Added a Shiny Setup page with refreshable environment checks and actionable
   installation guidance.
+- Added a no-YAML Shiny project wizard for tree, geography, and region uploads.
+- Added `create_analysis_project()` to build, configure, and validate a
+  portable project from user input files.
 
 # iBiogeobears 0.2.0
 

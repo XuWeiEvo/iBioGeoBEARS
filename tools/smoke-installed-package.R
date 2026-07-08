@@ -27,4 +27,17 @@ stopifnot(file.exists(file.path(result$project_paths$tables, "model_run_plan.csv
 stopifnot(file.exists(file.path(result$project_paths$tables, "input_validation.csv")))
 stopifnot(all(result$validation$ok))
 
+user_project <- create_analysis_project(
+  tempfile("ibgb-installed-user-project-"),
+  "installed smoke project",
+  tree,
+  geography,
+  regions,
+  max_range_size = 2L,
+  models = c("DEC", "DEC+J")
+)
+stopifnot(file.exists(user_project$config))
+stopifnot(identical(user_project$project_name, "installed_smoke_project"))
+stopifnot(all(user_project$validation$ok))
+
 cat("Installed package smoke test passed\n")

@@ -177,9 +177,20 @@ Calling `launch_app()` without arguments prepares and loads a complete example
 project automatically. The `Setup` tab reports missing requirements and the
 exact next action before a real analysis is started.
 
+For a new analysis, use `New project wizard` in the sidebar:
+
+1. Enter a project name.
+2. Upload a Newick tree, geography CSV, and regions CSV.
+3. Choose the maximum range size and models.
+4. Click `Create analysis project`.
+
+The wizard copies the inputs into a portable project, writes `analysis.yml`,
+loads it into the app, and immediately displays input validation results.
+
 Recommended GUI flow:
 
-1. Click `Create example project`, or provide an `analysis.yml` path.
+1. Create a project with `New project wizard`, click `Create example project`,
+   or provide an existing `analysis.yml`.
 2. Optionally check `Use GUI config overrides` and edit project name, input
    files, `max_range_size`, selected models, or advanced constraint files.
 3. Click `Validate`.
