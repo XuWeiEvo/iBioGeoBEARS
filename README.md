@@ -159,7 +159,7 @@ Recommended GUI flow:
 
 1. Click `Create example project`, or provide an `analysis.yml` path.
 2. Optionally check `Use GUI config overrides` and edit project name, input
-   files, `max_range_size`, or selected models.
+   files, `max_range_size`, selected models, or advanced constraint files.
 3. Click `Validate`.
 4. Keep `Dry run` checked for a first pass, then click `Run workflow`.
 5. Uncheck `Dry run` when BioGeoBEARS is installed and a real analysis is
@@ -262,6 +262,10 @@ advanced:
     areas_adjacency_file: null
     area_of_areas_file: null
 ```
+
+The Shiny config editor exposes these same advanced constraint file fields.
+Relative paths are resolved against the selected `analysis.yml` location when
+the workflow writes its temporary GUI-edited config.
 
 ## Outputs
 

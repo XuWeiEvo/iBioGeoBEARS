@@ -66,7 +66,9 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
             shiny::textInput("geography_file", "Geography file", value = ""),
             shiny::textInput("regions_file", "Regions file", value = ""),
             shiny::textInput("max_range_size", "Max range size", value = ""),
-            shiny::checkboxGroupInput("models_run", "Models", choices = valid_models(), selected = valid_models())
+            shiny::checkboxGroupInput("models_run", "Models", choices = valid_models(), selected = valid_models()),
+            shiny::tags$div(class = "ibgb-key-files-title", "Advanced constraints"),
+            shiny_constraint_inputs()
           ),
           shiny_control_section(
             "Run options",
@@ -203,6 +205,43 @@ shiny_action_grid <- function(...) {
   shiny::tags$div(class = "ibgb-action-grid", ...)
 }
 
+shiny_constraint_inputs <- function() {
+  fields <- shiny_constraint_fields()
+  shiny::tagList(lapply(seq_len(nrow(fields)), function(i) {
+    shiny::textInput(
+      inputId = paste0("constraint_", fields$field[[i]]),
+      label = fields$label[[i]],
+      value = ""
+    )
+  }))
+}
+
+shiny_constraint_fields <- function() {
+  data.frame(
+    field = c(
+      "times_file",
+      "dists_file",
+      "dispersal_multipliers_file",
+      "areas_allowed_file",
+      "areas_adjacency_file",
+      "area_of_areas_file"
+    ),
+    label = c(
+      "Times file",
+      "Distances file",
+      "Dispersal multipliers file",
+      "Areas allowed file",
+      "Areas adjacency file",
+      "Area-of-areas file"
+    ),
+    stringsAsFactors = FALSE
+  )
+}
+
+shiny_constraint_input_ids <- function() {
+  paste0("constraint_", shiny_constraint_fields()$field)
+}
+
 shiny_figure_panel <- function(title, output_id) {
   shiny::tags$section(
     shiny::tags$h4(title),
@@ -262,6 +301,9 @@ iBGB_shiny_server <- function(input, output, session) {
           shiny::updateTextInput(session, "regions_file", value = "data/regions.csv")
           shiny::updateTextInput(session, "max_range_size", value = "3")
           shiny::updateCheckboxGroupInput(session, "models_run", selected = valid_models())
+          for (id in shiny_constraint_input_ids()) {
+            shiny::updateTextInput(session, id, value = "")
+          }
           append_app_stage(state, "Example project", "ready", example$root)
         })
       })
@@ -1976,6 +2018,7 @@ apply_shiny_config_overrides <- function(config, input, output_dir = NULL) {
   regions_file <- shiny_trimmed_input(input, "regions_file")
   max_range_size <- shiny_trimmed_input(input, "max_range_size")
   models <- input$models_run %||% character()
+  constraints <- shiny_constraint_override_values(input)
 
   if (!is.null(project_name)) {
     cfg$project$name <- project_name
@@ -1994,8 +2037,27 @@ apply_shiny_config_overrides <- function(config, input, output_dir = NULL) {
     cfg$inputs$max_range_size <- if (!is.na(parsed)) parsed else max_range_size
   }
   cfg$models$run <- as.character(models)
+  if (length(constraints) > 0L) {
+    cfg$advanced <- cfg$advanced %||% list()
+    cfg$advanced$constraints <- cfg$advanced$constraints %||% list()
+    for (field in names(constraints)) {
+      cfg$advanced$constraints[[field]] <- constraints[[field]]
+    }
+  }
 
   cfg
+}
+
+shiny_constraint_override_values <- function(input) {
+  fields <- shiny_constraint_fields()$field
+  values <- list()
+  for (field in fields) {
+    value <- shiny_trimmed_input(input, paste0("constraint_", field))
+    if (!is.null(value)) {
+      values[[field]] <- value
+    }
+  }
+  values
 }
 
 shiny_trimmed_input <- function(input, id) {

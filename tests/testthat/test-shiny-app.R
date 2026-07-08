@@ -33,6 +33,23 @@ test_that("Shiny sidebar helper builds grouped controls", {
   expect_match(html, "Workflow", fixed = TRUE)
 })
 
+test_that("Shiny constraint input helpers expose advanced fields", {
+  fields <- shiny_constraint_fields()
+
+  expect_equal(
+    fields$field,
+    c(
+      "times_file",
+      "dists_file",
+      "dispersal_multipliers_file",
+      "areas_allowed_file",
+      "areas_adjacency_file",
+      "area_of_areas_file"
+    )
+  )
+  expect_true(all(grepl("^constraint_", shiny_constraint_input_ids())))
+})
+
 test_that("resolve_shiny_config_path prefers uploaded YAML files", {
   uploaded <- tempfile(fileext = ".yml")
   writeLines("project:\n  name: uploaded", uploaded)
@@ -62,6 +79,8 @@ test_that("resolve_shiny_config_path requires a config source", {
 test_that("Shiny config editor applies GUI overrides and writes runnable YAML", {
   project <- create_example_project(tempfile("ibgb-shiny-config-editor-"))
   cfg <- read_config(project$config)
+  writeLines("0 1", file.path(project$root, "data", "times.txt"))
+  writeLines("1 1", file.path(project$root, "data", "dists.txt"))
   input <- list(
     use_config_editor = TRUE,
     project_name = "edited_clade",
@@ -69,7 +88,9 @@ test_that("Shiny config editor applies GUI overrides and writes runnable YAML", 
     geography_file = "data/geography.csv",
     regions_file = "data/regions.csv",
     max_range_size = "2",
-    models_run = c("DEC", "DEC+J")
+    models_run = c("DEC", "DEC+J"),
+    constraint_times_file = "data/times.txt",
+    constraint_dists_file = "data/dists.txt"
   )
 
   edited <- apply_shiny_config_overrides(cfg, input, output_dir = file.path(project$root, "edited-results"))
@@ -80,9 +101,13 @@ test_that("Shiny config editor applies GUI overrides and writes runnable YAML", 
   expect_equal(edited$inputs$max_range_size, 2L)
   expect_equal(edited$models$run, c("DEC", "DEC+J"))
   expect_true(grepl("edited-results$", edited$project$output_dir))
+  expect_equal(edited$advanced$constraints$times_file, "data/times.txt")
+  expect_equal(edited$advanced$constraints$dists_file, "data/dists.txt")
   expect_true(file.exists(roundtrip$inputs$tree_file))
   expect_true(file.exists(roundtrip$inputs$geography_file))
   expect_true(file.exists(roundtrip$inputs$regions_file))
+  expect_true(file.exists(roundtrip$advanced$constraints$times_file))
+  expect_true(file.exists(roundtrip$advanced$constraints$dists_file))
   expect_equal(roundtrip$models$run, c("DEC", "DEC+J"))
 })
 
@@ -829,6 +854,7 @@ test_that("Shiny server uses GUI config editor overrides", {
   testthat::skip_if_not_installed("shiny")
 
   project <- create_example_project(tempfile("ibgb-shiny-server-editor-"))
+  writeLines("0 1", file.path(project$root, "data", "times.txt"))
   edited_output <- file.path(project$root, "results", "edited_clade")
 
   shiny::testServer(iBGB_shiny_server, {
@@ -842,6 +868,7 @@ test_that("Shiny server uses GUI config editor overrides", {
       regions_file = "data/regions.csv",
       max_range_size = "2",
       models_run = "DEC",
+      constraint_times_file = "data/times.txt",
       dry_run = TRUE,
       require_biogeobears = FALSE,
       force = FALSE,
@@ -857,6 +884,7 @@ test_that("Shiny server uses GUI config editor overrides", {
     expect_equal(state$result$config$project$name, "edited_clade")
     expect_equal(state$result$config$inputs$max_range_size, 2L)
     expect_equal(state$result$config$models$run, "DEC")
+    expect_true(file.exists(state$result$config$advanced$constraints$times_file))
     expect_equal(state$result$project_paths$root, edited_output)
   })
 })
