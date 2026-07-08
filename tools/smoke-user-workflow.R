@@ -1,7 +1,7 @@
 args <- commandArgs(trailingOnly = TRUE)
 repo <- normalizePath(if (length(args) >= 1L) args[[1L]] else ".", winslash = "/", mustWork = TRUE)
 
-required <- c("pkgload", "yaml")
+required <- c("yaml")
 missing <- required[!vapply(required, requireNamespace, logical(1), quietly = TRUE)]
 if (length(missing) > 0L) {
   stop("Missing required smoke-test package(s): ", paste(missing, collapse = ", "), call. = FALSE)
@@ -10,7 +10,12 @@ if (Sys.which("zip") == "") {
   stop("The zip utility is required for result-bundle smoke testing.", call. = FALSE)
 }
 
-pkgload::load_all(repo, quiet = TRUE)
+lib <- tempfile("ibgb-user-workflow-lib-")
+dir.create(lib, recursive = TRUE, showWarnings = FALSE)
+install.packages(repo, lib = lib, repos = NULL, type = "source")
+.libPaths(c(lib, .libPaths()))
+
+library(iBiogeobears)
 
 assert <- function(ok, message) {
   if (!isTRUE(ok)) {
