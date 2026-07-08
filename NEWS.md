@@ -1,6 +1,6 @@
-# iBiogeobears 0.1.0.9000
+# iBiogeobears 0.2.0
 
-Development version after the 0.1.0 alpha release.
+Second alpha release of the single-clade BioGeoBEARS workflow MVP.
 
 - Added standardized `geographic_states.csv`, `tree_nodes.csv`, and
   `node_state_summary.csv` tables for downstream plotting and future Shiny

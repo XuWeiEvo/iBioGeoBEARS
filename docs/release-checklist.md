@@ -7,7 +7,8 @@ Use this checklist before publishing the next alpha release.
 - Choose the release tag:
   - `v0.1.1-alpha` for an incremental alpha after `v0.1.0-alpha`.
   - `v0.2.0-alpha` if the release should signal a larger feature step.
-- Update `DESCRIPTION` from `0.1.0.9000` to the chosen release version.
+- Update `DESCRIPTION` from the development version to the chosen release
+  version.
 - Update `README.md` installation text if the recommended alpha tag changes.
 - Update `NEWS.md` so the release section matches the chosen version.
 
@@ -39,7 +40,7 @@ $src = (Resolve-Path -LiteralPath '.').Path
 $tmp = Join-Path $env:TEMP ('ibgb-build-src-' + [guid]::NewGuid().ToString())
 New-Item -ItemType Directory -Path $tmp | Out-Null
 Get-ChildItem -LiteralPath $src -Force |
-  Where-Object { $_.Name -notin @('.git','iBiogeobears.Rcheck','iBiogeobears_0.1.0.9000.tar.gz','iBioGeoBEARS-scaffold.zip') } |
+  Where-Object { $_.Name -notin @('.git','iBiogeobears.Rcheck','iBiogeobears_*.tar.gz','iBioGeoBEARS-scaffold.zip') } |
   Copy-Item -Destination $tmp -Recurse -Force
 & 'C:\Program Files\R\R-4.3.1\bin\R.exe' CMD build $tmp
 & 'C:\Program Files\R\R-4.3.1\bin\R.exe' CMD check --no-manual iBiogeobears_*.tar.gz
