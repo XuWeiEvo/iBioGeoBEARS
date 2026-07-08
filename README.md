@@ -171,12 +171,12 @@ Recommended GUI flow:
 The Shiny result views are designed for triage:
 
 - `Run Summary`: fitted model count, best statistical model, `+J` caution,
-  warning count, report path, and output path.
+  failed model list, warning count, report path, and output path.
 - `Model Comparison`: compact fit summary plus the full model-comparison table.
 - `+J Sensitivity`: direct answers about whether `+J` is best or near-best,
   plus the detailed sensitivity table.
 - `Warnings`: captured optimizer/BioGeoBEARS warnings and recommended review
-  steps.
+  steps, including failed-model error messages and log paths.
 - `Figure Dashboard`: expected workflow figures, preview status, missing
   reasons, and next steps.
 - `Tables`: key CSV availability, row and column counts, missing reasons, next

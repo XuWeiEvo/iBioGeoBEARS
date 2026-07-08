@@ -130,6 +130,7 @@ messages_text <- app$get_text("body")
 required_messages <- c(
   "Validation: model plan ready",
   "Workflow: model status ready",
+  "Workflow: failed models - none",
   "Workflow: outputs refreshed",
   "Report: render started",
   "Bundle: creating archive"

@@ -101,7 +101,13 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
               shiny::tableOutput("run_summary_table")
             ),
             shiny::tabPanel("Validation", shiny::tableOutput("validation_table")),
-            shiny::tabPanel("Run Status", shiny::tableOutput("model_table")),
+            shiny::tabPanel(
+              "Run Status",
+              shiny::tags$div(class = "ibgb-key-files-title", "Failed model diagnostics"),
+              shiny::tableOutput("failed_models_table"),
+              shiny::tags$div(class = "ibgb-key-files-title", "Model status details"),
+              shiny::tableOutput("model_table")
+            ),
             shiny::tabPanel(
               "Model Comparison",
               shiny::tags$div(class = "ibgb-key-files-title", "Fit summary"),
@@ -283,6 +289,7 @@ iBGB_shiny_server <- function(input, output, session) {
           state$manifest <- result$workflow_manifest
           append_app_stage(state, "Workflow", "validation complete", workflow_validation_label(result$validation))
           append_app_stage(state, "Workflow", "model status ready", workflow_model_status_label(result$model_run_status))
+          append_app_stage(state, "Workflow", "failed models", workflow_failed_models_label(result$model_run_status))
           refresh_shiny_result_exports(session, state)
           append_app_stage(state, "Workflow", "outputs refreshed", result$project_paths$root)
           append_app_message(state, if (isTRUE(result$dry_run)) "Dry run completed." else "Workflow completed.")
@@ -380,6 +387,10 @@ iBGB_shiny_server <- function(input, output, session) {
 
       output$model_table <- shiny::renderTable({
         table_head(state$model_table, 20L)
+      }, striped = TRUE, bordered = TRUE, na = "")
+
+      output$failed_models_table <- shiny::renderTable({
+        shiny_failed_models_table(state)
       }, striped = TRUE, bordered = TRUE, na = "")
 
       output$model_fit_summary_table <- shiny::renderTable({
@@ -591,6 +602,14 @@ workflow_model_status_label <- function(model_table) {
   }
   statuses <- sort(table(model_table$status), decreasing = TRUE)
   paste(paste0(names(statuses), ": ", as.integer(statuses)), collapse = ", ")
+}
+
+workflow_failed_models_label <- function(model_table) {
+  label <- failed_models_label(model_table)
+  if (identical(label, "none")) {
+    return("none")
+  }
+  label
 }
 
 resolve_report_file <- function(state) {
@@ -865,11 +884,13 @@ shiny_run_summary_table <- function(state) {
   best_plus_j <- best_model_label(filter_model_comparison_by_j(comparison, has_j = TRUE))
   plus_j_caution <- plus_j_caution_label(comparison, sensitivity)
   warning_count <- warning_count_label(state$model_table, warnings)
+  failed_models <- failed_models_label(state$model_table)
   output_dir <- if (!is.null(state$result)) state$result$project_paths$root %||% "not available" else "not available"
 
   data.frame(
     item = c(
       "Fitted models",
+      "Failed models",
       "Best statistical model",
       "Best non-+J model",
       "Best +J model",
@@ -880,6 +901,7 @@ shiny_run_summary_table <- function(state) {
     ),
     value = c(
       fitted_models_label(state$model_table, comparison),
+      failed_models,
       best_overall,
       best_non_j,
       best_plus_j,
@@ -915,6 +937,7 @@ shiny_run_summary_cards <- function(state) {
 shiny_run_summary_card_items <- function() {
   c(
     "Fitted models",
+    "Failed models",
     "Best statistical model",
     "+J interpretation caution",
     "Captured warnings",
@@ -934,6 +957,9 @@ shiny_run_summary_card_class <- function(item, value) {
   if (identical(item, "Captured warnings")) {
     warning_count <- suppressWarnings(as.numeric(value))
     return(if (!is.na(warning_count) && warning_count > 0) "warning" else "good")
+  }
+  if (identical(item, "Failed models")) {
+    return(if (value == "none") "good" else "warning")
   }
   if (identical(item, "Report")) {
     return("good")
@@ -1035,6 +1061,24 @@ fitted_models_label <- function(model_table, comparison) {
     return(as.character(nrow(comparison)))
   }
   "not available"
+}
+
+failed_models_label <- function(model_table) {
+  failed <- failed_model_rows(model_table)
+  if (nrow(failed) == 0L) {
+    return("none")
+  }
+  if (!"model" %in% names(failed)) {
+    return(as.character(nrow(failed)))
+  }
+  paste(failed$model, collapse = ", ")
+}
+
+failed_model_rows <- function(model_table) {
+  if (is.null(model_table) || nrow(model_table) == 0L || !"status" %in% names(model_table)) {
+    return(data.frame())
+  }
+  model_table[!is.na(model_table$status) & tolower(model_table$status) == "failed", , drop = FALSE]
 }
 
 best_model_label <- function(comparison) {
@@ -1157,7 +1201,12 @@ affected_warning_models_label <- function(warnings) {
   if (is.null(warnings) || nrow(warnings) == 0L || !"model" %in% names(warnings)) {
     return("not available")
   }
-  rows <- warnings[!is.na(warnings$model) & warnings$model != "No captured warnings", , drop = FALSE]
+  rows <- warnings[
+    !is.na(warnings$model) &
+      !warnings$model %in% c("No captured warnings", "No captured warnings or failed models"),
+    ,
+    drop = FALSE
+  ]
   if (nrow(rows) == 0L) {
     return("none")
   }
@@ -1175,7 +1224,10 @@ max_warning_count_label <- function(warnings) {
   as.character(max(counts, na.rm = TRUE))
 }
 
-warning_next_step <- function(total) {
+warning_next_step <- function(total, failed = "none") {
+  if (!is.null(failed) && !identical(failed, "none") && !identical(failed, "not available")) {
+    return("Inspect failed model error messages and log paths before interpreting results.")
+  }
   total_num <- suppressWarnings(as.numeric(total))
   if (is.na(total_num)) {
     return("Run or load workflow results to inspect optimization warnings.")
@@ -1241,14 +1293,16 @@ shiny_warning_summary_table <- function(state) {
   model_table <- state$model_table %||% read_workflow_table(state$result, "model_run_status.csv")
   total <- warning_count_label(model_table, warnings)
   affected <- affected_warning_models_label(warnings)
+  failed <- failed_models_label(model_table)
 
   data.frame(
-    item = c("Captured warnings", "Affected models", "Highest warning count", "Recommended next step"),
+    item = c("Captured warnings", "Affected models", "Failed models", "Highest warning count", "Recommended next step"),
     value = c(
       total,
       affected,
+      failed,
       max_warning_count_label(warnings),
-      warning_next_step(total)
+      warning_next_step(total, failed)
     ),
     stringsAsFactors = FALSE
   )
@@ -1281,11 +1335,23 @@ shiny_warnings_table <- function(state) {
   if (is.null(table) || nrow(table) == 0L || !"warning_count" %in% names(table)) {
     return(data.frame())
   }
-  rows <- table[!is.na(table$warning_count) & table$warning_count > 0L, , drop = FALSE]
+  warning_rows <- !is.na(table$warning_count) & table$warning_count > 0L
+  failed_rows <- if ("status" %in% names(table)) !is.na(table$status) & tolower(table$status) == "failed" else rep(FALSE, nrow(table))
+  rows <- table[warning_rows | failed_rows, , drop = FALSE]
   if (nrow(rows) == 0L) {
-    return(data.frame(model = "No captured warnings", warning_count = 0L, warning_messages = ""))
+    return(data.frame(model = "No captured warnings or failed models", warning_count = 0L, warning_messages = ""))
   }
-  cols <- c("model", "status", "warning_count", "warning_messages", "log_file")
+  cols <- c("model", "status", "warning_count", "warning_messages", "error_message", "log_file")
+  rows[, intersect(cols, names(rows)), drop = FALSE]
+}
+
+shiny_failed_models_table <- function(state) {
+  table <- state$model_table %||% read_workflow_table(state$result, "model_run_status.csv")
+  rows <- failed_model_rows(table)
+  if (nrow(rows) == 0L) {
+    return(data.frame(model = "No failed models", status = "", error_message = "", log_file = ""))
+  }
+  cols <- c("model", "status", "error_message", "log_file", "raw_output_dir", "result_file")
   rows[, intersect(cols, names(rows)), drop = FALSE]
 }
 

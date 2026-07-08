@@ -263,6 +263,7 @@ test_that("shiny_run_summary_table handles empty and fitted result states", {
   summary <- shiny_run_summary_table(state)
 
   expect_equal(summary$value[match("Fitted models", summary$item)], "3 of 3")
+  expect_equal(summary$value[match("Failed models", summary$item)], "none")
   expect_equal(summary$value[match("Best statistical model", summary$item)], "DEC+J (delta AICc 0)")
   expect_equal(summary$value[match("Best non-+J model", summary$item)], "DEC (delta AICc 2)")
   expect_equal(summary$value[match("Best +J model", summary$item)], "DEC+J (delta AICc 0)")
@@ -310,6 +311,7 @@ test_that("shiny_run_summary_cards renders readable status cards", {
   expect_match(html, "Best statistical model", fixed = TRUE)
   expect_match(html, "DEC\\+J \\(delta AICc 0\\)")
   expect_match(html, "yes; report sensitivity", fixed = TRUE)
+  expect_match(html, "Failed models", fixed = TRUE)
   expect_match(html, "ibgb-run-summary-card warning", fixed = TRUE)
 })
 
@@ -404,26 +406,59 @@ test_that("Shiny result helpers expose comparison, sensitivity, and warnings", {
     )
   )
   state$model_table <- data.frame(
-    model = c("DEC", "DEC+J"),
-    status = c("completed", "completed"),
-    warning_count = c(0L, 2L),
-    warning_messages = c(NA, "optimizer warning"),
-    log_file = c("dec.log", "decj.log")
+    model = c("DEC", "DEC+J", "BAYAREALIKE"),
+    status = c("completed", "completed", "failed"),
+    warning_count = c(0L, 2L, 0L),
+    warning_messages = c(NA, "optimizer warning", NA),
+    error_message = c(NA, NA, "optimizer failed"),
+    log_file = c("dec.log", "decj.log", "bayarealike.log")
   )
 
   comparison <- shiny_model_comparison_table(state)
   sensitivity <- shiny_model_sensitivity_table(state)
   warnings <- shiny_warnings_table(state)
+  failed <- shiny_failed_models_table(state)
   node_states <- shiny_node_state_summary_table(state)
   node_sensitivity <- shiny_node_state_sensitivity_table(state)
 
   expect_equal(comparison$model, c("DEC", "DEC+J"))
   expect_true("interpretation_note" %in% names(comparison))
   expect_equal(sensitivity$display_label, "Best model includes +J")
-  expect_equal(warnings$model, "DEC+J")
-  expect_equal(warnings$warning_count, 2L)
+  expect_equal(warnings$model, c("DEC+J", "BAYAREALIKE"))
+  expect_equal(warnings$warning_count, c(2L, 0L))
+  expect_equal(warnings$error_message[match("BAYAREALIKE", warnings$model)], "optimizer failed")
+  expect_equal(failed$model, "BAYAREALIKE")
+  expect_equal(failed$log_file, "bayarealike.log")
   expect_equal(node_states$best_state, "AB")
   expect_equal(node_sensitivity$plus_j_state, "AB")
+})
+
+test_that("Shiny failed-model diagnostics summarize errors and logs", {
+  state <- new.env(parent = emptyenv())
+  state$result <- list(project_paths = list(tables = tempfile(), root = tempfile()))
+  state$model_table <- data.frame(
+    model = c("DEC", "DIVALIKE+J"),
+    status = c("completed", "failed"),
+    error_message = c(NA, "BioGeoBEARS optimizer stopped"),
+    log_file = c("dec.log", "divalikej.log"),
+    warning_count = c(0L, 0L),
+    warning_messages = c(NA, NA),
+    stringsAsFactors = FALSE
+  )
+
+  summary <- shiny_run_summary_table(state)
+  failed <- shiny_failed_models_table(state)
+  warning_summary <- shiny_warning_summary_table(state)
+
+  expect_equal(summary$value[match("Failed models", summary$item)], "DIVALIKE+J")
+  expect_equal(failed$model, "DIVALIKE+J")
+  expect_equal(failed$error_message, "BioGeoBEARS optimizer stopped")
+  expect_equal(warning_summary$value[match("Failed models", warning_summary$item)], "DIVALIKE+J")
+  expect_match(
+    warning_summary$value[match("Recommended next step", warning_summary$item)],
+    "Inspect failed model error messages",
+    fixed = TRUE
+  )
 })
 
 test_that("Shiny result summaries make model fit, +J sensitivity, and warnings readable", {
@@ -532,7 +567,7 @@ test_that("Shiny result helpers can read workflow CSV tables", {
 
   expect_equal(shiny_model_comparison_table(state)$model, "DEC")
   expect_equal(shiny_model_sensitivity_table(state)$answer, "DEC")
-  expect_equal(shiny_warnings_table(state)$model, "No captured warnings")
+  expect_equal(shiny_warnings_table(state)$model, "No captured warnings or failed models")
   expect_equal(shiny_node_state_summary_table(state)$best_state, "A")
   expect_equal(shiny_node_state_sensitivity_table(state)$plus_j_state, "B")
 })
@@ -737,6 +772,7 @@ test_that("Shiny server validates and dry-runs a workflow", {
     expect_true(any(grepl("Workflow: dry run started", state$messages, fixed = TRUE)))
     expect_true(any(grepl("Workflow: validation complete", state$messages, fixed = TRUE)))
     expect_true(any(grepl("Workflow: model status ready", state$messages, fixed = TRUE)))
+    expect_true(any(grepl("Workflow: failed models - none", state$messages, fixed = TRUE)))
     expect_true(any(grepl("Workflow: outputs refreshed", state$messages, fixed = TRUE)))
   })
 })

@@ -63,6 +63,8 @@ Development version after the 0.1.0 alpha release.
   guidance, license, package version, and workflow log paths.
 - Added staged Shiny progress messages for validation, workflow execution,
   output refresh, report rendering, and result bundling.
+- Added Shiny failed-model diagnostics in run summaries, warning summaries,
+  run-status details, and staged workflow messages.
 - Updated README workflow documentation for command-line runs, Shiny GUI use,
   result triage, key outputs, report rendering, and result bundling.
 - Added a `shinytest2` browser smoke script for the Shiny workflow runner.
