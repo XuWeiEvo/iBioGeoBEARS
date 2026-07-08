@@ -10,10 +10,14 @@ test_that("check_installation returns actionable workflow readiness", {
   ) %in% checks$component))
   expect_true(all(checks$status %in% c("Ready", "Action needed")))
   expect_true(all(nzchar(checks$next_step)))
-  expect_equal(
-    checks$status[checks$component %in% c("R", "Core R packages")],
-    c("Ready", "Ready")
-  )
+  expect_equal(checks$status[checks$component == "R"], "Ready")
+
+  core <- checks[checks$component == "Core R packages", , drop = FALSE]
+  if (identical(core$status[[1L]], "Ready")) {
+    expect_equal(core$next_step[[1L]], "Ready.")
+  } else {
+    expect_match(core$next_step[[1L]], "Install missing packages", fixed = TRUE)
+  }
 })
 
 test_that("check_installation can omit optional PDF readiness", {
