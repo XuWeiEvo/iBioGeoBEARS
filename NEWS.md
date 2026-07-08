@@ -75,6 +75,9 @@ Development version after the 0.1.0 alpha release.
 - Added Shiny config-editor fields for advanced BioGeoBEARS constraint files,
   including times, distances, dispersal multipliers, area-allowed, adjacency,
   and area-of-areas files.
+- Added a user-workflow smoke script covering GUI-style config overrides,
+  advanced constraint paths, report-source rendering, result bundles, and
+  diagnostic bundles.
 - Updated README workflow documentation for command-line runs, Shiny GUI use,
   result triage, key outputs, report rendering, and result bundling.
 - Added a `shinytest2` browser smoke script for the Shiny workflow runner.

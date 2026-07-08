@@ -98,6 +98,14 @@ output scaffold:
 result <- run_workflow(project$config, dry_run = TRUE, require_biogeobears = FALSE)
 ```
 
+For a broader local smoke test of the user workflow, including GUI-style config
+overrides, advanced constraint paths, report-source rendering, result bundling,
+and diagnostic bundling, run:
+
+```r
+source("tools/smoke-user-workflow.R")
+```
+
 ## Command-Line Workflow
 
 Create a runnable example project:
