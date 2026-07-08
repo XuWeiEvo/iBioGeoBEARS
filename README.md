@@ -211,6 +211,12 @@ install.packages("shinytest2")
 source("tools/smoke-shiny-browser.R")
 ```
 
+Before publishing a new alpha release, use the release checklist:
+
+```text
+docs/release-checklist.md
+```
+
 If validation fails, real execution is blocked by default. Review:
 
 ```text
