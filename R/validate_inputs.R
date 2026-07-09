@@ -121,7 +121,113 @@ validate_inputs <- function(config, base_dir = dirname(config$.config_file %||% 
 
   validation <- do.call(rbind, checks)
   row.names(validation) <- NULL
-  validation
+  format_validation_results(validation)
+}
+
+#' Add user-facing labels and repair guidance to validation results
+#'
+#' @param validation A validation data frame containing `check`, `ok`, and
+#'   `detail` columns.
+#' @return The validation data frame with `label`, `status`, and `next_step`
+#'   columns added while preserving the machine-readable fields.
+#' @export
+format_validation_results <- function(validation) {
+  required <- c("check", "ok", "detail")
+  missing <- setdiff(required, names(validation))
+  if (length(missing) > 0L) {
+    stop(
+      "Validation results are missing column(s): ",
+      paste(missing, collapse = ", "),
+      call. = FALSE
+    )
+  }
+
+  catalog <- validation_check_catalog()
+  matched <- match(validation$check, catalog$check)
+  fallback_label <- gsub("_", " ", validation$check, fixed = TRUE)
+  fallback_label <- paste0(toupper(substr(fallback_label, 1L, 1L)), substr(fallback_label, 2L, nchar(fallback_label)))
+  labels <- ifelse(is.na(matched), fallback_label, catalog$label[matched])
+  failed_steps <- ifelse(
+    is.na(matched),
+    "Review the technical detail, correct the input, and validate again.",
+    catalog$next_step[matched]
+  )
+
+  data.frame(
+    check = validation$check,
+    label = labels,
+    status = ifelse(validation$ok, "Passed", "Needs attention"),
+    ok = validation$ok,
+    detail = validation$detail,
+    next_step = ifelse(validation$ok, "No action needed.", failed_steps),
+    stringsAsFactors = FALSE
+  )
+}
+
+validation_check_catalog <- function() {
+  data.frame(
+    check = c(
+      "tree_file_exists",
+      "geography_file_exists",
+      "regions_file_exists",
+      "tree_file_parseable",
+      "geography_csv_parseable",
+      "geography_species_unique",
+      "geography_area_values_binary",
+      "geography_each_species_has_area",
+      "max_range_size_within_area_count",
+      "tree_geography_species_match",
+      "regions_cover_geography_areas",
+      "models_supported",
+      "models_not_duplicated",
+      "max_range_size_positive",
+      "output_parent_writable",
+      "advanced_constraints_list",
+      "advanced_constraint_fields_known",
+      "advanced_constraint_files_exist"
+    ),
+    label = c(
+      "Tree file is available",
+      "Geography CSV is available",
+      "Regions CSV is available",
+      "Tree file can be read",
+      "Geography CSV can be read",
+      "Taxon names in geography CSV are unique",
+      "Geography area values are binary",
+      "Every taxon occurs in at least one area",
+      "Maximum range size fits the area count",
+      "Tree and geography taxon names match",
+      "Regions CSV covers every geography area",
+      "Selected models are supported",
+      "Selected models are not duplicated",
+      "Maximum range size is positive",
+      "Output directory is writable",
+      "Advanced constraints use a valid structure",
+      "Advanced constraint names are recognized",
+      "Advanced constraint files are available"
+    ),
+    next_step = c(
+      "Select an existing Newick tree file.",
+      "Select an existing geography CSV file.",
+      "Select an existing regions CSV file, or remove it from the configuration.",
+      "Export the tree in valid Newick format and upload it again.",
+      "Use a CSV with one taxon column and at least one area column.",
+      "Keep one geography row per taxon and remove or merge duplicate names.",
+      "Use only 0 and 1 in all geography area columns.",
+      "Assign at least one area with value 1 to every taxon.",
+      "Set maximum range size no higher than the number of geography areas.",
+      "Make tree tip names and geography taxon names identical, including capitalization.",
+      "Add one regions CSV row for every geography area column.",
+      "Select at least one model from the supported model list.",
+      "Remove duplicate model selections.",
+      "Set maximum range size to a whole number of 1 or greater.",
+      "Choose an output location where the current user can create files.",
+      "Define advanced constraints as named YAML fields.",
+      "Remove unknown advanced constraint fields or use a documented field name.",
+      "Correct or remove advanced constraint file paths that do not exist."
+    ),
+    stringsAsFactors = FALSE
+  )
 }
 
 read_geography_for_validation <- function(path) {

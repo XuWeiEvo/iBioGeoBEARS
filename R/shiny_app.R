@@ -60,6 +60,12 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
             ),
             shiny::fileInput("wizard_geography", "Geography CSV", accept = ".csv"),
             shiny::fileInput("wizard_regions", "Regions CSV", accept = ".csv"),
+            shiny::tags$div(
+              class = "ibgb-downloads",
+              shiny::downloadButton("download_tree_template", "Tree template"),
+              shiny::downloadButton("download_geography_template", "Geography template"),
+              shiny::downloadButton("download_regions_template", "Regions template")
+            ),
             shiny::numericInput("wizard_max_range_size", "Maximum range size", value = 3L, min = 1L, step = 1L),
             shiny::checkboxGroupInput(
               "wizard_models",
@@ -568,7 +574,7 @@ iBGB_shiny_server <- function(input, output, session) {
       }, striped = TRUE, bordered = TRUE, na = "")
 
       output$validation_table <- shiny::renderTable({
-        state$validation
+        shiny_validation_table(state$validation)
       }, striped = TRUE, bordered = TRUE, na = "")
 
       output$model_table <- shiny::renderTable({
@@ -753,6 +759,27 @@ iBGB_shiny_server <- function(input, output, session) {
           copy_download_file(src, file)
         }
       )
+
+      output$download_tree_template <- shiny::downloadHandler(
+        filename = function() "tree_template.nwk",
+        content = function(file) {
+          copy_download_file(input_template_path("tree"), file)
+        }
+      )
+
+      output$download_geography_template <- shiny::downloadHandler(
+        filename = function() "geography_template.csv",
+        content = function(file) {
+          copy_download_file(input_template_path("geography"), file)
+        }
+      )
+
+      output$download_regions_template <- shiny::downloadHandler(
+        filename = function() "regions_template.csv",
+        content = function(file) {
+          copy_download_file(input_template_path("regions"), file)
+        }
+      )
 }
 
 shiny_installation_table <- function(checks = check_installation()) {
@@ -762,6 +789,34 @@ shiny_installation_table <- function(checks = check_installation()) {
   out <- checks
   names(out) <- c("Component", "Required for", "Required", "Status", "Version", "Next step")
   out
+}
+
+shiny_validation_table <- function(validation) {
+  if (is.null(validation) || nrow(validation) == 0L) {
+    return(data.frame())
+  }
+  if (!all(c("label", "status", "next_step") %in% names(validation))) {
+    validation <- format_validation_results(validation)
+  }
+  out <- validation[c("label", "status", "detail", "next_step")]
+  names(out) <- c("Check", "Status", "Detail", "How to fix")
+  out
+}
+
+input_template_path <- function(kind) {
+  files <- c(
+    tree = "tree.nwk",
+    geography = "geography.csv",
+    regions = "regions.csv"
+  )
+  if (length(kind) != 1L || is.na(kind) || !kind %in% names(files)) {
+    stop("Unknown input template: ", paste(kind, collapse = ", "), call. = FALSE)
+  }
+  path <- system.file("example_data", files[[kind]], package = "iBiogeobears")
+  if (!file.exists(path)) {
+    stop("Installed input template could not be found: ", files[[kind]], call. = FALSE)
+  }
+  path
 }
 
 default_project_parent <- function() {

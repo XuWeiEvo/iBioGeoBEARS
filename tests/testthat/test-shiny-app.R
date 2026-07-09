@@ -76,6 +76,27 @@ test_that("Shiny project wizard helpers resolve uploads and defaults", {
   expect_error(shiny_upload_path(NULL, "Tree file"), "Tree file is required")
 })
 
+test_that("Shiny validation table and input templates are user-facing", {
+  validation <- data.frame(
+    check = "geography_area_values_binary",
+    ok = FALSE,
+    detail = "A, B",
+    stringsAsFactors = FALSE
+  )
+
+  table <- shiny_validation_table(validation)
+
+  expect_equal(names(table), c("Check", "Status", "Detail", "How to fix"))
+  expect_equal(table$Status, "Needs attention")
+  expect_match(table$`How to fix`, "only 0 and 1", fixed = TRUE)
+  expect_true(all(file.exists(vapply(
+    c("tree", "geography", "regions"),
+    input_template_path,
+    character(1)
+  ))))
+  expect_error(input_template_path("unknown"), "Unknown input template")
+})
+
 test_that("Shiny sidebar helper builds grouped controls", {
   testthat::skip_if_not_installed("shiny")
 

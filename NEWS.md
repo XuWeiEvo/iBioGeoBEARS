@@ -11,6 +11,10 @@ Development toward a stable, ordinary-user release.
 - Added a no-YAML Shiny project wizard for tree, geography, and region uploads.
 - Added `create_analysis_project()` to build, configure, and validate a
   portable project from user input files.
+- Added user-facing validation labels, pass/fail status, and specific repair
+  guidance while preserving technical check identifiers.
+- Added downloadable tree, geography, and regions templates to the Shiny
+  project wizard.
 
 # iBiogeobears 0.2.0
 

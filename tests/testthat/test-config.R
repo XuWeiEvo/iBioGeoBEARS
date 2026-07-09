@@ -27,6 +27,28 @@ test_that("validate_inputs returns checks", {
     "output_parent_writable"
   ) %in% checks$check))
   expect_true(all(checks$ok))
+  expect_true(all(c("label", "status", "next_step") %in% names(checks)))
+  expect_true(all(checks$status == "Passed"))
+  expect_true(all(checks$next_step == "No action needed."))
+})
+
+test_that("format_validation_results explains how to repair failures", {
+  validation <- data.frame(
+    check = c("tree_geography_species_match", "custom_future_check"),
+    ok = c(FALSE, FALSE),
+    detail = c("missing_from_geography: taxon_b", "custom detail"),
+    stringsAsFactors = FALSE
+  )
+
+  formatted <- format_validation_results(validation)
+
+  expect_equal(formatted$status, c("Needs attention", "Needs attention"))
+  expect_equal(formatted$label[[1L]], "Tree and geography taxon names match")
+  expect_match(formatted$next_step[[1L]], "identical", fixed = TRUE)
+  expect_equal(formatted$label[[2L]], "Custom future check")
+  expect_match(formatted$next_step[[2L]], "technical detail", fixed = TRUE)
+  expect_equal(formatted$check, validation$check)
+  expect_equal(formatted$detail, validation$detail)
 })
 
 test_that("validate_inputs catches common configuration errors", {

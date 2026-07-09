@@ -186,6 +186,8 @@ For a new analysis, use `New project wizard` in the sidebar:
 
 The wizard copies the inputs into a portable project, writes `analysis.yml`,
 loads it into the app, and immediately displays input validation results.
+Template buttons provide working tree, geography, and regions files that can be
+edited for a new analysis.
 
 Recommended GUI flow:
 
@@ -245,6 +247,10 @@ If validation fails, real execution is blocked by default. Review:
 ```text
 tables/input_validation.csv
 ```
+
+Validation output includes a readable check name, `Passed` or
+`Needs attention`, the technical detail, and a concrete repair step. The
+machine-readable `check` and `ok` columns remain available for reproducibility.
 
 Only override this after reviewing the failure:
 

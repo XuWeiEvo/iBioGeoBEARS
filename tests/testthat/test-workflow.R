@@ -47,6 +47,10 @@ test_that("run_workflow blocks execution when validation fails", {
   expect_true(file.exists(validation_path))
   validation <- utils::read.csv(validation_path)
   expect_false(validation$ok[match("tree_geography_species_match", validation$check)])
+  expect_true(all(c("label", "status", "next_step") %in% names(validation)))
+  mismatch <- validation[validation$check == "tree_geography_species_match", , drop = FALSE]
+  expect_equal(mismatch$status, "Needs attention")
+  expect_match(mismatch$next_step, "identical", fixed = TRUE)
 })
 
 test_that("run_workflow exposes model comparison when BioGeoBEARS is available", {

@@ -73,7 +73,7 @@ run_workflow <- function(config, output_dir = NULL, dry_run = TRUE, require_biog
 
 format_validation_failure_message <- function(validation, project_paths) {
   failed <- validation[!validation$ok, , drop = FALSE]
-  failed_checks <- paste(failed$check, collapse = ", ")
+  failed_checks <- paste(failed$label %||% failed$check, collapse = ", ")
   paste(
     "Input validation failed; refusing to execute BioGeoBEARS.",
     "Failed checks:",
