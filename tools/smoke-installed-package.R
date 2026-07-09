@@ -40,4 +40,8 @@ stopifnot(file.exists(user_project$config))
 stopifnot(identical(user_project$project_name, "installed_smoke_project"))
 stopifnot(all(user_project$validation$ok))
 
+install_plan <- biogeobears_install_plan()
+stopifnot(all(c("package", "source", "status", "next_step") %in% names(install_plan)))
+stopifnot(identical(install_biogeobears(), install_plan))
+
 cat("Installed package smoke test passed\n")

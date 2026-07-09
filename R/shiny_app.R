@@ -91,7 +91,9 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
           shiny_control_section(
             "Setup",
             shiny_action_grid(
-              shiny::actionButton("refresh_setup", "Refresh setup checks")
+              shiny::actionButton("refresh_setup", "Refresh setup checks"),
+              shiny::actionButton("show_install_plan", "Show BioGeoBEARS install plan"),
+              shiny::actionButton("install_biogeobears", "Install BioGeoBEARS")
             )
           ),
           shiny_control_section(
@@ -146,7 +148,9 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
             shiny::tabPanel(
               "Setup",
               shiny::tags$div(class = "ibgb-key-files-title", "Installation readiness"),
-              shiny::tableOutput("installation_table")
+              shiny::tableOutput("installation_table"),
+              shiny::tags$div(class = "ibgb-key-files-title", "BioGeoBEARS installation plan"),
+              shiny::tableOutput("biogeobears_install_plan_table")
             ),
             shiny::tabPanel(
               "Run Summary",
@@ -300,6 +304,7 @@ iBGB_shiny_server <- function(input, output, session) {
         bundle = NULL,
         diagnostic_bundle = NULL,
         installation = check_installation(),
+        install_plan = biogeobears_install_plan(),
         message = "Configuration ready. Validate inputs before running.",
         messages = "Configuration ready. Validate inputs before running.",
         status_type = "info"
@@ -353,7 +358,44 @@ iBGB_shiny_server <- function(input, output, session) {
       shiny::observeEvent(input$refresh_setup, {
         run_app_action(state, {
           state$installation <- check_installation()
+          state$install_plan <- biogeobears_install_plan()
           append_app_message(state, "Setup checks refreshed.")
+        })
+      })
+
+      shiny::observeEvent(input$show_install_plan, {
+        run_app_action(state, {
+          state$install_plan <- biogeobears_install_plan()
+          missing_count <- sum(state$install_plan$status != "Ready")
+          append_app_message(
+            state,
+            paste("BioGeoBEARS install plan refreshed:", missing_count, "package(s) need action.")
+          )
+        })
+      })
+
+      shiny::observeEvent(input$install_biogeobears, {
+        shiny::showModal(biogeobears_install_modal())
+      })
+
+      shiny::observeEvent(input$confirm_install_biogeobears, {
+        shiny::removeModal()
+        run_app_action(state, {
+          shiny::withProgress(message = "Installing BioGeoBEARS", value = 0, {
+            append_app_message(
+              state,
+              "BioGeoBEARS installation started from CRAN and nmatzke/BioGeoBEARS."
+            )
+            installation_result <- install_biogeobears(execute = TRUE)
+            shiny::incProgress(0.9)
+            state$installation <- check_installation()
+            state$install_plan <- installation_result$plan
+            append_app_message(
+              state,
+              paste("BioGeoBEARS installation ready:", installation_result$biogeobears$version)
+            )
+            shiny::incProgress(0.1)
+          })
         })
       })
 
@@ -559,6 +601,10 @@ iBGB_shiny_server <- function(input, output, session) {
 
       output$installation_table <- shiny::renderTable({
         shiny_installation_table(state$installation)
+      }, striped = TRUE, bordered = TRUE, na = "")
+
+      output$biogeobears_install_plan_table <- shiny::renderTable({
+        shiny_biogeobears_install_plan(state$install_plan)
       }, striped = TRUE, bordered = TRUE, na = "")
 
       output$run_summary_table <- shiny::renderTable({
@@ -789,6 +835,33 @@ shiny_installation_table <- function(checks = check_installation()) {
   out <- checks
   names(out) <- c("Component", "Required for", "Required", "Status", "Version", "Next step")
   out
+}
+
+shiny_biogeobears_install_plan <- function(plan = biogeobears_install_plan()) {
+  if (is.null(plan) || nrow(plan) == 0L) {
+    return(data.frame())
+  }
+  out <- plan[order(plan$status == "Ready", plan$package), , drop = FALSE]
+  row.names(out) <- NULL
+  names(out) <- c("Package", "Source", "Status", "Version", "Next step")
+  out
+}
+
+biogeobears_install_modal <- function() {
+  shiny::modalDialog(
+    title = "Install BioGeoBEARS",
+    shiny::tags$p(
+      "This will install missing CRAN dependencies and BioGeoBEARS from ",
+      shiny::tags$code("nmatzke/BioGeoBEARS"),
+      " into the first writable R library."
+    ),
+    shiny::tags$p("The installation requires internet access and may take several minutes."),
+    footer = shiny::tagList(
+      shiny::modalButton("Cancel"),
+      shiny::actionButton("confirm_install_biogeobears", "Install")
+    ),
+    easyClose = FALSE
+  )
 }
 
 shiny_validation_table <- function(validation) {

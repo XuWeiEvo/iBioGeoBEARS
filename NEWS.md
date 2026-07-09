@@ -15,6 +15,10 @@ Development toward a stable, ordinary-user release.
   guidance while preserving technical check identifiers.
 - Added downloadable tree, geography, and regions templates to the Shiny
   project wizard.
+- Added a complete BioGeoBEARS dependency plan and an explicitly enabled
+  installation API.
+- Added a Shiny BioGeoBEARS installation plan and confirmation dialog; package
+  installation never starts from the GUI without a second user action.
 
 # iBiogeobears 0.2.0
 

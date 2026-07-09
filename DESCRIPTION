@@ -30,6 +30,7 @@ Imports:
     ggraph,
     ape
 Suggests:
+    devtools,
     testthat (>= 3.0.0),
     shiny,
     shinytest2,

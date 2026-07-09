@@ -60,6 +60,30 @@ test_that("Shiny installation table uses readable labels", {
   expect_equal(table$Component, "BioGeoBEARS")
 })
 
+test_that("Shiny BioGeoBEARS installation helpers are explicit", {
+  testthat::skip_if_not_installed("shiny")
+
+  plan <- data.frame(
+    package = c("rexpokit", "BioGeoBEARS"),
+    source = c("CRAN", "GitHub"),
+    status = c("Ready", "Action needed"),
+    version = c("0.26.6.9", NA_character_),
+    next_step = c("No action needed.", "Install from official GitHub."),
+    stringsAsFactors = FALSE
+  )
+  table <- shiny_biogeobears_install_plan(plan)
+  modal <- as.character(biogeobears_install_modal())
+
+  expect_equal(
+    names(table),
+    c("Package", "Source", "Status", "Version", "Next step")
+  )
+  expect_equal(table$Status, c("Action needed", "Ready"))
+  expect_match(modal, "nmatzke/BioGeoBEARS", fixed = TRUE)
+  expect_match(modal, "confirm_install_biogeobears", fixed = TRUE)
+  expect_match(modal, "Cancel", fixed = TRUE)
+})
+
 test_that("Shiny project wizard helpers resolve uploads and defaults", {
   uploaded <- tempfile(fileext = ".csv")
   writeLines("species,A\ntaxon_a,1", uploaded)

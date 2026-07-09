@@ -13,9 +13,9 @@ check_biogeobears <- function(required = TRUE) {
 
   install_help <- paste(
     "BioGeoBEARS is required for running analyses but is not bundled with",
-    "iBiogeobears. Install it separately, for example:",
-    "install.packages(c('devtools', 'rexpokit', 'cladoRcpp'));",
-    "devtools::install_github('nmatzke/BioGeoBEARS', dependencies = FALSE)"
+    "iBiogeobears. Inspect the installation plan with",
+    "iBiogeobears::biogeobears_install_plan(), then explicitly install with",
+    "iBiogeobears::install_biogeobears(execute = TRUE)."
   )
 
   if (!available) {
@@ -155,4 +155,192 @@ installation_check_row <- function(component, required_for, required, available,
     next_step = if (isTRUE(available)) "Ready." else as.character(next_step %||% "Install the missing component."),
     stringsAsFactors = FALSE
   )
+}
+
+#' Plan a BioGeoBEARS installation
+#'
+#' Checks the complete BioGeoBEARS 1.1.x import set plus BioGeoBEARS itself.
+#' This function never installs or updates packages.
+#'
+#' @return A data frame listing package source, availability, version, and the
+#'   next installation step.
+#' @export
+biogeobears_install_plan <- function() {
+  dependencies <- biogeobears_cran_dependencies()
+  archived <- biogeobears_archived_dependencies()
+  packages <- c(dependencies, names(archived), "BioGeoBEARS")
+  available <- vapply(packages, requireNamespace, logical(1), quietly = TRUE)
+  versions <- vapply(packages, installed_package_version, character(1))
+  sources <- c(
+    rep("CRAN", length(dependencies)),
+    rep("CRAN Archive", length(archived)),
+    "GitHub"
+  )
+
+  plan <- data.frame(
+    package = packages,
+    source = sources,
+    status = ifelse(available, "Ready", "Action needed"),
+    version = versions,
+    next_step = ifelse(
+      available,
+      "No action needed.",
+      ifelse(
+        sources == "CRAN",
+        paste0("Install from CRAN: install.packages('", packages, "')."),
+        ifelse(
+          sources == "CRAN Archive",
+          "Install the archived MultinomialCI 1.2 source package from CRAN.",
+          "Install from the official nmatzke/BioGeoBEARS GitHub repository."
+        )
+      )
+    ),
+    stringsAsFactors = FALSE
+  )
+  row.names(plan) <- NULL
+  plan
+}
+
+#' Install BioGeoBEARS and its R package dependencies
+#'
+#' By default this function only returns an installation plan. Set
+#' `execute = TRUE` to install missing CRAN dependencies and then install
+#' BioGeoBEARS from its official GitHub repository.
+#'
+#' @param execute Logical. Perform installation only when explicitly `TRUE`.
+#' @param lib Optional R library directory. Defaults to the first writable
+#'   library in `.libPaths()`.
+#' @param repos CRAN repository passed to [utils::install.packages()].
+#' @param github_repo GitHub repository used for BioGeoBEARS.
+#' @param force Logical. Reinstall BioGeoBEARS even when it is already
+#'   available.
+#' @return When `execute = FALSE`, an installation-plan data frame. Otherwise,
+#'   a list containing the library path, final plan, and BioGeoBEARS check.
+#' @export
+install_biogeobears <- function(
+    execute = FALSE,
+    lib = NULL,
+    repos = NULL,
+    github_repo = "nmatzke/BioGeoBEARS",
+    force = FALSE) {
+  plan <- biogeobears_install_plan()
+  if (!isTRUE(execute)) {
+    return(plan)
+  }
+
+  lib <- resolve_install_library(lib)
+  repos <- resolve_cran_repositories(repos)
+  .libPaths(unique(c(lib, .libPaths())))
+
+  dependency_rows <- plan$source == "CRAN" & plan$status != "Ready"
+  missing_dependencies <- plan$package[dependency_rows]
+  if (length(missing_dependencies) > 0L) {
+    utils::install.packages(
+      missing_dependencies,
+      lib = lib,
+      repos = repos,
+      dependencies = c("Depends", "Imports", "LinkingTo")
+    )
+  }
+
+  archived <- biogeobears_archived_dependencies()
+  missing_archived <- names(archived)[
+    !vapply(names(archived), requireNamespace, logical(1), quietly = TRUE)
+  ]
+  for (package in missing_archived) {
+    utils::install.packages(
+      archived[[package]],
+      lib = lib,
+      repos = NULL,
+      type = "source"
+    )
+  }
+
+  required_dependencies <- c(biogeobears_cran_dependencies(), names(archived))
+  remaining <- required_dependencies[
+    !vapply(required_dependencies, requireNamespace, logical(1), quietly = TRUE)
+  ]
+  if (length(remaining) > 0L) {
+    stop(
+      "Could not install required BioGeoBEARS dependencies: ",
+      paste(remaining, collapse = ", "),
+      ". Review the installation messages and try these packages individually.",
+      call. = FALSE
+    )
+  }
+
+  if (!requireNamespace("devtools", quietly = TRUE)) {
+    stop("The devtools package is required to install BioGeoBEARS from GitHub.", call. = FALSE)
+  }
+  if (isTRUE(force) || !requireNamespace("BioGeoBEARS", quietly = TRUE)) {
+    devtools::install_github(
+      repo = github_repo,
+      dependencies = FALSE,
+      upgrade = "never",
+      force = isTRUE(force),
+      lib = lib
+    )
+  }
+
+  final_check <- check_biogeobears(required = TRUE)
+  list(
+    library = as_path(lib),
+    plan = biogeobears_install_plan(),
+    biogeobears = final_check
+  )
+}
+
+biogeobears_cran_dependencies <- function() {
+  c(
+    "optimx", "plotrix", "gdata", "GenSA", "rexpokit", "cladoRcpp", "ape",
+    "phylobase", "phytools", "FD", "minqa", "expm", "devtools", "fdrtool",
+    "httr", "statmod", "SparseM", "spam", "stringr"
+  )
+}
+
+biogeobears_archived_dependencies <- function() {
+  c(
+    MultinomialCI = paste0(
+      "https://cran.r-project.org/src/contrib/Archive/MultinomialCI/",
+      "MultinomialCI_1.2.tar.gz"
+    )
+  )
+}
+
+installed_package_version <- function(package) {
+  if (!requireNamespace(package, quietly = TRUE)) {
+    return(NA_character_)
+  }
+  as.character(utils::packageVersion(package))
+}
+
+resolve_install_library <- function(lib = NULL) {
+  if (!is.null(lib)) {
+    lib <- as_path(lib)
+    dir.create(lib, recursive = TRUE, showWarnings = FALSE)
+    if (!dir.exists(lib) || file.access(lib, mode = 2) != 0L) {
+      stop("R library is not writable: ", lib, call. = FALSE)
+    }
+    return(lib)
+  }
+
+  candidates <- .libPaths()
+  writable <- candidates[file.access(candidates, mode = 2) == 0L]
+  if (length(writable) == 0L) {
+    stop(
+      "No writable R library was found. Create a user library and pass it with the lib argument.",
+      call. = FALSE
+    )
+  }
+  as_path(writable[[1L]])
+}
+
+resolve_cran_repositories <- function(repos = NULL) {
+  repos <- repos %||% getOption("repos")
+  if (is.null(repos) || length(repos) == 0L || all(is.na(repos) | repos == "@CRAN@")) {
+    repos <- c(CRAN = "https://cloud.r-project.org")
+  } else {
+    repos[is.na(repos) | repos == "@CRAN@"] <- "https://cloud.r-project.org"
+  }
+  repos
 }

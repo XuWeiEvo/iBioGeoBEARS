@@ -104,9 +104,11 @@ test_that("installed package exposes templates, example data, and public API", {
   expect_true(all(c(
     "bundle_diagnostics",
     "bundle_results",
+    "biogeobears_install_plan",
     "create_workflow_manifest",
     "create_analysis_project",
     "create_example_project",
+    "install_biogeobears",
     "run_workflow",
     "render_report",
     "run_models"

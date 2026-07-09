@@ -86,6 +86,26 @@ execution, and report rendering, run:
 check_installation()
 ```
 
+Inspect the complete BioGeoBEARS dependency plan without changing the R
+installation:
+
+```r
+biogeobears_install_plan()
+install_biogeobears()
+```
+
+To explicitly install missing dependencies and BioGeoBEARS from its official
+GitHub repository:
+
+```r
+install_biogeobears(execute = TRUE)
+```
+
+The Shiny Setup section exposes the same plan and requires a confirmation
+dialog before installation starts. The helper installs `MultinomialCI` 1.2
+from the official CRAN Archive because it is no longer in the active CRAN
+package index.
+
 ## Quick Start
 
 This creates a self-contained example project, runs the bundled example data,
