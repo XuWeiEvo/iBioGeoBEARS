@@ -1,4 +1,7 @@
 test_that("quick acceptance check covers the installed user workflow", {
+  # The dedicated CI acceptance step runs this installed-package workflow.
+  skip_on_ci()
+
   out <- tempfile("ibgb-acceptance-")
   result <- run_acceptance_check(out, mode = "quick")
   failed <- result$checks[result$checks$status == "Failed", , drop = FALSE]
