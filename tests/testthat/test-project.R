@@ -109,6 +109,7 @@ test_that("installed package exposes templates, example data, and public API", {
     "create_analysis_project",
     "create_example_project",
     "install_biogeobears",
+    "run_acceptance_check",
     "run_workflow",
     "render_report",
     "run_models"

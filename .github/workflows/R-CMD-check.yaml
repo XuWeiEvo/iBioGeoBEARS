@@ -55,3 +55,6 @@ jobs:
 
       - name: Smoke-test user workflow
         run: Rscript tools/smoke-user-workflow.R .
+
+      - name: Run quick acceptance matrix
+        run: Rscript tools/run-acceptance.R . quick

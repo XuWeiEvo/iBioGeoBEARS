@@ -46,7 +46,8 @@ BioGeoBEARS must be installed separately; it is not bundled with
 ## Continuous Integration
 
 GitHub Actions runs `R CMD check --no-manual`, an installed-package smoke test,
-and a user-workflow smoke test on every push and pull request to `main`.
+the user-workflow smoke test, and the quick acceptance matrix on every push and
+pull request to `main`.
 
 The CI workflow intentionally does not install or execute BioGeoBEARS. It
 verifies package installation, exported APIs, bundled templates, bundled example
@@ -85,6 +86,33 @@ execution, and report rendering, run:
 ```r
 check_installation()
 ```
+
+For a single end-to-end readiness result, run:
+
+```r
+acceptance <- run_acceptance_check(
+  tempfile("iBiogeobears-acceptance-"),
+  mode = "quick"
+)
+acceptance
+```
+
+Quick mode validates project creation, bundled inputs, the six-model dry-run
+plan, report source generation, and result/diagnostic bundles without requiring
+BioGeoBEARS, Shiny, or Quarto. Maintainers preparing a stable release should
+run the stricter gate:
+
+```r
+acceptance <- run_acceptance_check(
+  "stable-release-acceptance",
+  mode = "full"
+)
+```
+
+Full mode requires the ordinary-user environment, executes all six supported
+models, verifies that the second run reuses every completed result, renders an
+HTML report, and creates both bundles. Detailed results are saved in
+`acceptance_results.csv`; failed steps include a recommended next action.
 
 Inspect the complete BioGeoBEARS dependency plan without changing the R
 installation:

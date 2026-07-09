@@ -2,6 +2,12 @@
 
 Development toward a stable, ordinary-user release.
 
+- Added `run_acceptance_check()` with a CI-friendly quick mode and a full
+  six-model stability gate covering model reuse, HTML reporting, result
+  bundling, and diagnostic bundling.
+- Added a saved acceptance matrix with platform, R version, package version,
+  elapsed time, failure details, and actionable next steps.
+- Added the quick acceptance matrix to GitHub Actions.
 - Added a unified installation-readiness check for R, package dependencies,
   Shiny, BioGeoBEARS, and report rendering.
 - Made the no-argument Shiny launch open with a complete, valid example project
