@@ -57,12 +57,11 @@ check_biogeobears <- function(required = TRUE) {
 #' @export
 check_installation <- function(include_pdf = TRUE) {
   core_packages <- c("yaml", "ggplot2", "igraph", "ggraph", "ape")
-  core_available <- vapply(core_packages, requireNamespace, logical(1), quietly = TRUE)
-  missing_core <- core_packages[!core_available]
-  core_versions <- vapply(
-    core_packages[core_available],
-    function(package) as.character(utils::packageVersion(package)),
-    character(1)
+  core_status <- do.call(rbind, lapply(core_packages, package_namespace_status))
+  core_available <- core_status$available
+  core_versions <- stats::setNames(
+    core_status$version[core_available],
+    core_status$package[core_available]
   )
 
   bgb <- check_biogeobears(required = FALSE)
@@ -88,15 +87,7 @@ check_installation <- function(include_pdf = TRUE) {
       } else {
         NA_character_
       },
-      if (length(missing_core) > 0L) {
-        paste0(
-          "Install missing packages: install.packages(c(",
-          paste(sprintf("'%s'", missing_core), collapse = ", "),
-          "))."
-        )
-      } else {
-        "Ready."
-      }
+      core_package_next_step(core_status)
     ),
     installation_check_row(
       "Shiny",
@@ -139,6 +130,74 @@ check_installation <- function(include_pdf = TRUE) {
   out <- do.call(rbind, rows)
   row.names(out) <- NULL
   out
+}
+
+package_namespace_status <- function(package) {
+  error_message <- NA_character_
+  available <- tryCatch(
+    {
+      loadNamespace(package)
+      TRUE
+    },
+    error = function(e) {
+      error_message <<- conditionMessage(e)
+      FALSE
+    }
+  )
+  installed <- package %in% row.names(utils::installed.packages())
+  version <- if (available) {
+    as.character(utils::packageVersion(package))
+  } else {
+    NA_character_
+  }
+  data.frame(
+    package = package,
+    installed = installed,
+    available = available,
+    version = version,
+    error_message = error_message,
+    stringsAsFactors = FALSE
+  )
+}
+
+core_package_next_step <- function(status) {
+  unavailable <- status[!status$available, , drop = FALSE]
+  if (nrow(unavailable) == 0L) {
+    return("Ready.")
+  }
+
+  missing <- unavailable$package[!unavailable$installed]
+  unloadable <- unavailable[unavailable$installed, , drop = FALSE]
+  guidance <- character()
+  if (length(missing) > 0L) {
+    guidance <- c(
+      guidance,
+      paste0(
+        "Install missing packages: install.packages(c(",
+        paste(sprintf("'%s'", missing), collapse = ", "),
+        "))."
+      )
+    )
+  }
+  if (nrow(unloadable) > 0L) {
+    errors <- paste0(
+      unloadable$package,
+      ": ",
+      unloadable$error_message
+    )
+    guidance <- c(
+      guidance,
+      paste0(
+        "Installed package(s) could not be loaded: ",
+        paste(unloadable$package, collapse = ", "),
+        ". Load errors: ",
+        paste(errors, collapse = "; "),
+        ". On Debian/Ubuntu, install libglpk-dev and libxml2-dev before ",
+        "reinstalling igraph and ggraph."
+      )
+    )
+  }
+  paste(guidance, collapse = " ")
 }
 
 installation_check_row <- function(component, required_for, required, available, version, next_step) {

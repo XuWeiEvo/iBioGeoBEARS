@@ -26,3 +26,21 @@ test_that("check_installation can omit optional PDF readiness", {
   expect_false("Quarto PDF" %in% checks$component)
   expect_true("Quarto HTML" %in% checks$component)
 })
+
+test_that("core package guidance distinguishes missing and unloadable packages", {
+  status <- data.frame(
+    package = c("missingPkg", "igraph"),
+    installed = c(FALSE, TRUE),
+    available = c(FALSE, FALSE),
+    version = NA_character_,
+    error_message = c(NA_character_, "libglpk.so.40: cannot open shared object file"),
+    stringsAsFactors = FALSE
+  )
+
+  guidance <- iBiogeobears:::core_package_next_step(status)
+
+  expect_match(guidance, "install.packages\\(c\\('missingPkg'\\)\\)")
+  expect_match(guidance, "Installed package\\(s\\) could not be loaded: igraph")
+  expect_match(guidance, "libglpk-dev and libxml2-dev", fixed = TRUE)
+  expect_match(guidance, "libglpk.so.40", fixed = TRUE)
+})

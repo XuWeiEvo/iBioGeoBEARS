@@ -8,6 +8,9 @@ Development toward a stable, ordinary-user release.
 - Added a saved acceptance matrix with platform, R version, package version,
   elapsed time, failure details, and actionable next steps.
 - Added the quick acceptance matrix to GitHub Actions.
+- Added Linux GLPK/libxml2 CI dependencies and actionable diagnostics for R
+  packages that are installed but cannot load because a system library is
+  missing.
 - Added a unified installation-readiness check for R, package dependencies,
   Shiny, BioGeoBEARS, and report rendering.
 - Made the no-argument Shiny launch open with a complete, valid example project
