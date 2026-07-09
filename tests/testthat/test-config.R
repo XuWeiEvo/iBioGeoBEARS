@@ -32,6 +32,13 @@ test_that("validate_inputs returns checks", {
   expect_true(all(checks$next_step == "No action needed."))
 })
 
+test_that("configuration defaults enable safe model resume", {
+  cfg <- fill_config_defaults(list())
+
+  expect_true(cfg$analysis$resume_completed_models)
+  expect_false(cfg$analysis$retry_failed_only)
+})
+
 test_that("format_validation_results explains how to repair failures", {
   validation <- data.frame(
     check = c("tree_geography_species_match", "custom_future_check"),

@@ -161,7 +161,7 @@ if (!is.null(workflow_manifest) && nrow(workflow_manifest) > 0L) {
 ### Run Overview
 
 ```{r}
-status_cols <- c("model", "status", "logLik", "num_params", "warning_count")
+status_cols <- c("model", "status", "run_action", "logLik", "num_params", "warning_count")
 if (!is.null(model_status)) {
   print_table(model_status[intersect(status_cols, names(model_status))])
 } else {

@@ -6,7 +6,94 @@ test_that("run_models returns a dry-run plan", {
 
   expect_equal(plan$model, c("DEC", "DEC+J"))
   expect_equal(plan$status, c("planned", "planned"))
+  expect_equal(plan$run_action, c("planned", "planned"))
   expect_true(all(grepl("DEC", plan$raw_output_dir)))
+})
+
+test_that("model run signatures change when model inputs change", {
+  root <- tempfile("ibgb-signature-")
+  dir.create(root)
+  tree <- file.path(root, "tree.nwk")
+  geog <- file.path(root, "geography.data")
+  writeLines("(a:1,b:1);", tree)
+  writeLines("2\t1 (A)\na\t1\nb\t1", geog)
+  prepared <- list(
+    tree_file = tree,
+    geography_file = geog,
+    max_range_size = 1L
+  )
+  cfg <- list(
+    analysis = list(time_bins = NULL),
+    advanced = list(),
+    .config_file = file.path(root, "analysis.yml")
+  )
+
+  first <- model_run_signature(cfg, prepared, "DEC")
+  writeLines("2\t1 (A)\na\t1\nb\t0", geog)
+  second <- model_run_signature(cfg, prepared, "DEC")
+
+  expect_false(identical(first, second))
+  expect_false(identical(first, model_run_signature(cfg, prepared, "DEC+J")))
+})
+
+test_that("completed model metadata is reused only for a matching signature", {
+  raw_dir <- tempfile("ibgb-reusable-model-")
+  dir.create(raw_dir)
+  model <- "DEC"
+  signature <- "matching-signature"
+  result_file <- file.path(raw_dir, "DEC_result.rds")
+  log_file <- file.path(raw_dir, "DEC.log")
+  saveRDS(list(fit = "saved"), result_file)
+  writeLines("completed", log_file)
+  summary <- data.frame(
+    model = model,
+    status = "completed",
+    run_action = "executed",
+    run_signature = signature,
+    logLik = -10,
+    num_params = 2L,
+    raw_output_dir = raw_dir,
+    result_file = result_file,
+    log_file = log_file,
+    error_message = NA_character_,
+    warning_count = 0L,
+    warning_messages = NA_character_,
+    stringsAsFactors = FALSE
+  )
+  saveRDS(
+    list(
+      schema_version = 1L,
+      model = model,
+      signature = signature,
+      status = "completed",
+      summary = summary
+    ),
+    model_run_metadata_file(raw_dir, model)
+  )
+
+  reused <- load_reusable_model_result(model, raw_dir, signature)
+
+  expect_equal(reused$status, "completed")
+  expect_equal(reused$summary$run_action, "reused")
+  expect_equal(reused$result$fit, "saved")
+  expect_null(load_reusable_model_result(model, raw_dir, "changed-signature"))
+})
+
+test_that("failed-only retry selection and log archiving are explicit", {
+  previous <- data.frame(
+    model = c("DEC", "DEC+J"),
+    status = c("completed", "failed"),
+    stringsAsFactors = FALSE
+  )
+  log_file <- tempfile(fileext = ".log")
+  writeLines("first failure", log_file)
+
+  archived <- archive_previous_model_log(log_file)
+
+  expect_false(model_was_previously_failed("DEC", previous))
+  expect_true(model_was_previously_failed("DEC+J", previous))
+  expect_true(file.exists(archived))
+  expect_equal(readLines(archived), "first failure")
 })
 
 test_that("geography CSV is written in BioGeoBEARS data format", {
@@ -90,7 +177,13 @@ test_that("run_models executes a DEC smoke run when BioGeoBEARS is available", {
   expect_true(file.exists(file.path(paths$tables, "node_state_summary.csv")))
 
   run_status <- utils::read.csv(file.path(paths$tables, "model_run_status.csv"), check.names = FALSE)
-  expect_true(all(c("warning_count", "warning_messages") %in% names(run_status)))
+  expect_true(all(c(
+    "run_action", "run_signature", "warning_count", "warning_messages"
+  ) %in% names(run_status)))
+
+  resumed <- suppressWarnings(run_models(cfg, paths, execute = TRUE))
+  resumed_status <- attr(resumed, "run_status")
+  expect_equal(resumed_status$run_action, "reused")
 
   node_summary <- utils::read.csv(file.path(paths$tables, "node_state_summary.csv"), check.names = FALSE)
   expect_true(all(c("model", "node_index", "best_state", "best_probability") %in% names(node_summary)))

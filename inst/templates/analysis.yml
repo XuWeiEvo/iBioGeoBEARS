@@ -20,6 +20,8 @@ models:
 analysis:
   run_stochastic_mapping: false
   time_bins: null
+  resume_completed_models: true
+  retry_failed_only: false
 
 figures:
   region_colors: null

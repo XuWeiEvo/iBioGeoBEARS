@@ -112,6 +112,8 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
             "Run options",
             shiny::checkboxInput("dry_run", "Dry run", value = TRUE),
             shiny::checkboxInput("require_biogeobears", "Require BioGeoBEARS", value = FALSE),
+            shiny::checkboxInput("resume_completed_models", "Reuse completed models", value = TRUE),
+            shiny::checkboxInput("retry_failed_only", "Retry failed models only", value = FALSE),
             shiny::checkboxInput("force", "Force execution after validation failure", value = FALSE)
           ),
           shiny_control_section(
@@ -378,6 +380,12 @@ iBGB_shiny_server <- function(input, output, session) {
         shiny::showModal(biogeobears_install_modal())
       })
 
+      shiny::observeEvent(input$retry_failed_only, {
+        if (isTRUE(input$retry_failed_only)) {
+          shiny::updateCheckboxInput(session, "resume_completed_models", value = TRUE)
+        }
+      })
+
       shiny::observeEvent(input$confirm_install_biogeobears, {
         shiny::removeModal()
         run_app_action(state, {
@@ -497,7 +505,9 @@ iBGB_shiny_server <- function(input, output, session) {
             output_dir = NULL,
             dry_run = isTRUE(input$dry_run),
             require_biogeobears = isTRUE(input$require_biogeobears),
-            force = isTRUE(input$force)
+            force = isTRUE(input$force),
+            resume_completed_models = isTRUE(input$resume_completed_models),
+            retry_failed_only = isTRUE(input$retry_failed_only)
           )
           state$result <- result
           state$validation <- result$validation
@@ -505,6 +515,7 @@ iBGB_shiny_server <- function(input, output, session) {
           state$manifest <- result$workflow_manifest
           append_app_stage(state, "Workflow", "validation complete", workflow_validation_label(result$validation))
           append_app_stage(state, "Workflow", "model status ready", workflow_model_status_label(result$model_run_status))
+          append_app_stage(state, "Workflow", "model actions", workflow_model_action_label(result$model_run_status))
           append_app_stage(state, "Workflow", "failed models", workflow_failed_models_label(result$model_run_status))
           refresh_shiny_result_exports(session, state)
           append_app_stage(state, "Workflow", "outputs refreshed", result$project_paths$root)
@@ -977,6 +988,14 @@ workflow_model_status_label <- function(model_table) {
   paste(paste0(names(statuses), ": ", as.integer(statuses)), collapse = ", ")
 }
 
+workflow_model_action_label <- function(model_table) {
+  if (is.null(model_table) || nrow(model_table) == 0L || !"run_action" %in% names(model_table)) {
+    return("not available")
+  }
+  actions <- sort(table(model_table$run_action), decreasing = TRUE)
+  paste(paste0(names(actions), ": ", as.integer(actions)), collapse = ", ")
+}
+
 workflow_failed_models_label <- function(model_table) {
   label <- failed_models_label(model_table)
   if (identical(label, "none")) {
@@ -1150,6 +1169,7 @@ shiny_summary_table <- function(state) {
   run_status <- "not run"
   run_mode <- "not run"
   completed_models <- "not available"
+  reused_models <- "not available"
   warning_count <- "not available"
   if (!is.null(state$result)) {
     run_mode <- if (isTRUE(state$result$dry_run)) "dry run" else "executed"
@@ -1161,18 +1181,22 @@ shiny_summary_table <- function(state) {
     } else {
       completed_models <- as.character(nrow(state$model_table))
     }
+    if ("run_action" %in% names(state$model_table)) {
+      reused_models <- as.character(sum(state$model_table$run_action == "reused", na.rm = TRUE))
+    }
     if ("warning_count" %in% names(state$model_table)) {
       warning_count <- as.character(sum(state$model_table$warning_count, na.rm = TRUE))
     }
   }
 
   data.frame(
-    item = c("Validation", "Run mode", "Run status", "Completed models", "Warning count", "Report", "Bundle"),
+    item = c("Validation", "Run mode", "Run status", "Completed models", "Reused models", "Warning count", "Report", "Bundle"),
     value = c(
       validation_status,
       run_mode,
       run_status,
       completed_models,
+      reused_models,
       warning_count,
       if (!is.null(report_preview_path(state))) "available" else "not available",
       if (!is.null(state$bundle) && file.exists(state$bundle)) "available" else "not available"

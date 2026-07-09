@@ -19,6 +19,10 @@ Development toward a stable, ordinary-user release.
   installation API.
 - Added a Shiny BioGeoBEARS installation plan and confirmation dialog; package
   installation never starts from the GUI without a second user action.
+- Added model-level run signatures and safe reuse of matching completed model
+  results.
+- Added failed-model-only retry mode, archived retry logs, and explicit
+  `run_action` status values for executed, reused, and skipped models.
 
 # iBiogeobears 0.2.0
 

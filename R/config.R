@@ -33,6 +33,8 @@ fill_config_defaults <- function(cfg) {
   cfg$models$run <- cfg$models$run %||% valid_models()
   cfg$analysis$run_stochastic_mapping <- cfg$analysis$run_stochastic_mapping %||% FALSE
   cfg$analysis$time_bins <- cfg$analysis$time_bins %||% NULL
+  cfg$analysis$resume_completed_models <- cfg$analysis$resume_completed_models %||% TRUE
+  cfg$analysis$retry_failed_only <- cfg$analysis$retry_failed_only %||% FALSE
   cfg$figures$output_formats <- cfg$figures$output_formats %||% c("pdf", "png", "svg")
   cfg$report$formats <- cfg$report$formats %||% c("html", "pdf")
 

@@ -15,6 +15,9 @@
 #' @export
 run_models <- function(config, project_paths, execute = FALSE) {
   models <- config$models$run %||% valid_models()
+  retry_failed_only <- isTRUE(config$analysis$retry_failed_only %||% FALSE)
+  reuse_completed <- isTRUE(config$analysis$resume_completed_models %||% TRUE) ||
+    retry_failed_only
   unknown_models <- setdiff(models, valid_models())
   if (length(unknown_models) > 0L) {
     stop("Unsupported BioGeoBEARS model(s): ", paste(unknown_models, collapse = ", "), call. = FALSE)
@@ -24,6 +27,7 @@ run_models <- function(config, project_paths, execute = FALSE) {
   run_plan <- data.frame(
     model = models,
     status = "planned",
+    run_action = "planned",
     raw_output_dir = raw_output_dirs,
     stringsAsFactors = FALSE
   )
@@ -40,19 +44,45 @@ run_models <- function(config, project_paths, execute = FALSE) {
   model_results <- vector("list", length(models))
   names(model_results) <- models
   previous_results <- list()
+  previous_status <- read_previous_model_status(project_paths)
+  if (retry_failed_only && nrow(previous_status) == 0L) {
+    stop(
+      "Retry-failed-only mode requires an existing tables/model_run_status.csv file.",
+      call. = FALSE
+    )
+  }
 
   for (model in models) {
     family <- model_family(model)
     raw_dir <- file.path(project_paths$raw_biogeobears, model)
+    run_signature <- model_run_signature(config, prepared_inputs, model)
     no_j_seed <- if (is_j_model(model)) previous_results[[family]] else NULL
 
-    model_results[[model]] <- run_one_biogeobears_model(
-      config = config,
-      prepared_inputs = prepared_inputs,
-      model = model,
-      raw_dir = raw_dir,
-      no_j_seed = no_j_seed
-    )
+    reusable <- if (reuse_completed) {
+      load_reusable_model_result(model, raw_dir, run_signature)
+    } else {
+      NULL
+    }
+
+    if (!is.null(reusable)) {
+      model_results[[model]] <- reusable
+    } else if (retry_failed_only && !model_was_previously_failed(model, previous_status)) {
+      model_results[[model]] <- skipped_model_result(
+        model,
+        raw_dir,
+        run_signature,
+        "Model was not marked as failed in the previous run."
+      )
+    } else {
+      model_results[[model]] <- run_one_biogeobears_model(
+        config = config,
+        prepared_inputs = prepared_inputs,
+        model = model,
+        raw_dir = raw_dir,
+        no_j_seed = no_j_seed,
+        run_signature = run_signature
+      )
+    }
 
     if (!is_j_model(model) && identical(model_results[[model]]$status, "completed")) {
       previous_results[[family]] <- model_results[[model]]$result
@@ -184,12 +214,20 @@ write_biogeobears_geography <- function(geography, path) {
   invisible(path)
 }
 
-run_one_biogeobears_model <- function(config, prepared_inputs, model, raw_dir, no_j_seed = NULL) {
+run_one_biogeobears_model <- function(
+    config,
+    prepared_inputs,
+    model,
+    raw_dir,
+    no_j_seed = NULL,
+    run_signature = NA_character_) {
   dir.create(raw_dir, recursive = TRUE, showWarnings = FALSE)
   result_file <- file.path(raw_dir, paste0(safe_model_name(model), "_result.rds"))
   run_object_file <- file.path(raw_dir, paste0(safe_model_name(model), "_run_object.rds"))
   log_file <- file.path(raw_dir, paste0(safe_model_name(model), ".log"))
+  metadata_file <- model_run_metadata_file(raw_dir, model)
 
+  archive_previous_model_log(log_file)
   log_connection <- file(log_file, open = "wt")
   sink(log_connection, type = "output")
   sink(log_connection, type = "message")
@@ -234,7 +272,9 @@ run_one_biogeobears_model <- function(config, prepared_inputs, model, raw_dir, n
       result_file = result_file,
       log_file = log_file,
       error_message = error_message,
-      warning_messages = warning_messages
+      warning_messages = warning_messages,
+      run_action = "executed",
+      run_signature = run_signature
     ),
     error = function(e) {
       status <<- "failed"
@@ -246,9 +286,22 @@ run_one_biogeobears_model <- function(config, prepared_inputs, model, raw_dir, n
         result_file = result_file,
         log_file = log_file,
         error_message = conditionMessage(e),
-        warning_messages = warning_messages
+        warning_messages = warning_messages,
+        run_action = "executed",
+        run_signature = run_signature
       )
     }
+  )
+
+  saveRDS(
+    list(
+      schema_version = 1L,
+      model = model,
+      signature = run_signature,
+      status = status,
+      summary = summary
+    ),
+    metadata_file
   )
 
   list(summary = summary, result = result, status = status)
@@ -428,13 +481,25 @@ set_bgb_param <- function(run_object, param, column, value) {
   run_object
 }
 
-summarize_biogeobears_result <- function(model, status, result, raw_dir, result_file, log_file, error_message = NA_character_, warning_messages = character()) {
+summarize_biogeobears_result <- function(
+    model,
+    status,
+    result,
+    raw_dir,
+    result_file,
+    log_file,
+    error_message = NA_character_,
+    warning_messages = character(),
+    run_action = "executed",
+    run_signature = NA_character_) {
   warnings <- summarize_run_warnings(warning_messages)
 
   if (!identical(status, "completed") || is.null(result)) {
     return(data.frame(
       model = model,
       status = status,
+      run_action = run_action,
+      run_signature = run_signature,
       logLik = NA_real_,
       num_params = NA_integer_,
       raw_output_dir = raw_dir,
@@ -451,6 +516,8 @@ summarize_biogeobears_result <- function(model, status, result, raw_dir, result_
   data.frame(
     model = model,
     status = status,
+    run_action = run_action,
+    run_signature = run_signature,
     logLik = params$logLik,
     num_params = params$num_params,
     raw_output_dir = raw_dir,
@@ -461,6 +528,144 @@ summarize_biogeobears_result <- function(model, status, result, raw_dir, result_
     warning_messages = warnings$messages,
     stringsAsFactors = FALSE
   )
+}
+
+model_run_signature <- function(config, prepared_inputs, model) {
+  analysis <- config$analysis %||% list()
+  payload <- list(
+    schema_version = 1L,
+    model = model,
+    inputs = list(
+      tree = file_md5(prepared_inputs$tree_file),
+      geography = file_md5(prepared_inputs$geography_file),
+      max_range_size = prepared_inputs$max_range_size
+    ),
+    analysis = analysis[c("time_bins")],
+    advanced = config$advanced %||% list(),
+    constraint_files = constraint_file_hashes(config),
+    biogeobears_version = installed_package_version("BioGeoBEARS")
+  )
+  serialized_object_md5(payload)
+}
+
+constraint_file_hashes <- function(config) {
+  constraints <- config$advanced$constraints %||% list()
+  if (!is.list(constraints) || length(constraints) == 0L) {
+    return(character())
+  }
+  base_dir <- dirname(config$.config_file %||% ".")
+  values <- vapply(names(constraints), function(name) {
+    value <- constraints[[name]]
+    if (is.null(value) || length(value) != 1L || is.na(value) || !nzchar(value)) {
+      return(NA_character_)
+    }
+    file_md5(resolve_config_path(value, base_dir))
+  }, character(1))
+  values
+}
+
+file_md5 <- function(path) {
+  if (is.null(path) || length(path) != 1L || is.na(path) || !file.exists(path)) {
+    return(NA_character_)
+  }
+  unname(tools::md5sum(path)[[1L]])
+}
+
+serialized_object_md5 <- function(object) {
+  path <- tempfile("ibgb-signature-", fileext = ".rds")
+  on.exit(unlink(path), add = TRUE)
+  saveRDS(object, path, version = 2)
+  file_md5(path)
+}
+
+model_run_metadata_file <- function(raw_dir, model) {
+  file.path(raw_dir, paste0(safe_model_name(model), "_run_metadata.rds"))
+}
+
+load_reusable_model_result <- function(model, raw_dir, run_signature) {
+  metadata_file <- model_run_metadata_file(raw_dir, model)
+  result_file <- file.path(raw_dir, paste0(safe_model_name(model), "_result.rds"))
+  log_file <- file.path(raw_dir, paste0(safe_model_name(model), ".log"))
+  if (!file.exists(metadata_file) || !file.exists(result_file)) {
+    return(NULL)
+  }
+
+  metadata <- tryCatch(readRDS(metadata_file), error = function(e) NULL)
+  if (is.null(metadata) ||
+      !identical(metadata$signature, run_signature) ||
+      !identical(metadata$status, "completed")) {
+    return(NULL)
+  }
+  result <- tryCatch(readRDS(result_file), error = function(e) NULL)
+  if (is.null(result)) {
+    return(NULL)
+  }
+
+  summary <- as.data.frame(metadata$summary, stringsAsFactors = FALSE)
+  summary$model <- model
+  summary$status <- "completed"
+  summary$run_action <- "reused"
+  summary$run_signature <- run_signature
+  summary$raw_output_dir <- raw_dir
+  summary$result_file <- result_file
+  summary$log_file <- log_file
+  summary$error_message <- NA_character_
+  list(summary = summary, result = result, status = "completed")
+}
+
+skipped_model_result <- function(model, raw_dir, run_signature, reason) {
+  result_file <- file.path(raw_dir, paste0(safe_model_name(model), "_result.rds"))
+  log_file <- file.path(raw_dir, paste0(safe_model_name(model), ".log"))
+  summary <- summarize_biogeobears_result(
+    model = model,
+    status = "skipped",
+    result = NULL,
+    raw_dir = raw_dir,
+    result_file = result_file,
+    log_file = log_file,
+    error_message = reason,
+    run_action = "not_failed",
+    run_signature = run_signature
+  )
+  list(summary = summary, result = NULL, status = "skipped")
+}
+
+read_previous_model_status <- function(project_paths) {
+  path <- file.path(project_paths$tables, "model_run_status.csv")
+  if (!file.exists(path)) {
+    return(data.frame())
+  }
+  tryCatch(
+    utils::read.csv(path, check.names = FALSE, stringsAsFactors = FALSE),
+    error = function(e) data.frame()
+  )
+}
+
+model_was_previously_failed <- function(model, previous_status) {
+  if (is.null(previous_status) || nrow(previous_status) == 0L ||
+      !all(c("model", "status") %in% names(previous_status))) {
+    return(FALSE)
+  }
+  rows <- previous_status[previous_status$model == model, , drop = FALSE]
+  nrow(rows) > 0L && identical(tolower(rows$status[[nrow(rows)]]), "failed")
+}
+
+archive_previous_model_log <- function(log_file) {
+  if (!file.exists(log_file)) {
+    return(NULL)
+  }
+  index <- 1L
+  repeat {
+    archived <- sub("[.]log$", paste0(".retry-", index, ".log"), log_file)
+    if (!file.exists(archived)) {
+      break
+    }
+    index <- index + 1L
+  }
+  if (!file.copy(log_file, archived, overwrite = FALSE)) {
+    return(NULL)
+  }
+  archived
 }
 
 summarize_run_warnings <- function(warning_messages) {

@@ -249,6 +249,10 @@ test_that("Shiny message helpers record staged workflow progress", {
     workflow_model_status_label(data.frame(status = c("completed", "planned", "completed"))),
     "completed: 2, planned: 1"
   )
+  expect_equal(
+    workflow_model_action_label(data.frame(run_action = c("executed", "reused", "reused"))),
+    "reused: 2, executed: 1"
+  )
 })
 
 test_that("download file helpers resolve and copy report files", {
@@ -319,7 +323,11 @@ test_that("shiny_summary_table reports workflow status", {
 
   state <- new.env(parent = emptyenv())
   state$validation <- data.frame(check = c("a", "b"), ok = c(TRUE, TRUE))
-  state$model_table <- data.frame(status = c("completed", "planned"), warning_count = c(2L, 0L))
+  state$model_table <- data.frame(
+    status = c("completed", "planned"),
+    run_action = c("reused", "planned"),
+    warning_count = c(2L, 0L)
+  )
   state$result <- list(project_paths = paths, dry_run = FALSE, validation_failed = FALSE)
   state$report <- report
   state$bundle <- bundle
@@ -329,6 +337,7 @@ test_that("shiny_summary_table reports workflow status", {
   expect_equal(summary$value[match("Validation", summary$item)], "passed")
   expect_equal(summary$value[match("Run mode", summary$item)], "executed")
   expect_equal(summary$value[match("Completed models", summary$item)], "1 of 2")
+  expect_equal(summary$value[match("Reused models", summary$item)], "1")
   expect_equal(summary$value[match("Warning count", summary$item)], "2")
   expect_equal(summary$value[match("Report", summary$item)], "available")
   expect_equal(summary$value[match("Bundle", summary$item)], "available")
@@ -929,6 +938,8 @@ test_that("Shiny server validates and dry-runs a workflow", {
       output_dir = project$output_dir,
       dry_run = TRUE,
       require_biogeobears = FALSE,
+      resume_completed_models = TRUE,
+      retry_failed_only = FALSE,
       force = FALSE,
       report_format = "source"
     )
@@ -949,6 +960,7 @@ test_that("Shiny server validates and dry-runs a workflow", {
     expect_true(any(grepl("Workflow: dry run started", state$messages, fixed = TRUE)))
     expect_true(any(grepl("Workflow: validation complete", state$messages, fixed = TRUE)))
     expect_true(any(grepl("Workflow: model status ready", state$messages, fixed = TRUE)))
+    expect_true(any(grepl("Workflow: model actions - planned: 6", state$messages, fixed = TRUE)))
     expect_true(any(grepl("Workflow: failed models - none", state$messages, fixed = TRUE)))
     expect_true(any(grepl("Workflow: outputs refreshed", state$messages, fixed = TRUE)))
   })

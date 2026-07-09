@@ -9,8 +9,28 @@ test_that("run_workflow returns structured dry-run outputs", {
   expect_true(is.null(result$model_comparison))
   expect_false(is.null(result$workflow_manifest))
   expect_equal(result$model_plan$status[1], "planned")
+  expect_true(result$resume_completed_models)
+  expect_false(result$retry_failed_only)
   expect_true(file.exists(file.path(out, "tables", "model_run_plan.csv")))
   expect_true(file.exists(file.path(out, "tables", "workflow_manifest.csv")))
+})
+
+test_that("run_workflow accepts resume and retry overrides in dry runs", {
+  config <- system.file("templates", "analysis.yml", package = "iBiogeobears")
+  out <- tempfile("ibgb-workflow-resume-options-")
+
+  result <- run_workflow(
+    config,
+    output_dir = out,
+    dry_run = TRUE,
+    require_biogeobears = FALSE,
+    resume_completed_models = FALSE,
+    retry_failed_only = TRUE
+  )
+
+  expect_true(result$resume_completed_models)
+  expect_true(result$retry_failed_only)
+  expect_true(all(result$model_run_status$run_action == "planned"))
 })
 
 test_that("run_workflow blocks execution when validation fails", {

@@ -9,7 +9,9 @@ run_workflow(
   output_dir = NULL,
   dry_run = TRUE,
   require_biogeobears = !dry_run,
-  force = FALSE
+  force = FALSE,
+  resume_completed_models = NULL,
+  retry_failed_only = NULL
 )
 }
 \arguments{
@@ -25,6 +27,14 @@ installed. In dry runs this can be \code{FALSE}.}
 
 \item{force}{Logical. If \code{TRUE}, execute even when input validation checks
 fail. Use only after reviewing \code{tables/input_validation.csv}.}
+
+\item{resume_completed_models}{Optional logical override. Reuse completed
+model results only when their saved run signature matches current inputs
+and settings.}
+
+\item{retry_failed_only}{Optional logical override. Execute only models
+marked failed in the previous model status table while reusing valid
+completed results.}
 }
 \value{
 An object of class \code{iBGB_workflow_result}.

@@ -8,12 +8,34 @@
 #'   installed. In dry runs this can be `FALSE`.
 #' @param force Logical. If `TRUE`, execute even when input validation checks
 #'   fail. Use only after reviewing `tables/input_validation.csv`.
+#' @param resume_completed_models Optional logical override. Reuse completed
+#'   model results only when their saved run signature matches current inputs
+#'   and settings.
+#' @param retry_failed_only Optional logical override. Execute only models
+#'   marked failed in the previous model status table while reusing valid
+#'   completed results.
 #' @return An object of class `iBGB_workflow_result`.
 #' @export
-run_workflow <- function(config, output_dir = NULL, dry_run = TRUE, require_biogeobears = !dry_run, force = FALSE) {
+run_workflow <- function(
+    config,
+    output_dir = NULL,
+    dry_run = TRUE,
+    require_biogeobears = !dry_run,
+    force = FALSE,
+    resume_completed_models = NULL,
+    retry_failed_only = NULL) {
   cfg <- read_config(config)
   if (!is.null(output_dir)) {
     cfg$project$output_dir <- output_dir
+  }
+  if (!is.null(resume_completed_models)) {
+    cfg$analysis$resume_completed_models <- isTRUE(resume_completed_models)
+  }
+  if (!is.null(retry_failed_only)) {
+    cfg$analysis$retry_failed_only <- isTRUE(retry_failed_only)
+  }
+  if (isTRUE(cfg$analysis$retry_failed_only)) {
+    cfg$analysis$resume_completed_models <- TRUE
   }
 
   project_paths <- create_project(cfg$project$output_dir)
@@ -65,6 +87,8 @@ run_workflow <- function(config, output_dir = NULL, dry_run = TRUE, require_biog
     workflow_manifest = workflow_manifest,
     dry_run = dry_run,
     force = force,
+    resume_completed_models = isTRUE(cfg$analysis$resume_completed_models),
+    retry_failed_only = isTRUE(cfg$analysis$retry_failed_only),
     validation_failed = any(!validation$ok)
   )
   class(result) <- c("iBGB_workflow_result", "list")

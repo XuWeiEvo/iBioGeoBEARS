@@ -160,6 +160,29 @@ Run the example with real BioGeoBEARS execution:
 result <- run_workflow(config, dry_run = FALSE)
 ```
 
+Completed models are reused by default only when their saved run signature
+matches the current input files, constraints, model, and BioGeoBEARS version.
+To rerun every selected model:
+
+```r
+result <- run_workflow(
+  config,
+  dry_run = FALSE,
+  resume_completed_models = FALSE
+)
+```
+
+To retain valid completed results and execute only models marked failed in the
+previous `model_run_status.csv`:
+
+```r
+result <- run_workflow(
+  config,
+  dry_run = FALSE,
+  retry_failed_only = TRUE
+)
+```
+
 Render a report and create a portable result archive:
 
 ```r
