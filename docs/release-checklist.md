@@ -11,6 +11,8 @@ Use this checklist before publishing the next alpha release.
   version.
 - Update `README.md` installation text if the recommended alpha tag changes.
 - Update `NEWS.md` so the release section matches the chosen version.
+- Confirm `open_user_guide()` points to the current ordinary-user quick-start
+  and troubleshooting guide.
 
 ## Required Local Checks
 
@@ -18,6 +20,11 @@ Run these from the repository root:
 
 ```r
 source("tools/smoke-user-workflow.R")
+```
+
+```r
+library(iBiogeobears)
+open_user_guide(browse = FALSE)
 ```
 
 ```powershell

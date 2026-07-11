@@ -43,6 +43,16 @@ remotes::install_github("XuWeiEvo/iBioGeoBEARS@v0.2.0-alpha")
 BioGeoBEARS must be installed separately; it is not bundled with
 `iBiogeobears`. Quarto is required only when rendering reports.
 
+For the ordinary-user path, open the installed guide after loading the package:
+
+```r
+library(iBiogeobears)
+open_user_guide()
+```
+
+The same guide is available in the repository at
+[`inst/docs/ordinary-user-quick-start.md`](inst/docs/ordinary-user-quick-start.md).
+
 ## Continuous Integration
 
 GitHub Actions runs `R CMD check --no-manual`, an installed-package smoke test,
