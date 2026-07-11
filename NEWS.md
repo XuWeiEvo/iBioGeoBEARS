@@ -15,6 +15,9 @@ Third alpha release focused on ordinary-user stability and release readiness.
   reachable with `open_user_guide()`.
 - Added a simplified Chinese ordinary-user quick-start guide, reachable with
   `open_user_guide(language = "zh-CN")`.
+- Added a fuller simplified Chinese ordinary-user testing tutorial in Markdown
+  and standalone HTML for sharing installation, Shiny, example-data, user-data,
+  result-reading, and feedback instructions.
 - Added a Shiny Start Here readiness checklist and user-guide action for the
   ordinary-user workflow path.
 - Added a clean GitHub-install smoke script for release readiness checks.

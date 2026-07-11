@@ -60,6 +60,11 @@ The same guide is available in the repository at
 The simplified Chinese version is available at
 [`inst/docs/ordinary-user-quick-start.zh-CN.md`](inst/docs/ordinary-user-quick-start.zh-CN.md).
 
+For Chinese ordinary-user testing, share the fuller user tutorial:
+[`docs/user-tutorial.zh-CN.md`](docs/user-tutorial.zh-CN.md). A standalone
+HTML version is also included at
+[`docs/user-tutorial.zh-CN.html`](docs/user-tutorial.zh-CN.html).
+
 ## Continuous Integration
 
 GitHub Actions runs `R CMD check --no-manual`, an installed-package smoke test,

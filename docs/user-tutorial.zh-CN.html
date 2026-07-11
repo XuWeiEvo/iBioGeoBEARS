@@ -1,0 +1,422 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>iBiogeobears 中文用户测试教程</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei',Helvetica,Arial,sans-serif;line-height:1.65;color:#1f2937;background:#f8fafc;margin:0;}
+.page{max-width:980px;margin:0 auto;background:#fff;padding:42px 52px;box-shadow:0 1px 18px rgba(15,23,42,.08);}
+h1{font-size:34px;line-height:1.25;color:#111827;margin:0 0 18px;}
+h2{font-size:24px;border-top:1px solid #e5e7eb;padding-top:24px;margin-top:34px;color:#111827;}
+h3{font-size:18px;margin-top:24px;color:#111827;}
+p,li{font-size:16px;}
+code{font-family:Consolas,Menlo,Monaco,monospace;background:#eef2f7;border-radius:4px;padding:2px 5px;}
+pre{background:#0f172a;color:#e5e7eb;padding:16px 18px;border-radius:6px;overflow-x:auto;}
+pre code{background:transparent;color:inherit;padding:0;}
+blockquote{border-left:4px solid #2563eb;margin-left:0;padding-left:14px;color:#374151;background:#eff6ff;}
+a{color:#1d4ed8;text-decoration:none;}
+a:hover{text-decoration:underline;}
+table{border-collapse:collapse;width:100%;margin:18px 0;}
+th,td{border:1px solid #d1d5db;padding:8px 10px;text-align:left;}
+th{background:#f3f4f6;}
+.print-note{background:#ecfdf5;border:1px solid #bbf7d0;border-left:5px solid #16a34a;padding:12px 14px;border-radius:6px;margin:0 0 24px 0;}
+@media print{body{background:#fff}.page{box-shadow:none;padding:20mm;max-width:none}a{color:#111827;text-decoration:none}pre{white-space:pre-wrap;word-break:break-word}h2{page-break-after:avoid}}
+</style>
+</head>
+<body>
+<main class="page">
+<div class="print-note"><strong>Tip:</strong> Send this HTML file directly, or use Ctrl+P in a browser to save it as PDF.</div>
+<h1>iBiogeobears 中文用户测试教程</h1>
+<p>版本：面向 <code>0.2.1-alpha</code> 之后的普通用户测试<br />
+适用对象：会打开 R 或 RStudio、但不一定熟悉 R 包开发或 BioGeoBEARS 细节的用户</p>
+<p>这份教程的目标是让测试用户完成四件事：</p>
+<ol>
+<li>安装 <code>iBiogeobears</code> 和必要依赖。</li>
+<li>打开 Shiny 图形界面。</li>
+<li>用内置示例数据跑通一次分析。</li>
+<li>用自己的 tree、geography、regions 文件创建项目，并知道怎么看结果、怎么反馈错误。</li>
+</ol>
+<h2>一、你可以直接转发给测试用户的话</h2>
+<p>请先安装 R 和 RStudio，然后按下面教程操作：</p>
+<pre><code class="language-text">iBiogeobears 中文用户测试教程：
+https://github.com/XuWeiEvo/iBioGeoBEARS/blob/main/docs/user-tutorial.zh-CN.md
+</code></pre>
+<p>推荐先运行内置示例，不要一开始就用自己的数据。示例能跑通，说明软件安装和本机环境基本正常。</p>
+<p>如果失败，请把以下内容发回：</p>
+<ul>
+<li>R 控制台里的完整错误信息。</li>
+<li><code>diagnostics_zip</code> 生成的诊断压缩包。</li>
+<li>如果没有生成诊断压缩包，请发 <code>analysis.yml</code>、<code>tables/model_run_status.csv</code>、<code>tables/input_validation.csv</code> 和 <code>logs/</code> 文件夹。</li>
+</ul>
+<h2>二、安装前准备</h2>
+<p>用户电脑需要：</p>
+<ul>
+<li>R，建议 4.3 或更新版本。</li>
+<li>RStudio，推荐但不是必须。</li>
+<li>能访问 GitHub 和 CRAN 的网络。</li>
+<li>一个容易找到的英文路径，例如 <code>C:/iBiogeobears_test</code> 或桌面上的测试文件夹。</li>
+</ul>
+<p>真实 BioGeoBEARS 分析还需要：</p>
+<ul>
+<li>BioGeoBEARS R 包。</li>
+<li>Shiny 图形界面需要 <code>shiny</code> 包。</li>
+<li>HTML 报告建议安装 Quarto。</li>
+<li>PDF 报告还需要 TinyTeX、MiKTeX 或 TeX Live；测试阶段可以先只用 HTML 报告。</li>
+</ul>
+<h2>三、安装 iBiogeobears</h2>
+<p>打开 R 或 RStudio，运行：</p>
+<pre><code class="language-r">install.packages(&quot;remotes&quot;)
+remotes::install_github(&quot;XuWeiEvo/iBioGeoBEARS&quot;)
+</code></pre>
+<p>加载软件：</p>
+<pre><code class="language-r">library(iBiogeobears)
+</code></pre>
+<p>检查本机环境：</p>
+<pre><code class="language-r">check_installation()
+</code></pre>
+<p>这个表会告诉你哪些组件已经可用，哪些还缺失。第一次测试时，先不要急着解释结果，先确认环境检查能看懂。</p>
+<p>如果想打开包内中文快速开始：</p>
+<pre><code class="language-r">open_user_guide(language = &quot;zh-CN&quot;)
+</code></pre>
+<h2>四、安装 BioGeoBEARS</h2>
+<p><code>iBiogeobears</code> 不自带 BioGeoBEARS。真实运行 DEC、DEC+J、DIVALIKE、DIVALIKE+J、BAYAREALIKE、BAYAREALIKE+J 前，必须另外安装 BioGeoBEARS。</p>
+<p>先查看安装计划：</p>
+<pre><code class="language-r">biogeobears_install_plan()
+</code></pre>
+<p>确认后执行安装：</p>
+<pre><code class="language-r">install_biogeobears(execute = TRUE)
+</code></pre>
+<p>安装完成后检查：</p>
+<pre><code class="language-r">check_biogeobears(required = FALSE)
+check_installation()
+</code></pre>
+<p>如果 BioGeoBEARS 仍然显示不可用，先不要运行真实分析。请把 <code>check_installation()</code> 和 <code>check_biogeobears(required = FALSE)</code> 的输出发回。</p>
+<h2>五、打开 Shiny 图形界面</h2>
+<p>如果还没有安装 Shiny：</p>
+<pre><code class="language-r">install.packages(&quot;shiny&quot;)
+</code></pre>
+<p>启动图形界面：</p>
+<pre><code class="language-r">library(iBiogeobears)
+launch_app()
+</code></pre>
+<p>浏览器会打开 <code>iBiogeobears</code> 页面。第一次打开时，软件会自动准备一个临时示例项目。</p>
+<p>界面左侧是操作区，右侧是结果区。普通用户主要用这几个按钮：</p>
+<ul>
+<li><code>Refresh setup checks</code>：检查本机环境。</li>
+<li><code>Create example project</code>：创建内置示例项目。</li>
+<li><code>Create analysis project</code>：用自己的数据创建项目。</li>
+<li><code>Validate</code>：检查输入文件是否合格。</li>
+<li><code>Run workflow</code>：运行分析。</li>
+<li><code>Render report</code>：生成报告。</li>
+<li><code>Create bundle if missing</code>：生成结果压缩包。</li>
+<li><code>Create diagnostic bundle</code>：生成诊断压缩包，方便排查错误。</li>
+</ul>
+<h2>六、先用内置示例数据测试</h2>
+<p>这是推荐的第一次操作流程。</p>
+<ol>
+<li>打开 R 或 RStudio。</li>
+<li>运行：</li>
+</ol>
+<pre><code class="language-r">library(iBiogeobears)
+launch_app()
+</code></pre>
+<ol start="3">
+<li>在 Shiny 左侧找到 <code>Existing project</code>。</li>
+<li>点击 <code>Create example project</code>。</li>
+<li>点击 <code>Refresh setup checks</code>。</li>
+<li>保持 <code>Dry run</code> 勾选。</li>
+<li>点击 <code>Run workflow</code>。</li>
+</ol>
+<p>Dry run 不会真正运行 BioGeoBEARS，只检查项目、输入文件和输出目录。Dry run 通过后：</p>
+<ol>
+<li>确认 BioGeoBEARS 已安装。</li>
+<li>取消勾选 <code>Dry run</code>。</li>
+<li>如果界面里有 <code>Require BioGeoBEARS</code>，真实运行时建议勾选。</li>
+<li>点击 <code>Run workflow</code>。</li>
+<li>等六个模型运行完成。</li>
+<li>点击 <code>Render report</code>，报告格式选 <code>html</code>。</li>
+<li>点击 <code>Refresh key files</code>。</li>
+<li>点击 <code>Create bundle if missing</code>。</li>
+<li>如需反馈问题，点击 <code>Create diagnostic bundle</code>。</li>
+</ol>
+<p>如果不想用图形界面，也可以在 R 里直接运行：</p>
+<pre><code class="language-r">library(iBiogeobears)
+
+project &lt;- create_example_project(&quot;ibgb_example&quot;)
+
+dry &lt;- run_workflow(
+  project$config,
+  dry_run = TRUE,
+  require_biogeobears = FALSE
+)
+
+result &lt;- run_workflow(project$config, dry_run = FALSE)
+
+report &lt;- render_report(result, format = &quot;html&quot;)
+results_zip &lt;- bundle_results(result)
+diagnostics_zip &lt;- bundle_diagnostics(result)
+
+report
+results_zip
+diagnostics_zip
+</code></pre>
+<h2>七、准备自己的输入数据</h2>
+<p>自己的分析至少需要三个文件。</p>
+<h3>1. 系统树文件</h3>
+<p>Newick 格式，例如：</p>
+<pre><code class="language-text">((sp1:1,sp2:1):1,(sp3:1,(sp4:1,sp5:1):1):1);
+</code></pre>
+<p>注意：</p>
+<ul>
+<li>tip 名称必须和 geography CSV 里的物种名完全一致。</li>
+<li>大小写、下划线、空格都必须一致。</li>
+<li>建议先避免中文物种名和特殊符号。</li>
+</ul>
+<h3>2. geography CSV</h3>
+<p>第一列是物种名，可以叫 <code>species</code> 或 <code>taxon</code>。后面每一列是一个地理区域，用 <code>0</code> 或 <code>1</code> 表示该物种是否在该区域出现。</p>
+<p>示例：</p>
+<pre><code class="language-csv">species,A,B,C
+sp1,1,0,0
+sp2,1,1,0
+sp3,0,1,0
+sp4,0,1,1
+sp5,0,0,1
+</code></pre>
+<p>要求：</p>
+<ul>
+<li>每个物种一行。</li>
+<li>区域列只能用 <code>0</code> 或 <code>1</code>。</li>
+<li>每个物种至少有一个区域为 <code>1</code>。</li>
+<li>geography 里的物种必须和树的 tip 完全匹配。</li>
+</ul>
+<h3>3. regions CSV</h3>
+<p><code>region</code> 列必须覆盖 geography CSV 里的所有区域列。</p>
+<p>示例：</p>
+<pre><code class="language-csv">region,label,color
+A,Region A,#1b9e77
+B,Region B,#d95f02
+C,Region C,#7570b3
+</code></pre>
+<p>要求：</p>
+<ul>
+<li><code>region</code> 里的值要和 geography 的区域列名一致。</li>
+<li><code>label</code> 是报告和图形里显示的区域名称。</li>
+<li><code>color</code> 可以先照着示例写，也可以后续调整。</li>
+</ul>
+<h2>八、用 Shiny 导入自己的数据</h2>
+<p>推荐普通用户用这个流程。</p>
+<ol>
+<li>打开 Shiny：</li>
+</ol>
+<pre><code class="language-r">library(iBiogeobears)
+launch_app()
+</code></pre>
+<ol start="2">
+<li>在左侧找到 <code>New project wizard</code>。</li>
+<li>在 <code>Project name</code> 填项目名，例如 <code>my_clade</code>。</li>
+<li>在 <code>Save projects in</code> 填项目保存位置。</li>
+<li>上传：
+<ul>
+<li><code>Tree file</code></li>
+<li><code>Geography CSV</code></li>
+<li><code>Regions CSV</code></li>
+</ul>
+</li>
+<li>设置 <code>Maximum range size</code>。</li>
+<li>选择要运行的模型。第一次建议保留全部六个模型。</li>
+<li>点击 <code>Create analysis project</code>。</li>
+<li>点击 <code>Validate</code>。</li>
+<li>如果验证失败，先看右侧或 <code>tables/input_validation.csv</code> 的修复建议。</li>
+<li>保持 <code>Dry run</code> 勾选，点击 <code>Run workflow</code>。</li>
+<li>Dry run 通过后，取消 <code>Dry run</code>，点击 <code>Run workflow</code> 跑真实分析。</li>
+<li>点击 <code>Render report</code>。</li>
+<li>点击 <code>Create bundle if missing</code>。</li>
+</ol>
+<p>如果验证失败，不建议勾选 <code>Force execution after validation failure</code>。这个选项只适合确认问题可以忽略的高级用户。</p>
+<h2>九、用 R 命令导入自己的数据</h2>
+<p>如果用户更习惯 R 命令，也可以这样做：</p>
+<pre><code class="language-r">library(iBiogeobears)
+
+project &lt;- create_analysis_project(
+  path = &quot;my_ibgb_project&quot;,
+  project_name = &quot;my_clade&quot;,
+  tree_file = &quot;my_tree.nwk&quot;,
+  geography_file = &quot;my_geography.csv&quot;,
+  regions_file = &quot;my_regions.csv&quot;,
+  max_range_size = 3
+)
+</code></pre>
+<p>先 dry run：</p>
+<pre><code class="language-r">dry &lt;- run_workflow(
+  project$config,
+  dry_run = TRUE,
+  require_biogeobears = FALSE
+)
+</code></pre>
+<p>再真实运行：</p>
+<pre><code class="language-r">result &lt;- run_workflow(project$config, dry_run = FALSE)
+</code></pre>
+<p>生成报告和压缩包：</p>
+<pre><code class="language-r">report &lt;- render_report(result, format = &quot;html&quot;)
+results_zip &lt;- bundle_results(result)
+diagnostics_zip &lt;- bundle_diagnostics(result)
+</code></pre>
+<h2>十、怎么看分析结果</h2>
+<p>分析完成后，结果通常在：</p>
+<pre><code class="language-text">results/&lt;project_name&gt;/
+</code></pre>
+<p>重点看这些文件：</p>
+<pre><code class="language-text">reports/summary_report.html
+tables/shiny_run_summary.csv
+tables/model_comparison.csv
+tables/model_sensitivity.csv
+tables/model_run_status.csv
+figures/
+</code></pre>
+<h3>1. HTML 报告</h3>
+<p>优先打开：</p>
+<pre><code class="language-text">reports/summary_report.html
+</code></pre>
+<p>报告里会汇总：</p>
+<ul>
+<li>成功运行了几个模型。</li>
+<li>哪个模型统计拟合最好。</li>
+<li>是否触发 <code>+J</code> 模型解释 caution。</li>
+<li>是否有 warning 或失败模型。</li>
+<li>关键表格和图形。</li>
+</ul>
+<h3>2. model_comparison.csv</h3>
+<p>这个表用于看模型拟合结果。重点列包括：</p>
+<ul>
+<li><code>model</code></li>
+<li><code>logLik</code></li>
+<li><code>num_params</code></li>
+<li><code>AICc</code></li>
+<li><code>delta_aicc</code></li>
+<li><code>aicc_weight</code></li>
+<li><code>caution_flag</code></li>
+<li><code>interpretation_note</code></li>
+</ul>
+<p>注意：最低 AICc 是统计拟合结果，不等于自动的生物学结论。</p>
+<h3>3. model_sensitivity.csv</h3>
+<p>这个表用于看 <code>+J</code> 模型是否影响解释。尤其要看：</p>
+<ul>
+<li>最优模型是不是 <code>+J</code> 模型。</li>
+<li>是否有 <code>+J</code> 模型进入 <code>delta_aicc &lt;= 2</code>。</li>
+<li>非 <code>+J</code> 模型和 <code>+J</code> 模型之间是否需要谨慎比较。</li>
+</ul>
+<p>如果报告里出现 <code>+J caution</code>，这不是程序错误，而是提醒解释时要保守。</p>
+<h3>4. model_run_status.csv</h3>
+<p>这个表用于排查模型是否成功。重点列包括：</p>
+<ul>
+<li><code>model</code></li>
+<li><code>status</code></li>
+<li><code>run_action</code></li>
+<li><code>warnings</code></li>
+<li><code>error_message</code></li>
+<li><code>log_file</code></li>
+<li><code>result_file</code></li>
+</ul>
+<p>如果某个模型失败，先看 <code>error_message</code> 和 <code>log_file</code>。</p>
+<h2>十一、如何把结果发给别人</h2>
+<p>如果分析成功，优先发结果压缩包：</p>
+<pre><code class="language-r">results_zip &lt;- bundle_results(result, overwrite = TRUE)
+results_zip
+</code></pre>
+<p>如果分析失败或有 warning，优先发诊断压缩包：</p>
+<pre><code class="language-r">diagnostics_zip &lt;- bundle_diagnostics(result, overwrite = TRUE)
+diagnostics_zip
+</code></pre>
+<p>诊断压缩包通常更适合排查问题，因为它包含配置、状态表、日志和 session 信息，但不会包含完整的大型原始结果对象。</p>
+<h2>十二、常见问题</h2>
+<h3>1. 提示找不到 BioGeoBEARS</h3>
+<p>运行：</p>
+<pre><code class="language-r">biogeobears_install_plan()
+install_biogeobears(execute = TRUE)
+check_biogeobears(required = FALSE)
+</code></pre>
+<p>如果仍失败，把输出发回。</p>
+<h3>2. Shiny 打不开</h3>
+<p>运行：</p>
+<pre><code class="language-r">install.packages(&quot;shiny&quot;)
+library(iBiogeobears)
+launch_app()
+</code></pre>
+<p>如果还是失败，把 R 控制台错误信息发回。</p>
+<h3>3. HTML 报告没有生成</h3>
+<p>运行：</p>
+<pre><code class="language-r">check_report_environment()
+</code></pre>
+<p>如果 Quarto 不可用，先只查看 <code>reports/summary_report.qmd</code> 和 <code>tables/</code> 里的结果表。</p>
+<h3>4. 输入检查失败</h3>
+<p>打开：</p>
+<pre><code class="language-text">tables/input_validation.csv
+</code></pre>
+<p>看 <code>status</code>、<code>detail</code> 和 <code>repair_step</code>。常见原因是：</p>
+<ul>
+<li>树的 tip 名称和 geography 物种名不一致。</li>
+<li>geography 区域值不是 <code>0</code> 或 <code>1</code>。</li>
+<li>某个物种没有任何分布区域。</li>
+<li><code>max_range_size</code> 大于区域总数。</li>
+<li>regions CSV 没有覆盖所有 geography 区域列。</li>
+</ul>
+<h3>5. 某个模型失败</h3>
+<p>打开：</p>
+<pre><code class="language-text">tables/model_run_status.csv
+</code></pre>
+<p>找到失败模型对应的 <code>log_file</code>。如果想只重跑失败模型：</p>
+<pre><code class="language-r">result &lt;- run_workflow(
+  project$config,
+  dry_run = FALSE,
+  retry_failed_only = TRUE
+)
+</code></pre>
+<h3>6. 第二次运行为什么很快</h3>
+<p>软件默认会复用已经完成、且输入没有变化的模型结果。这是正常行为。</p>
+<p>如果想强制全部重跑：</p>
+<pre><code class="language-r">result &lt;- run_workflow(
+  project$config,
+  dry_run = FALSE,
+  resume_completed_models = FALSE
+)
+</code></pre>
+<h2>十三、测试用户反馈模板</h2>
+<p>请测试用户按这个格式反馈：</p>
+<pre><code class="language-text">操作系统：
+R 版本：
+iBiogeobears 安装方式：
+是否能打开 Shiny：
+是否能跑通内置示例 dry run：
+是否能跑通内置示例真实分析：
+是否能生成 HTML 报告：
+是否使用了自己的数据：
+失败步骤：
+完整错误信息：
+是否生成 diagnostics_zip：
+补充说明：
+</code></pre>
+<p>如果测试自己的数据，请同时说明：</p>
+<pre><code class="language-text">树的 tip 数量：
+地理区域数量：
+max_range_size：
+运行了哪些模型：
+是否有 +J caution：
+</code></pre>
+<h2>十四、测试阶段建议</h2>
+<p>第一轮普通用户测试建议按顺序做：</p>
+<ol>
+<li>只测试安装。</li>
+<li>打开 Shiny。</li>
+<li>跑内置示例 dry run。</li>
+<li>跑内置示例真实分析。</li>
+<li>生成 HTML 报告。</li>
+<li>打包结果和诊断文件。</li>
+<li>最后再测试自己的数据。</li>
+</ol>
+<p>如果前面任何一步失败，请先停下并反馈，不要继续叠加更多操作。</p>
+
+</main>
+</body>
+</html>
+
