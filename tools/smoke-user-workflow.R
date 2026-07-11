@@ -98,7 +98,9 @@ assert(all(plan$status == "planned"), "Dry-run model plan should contain planned
 
 report_source <- render_report(result, format = "source")
 assert_file(report_source, "source report")
-assert(identical(dirname(report_source), normalizePath(reports, winslash = "/", mustWork = TRUE)), "Report source path is outside reports directory.")
+report_source_dir <- normalizePath(dirname(report_source), winslash = "/", mustWork = TRUE)
+reports_dir <- normalizePath(reports, winslash = "/", mustWork = TRUE)
+assert(identical(report_source_dir, reports_dir), "Report source path is outside reports directory.")
 report_text <- paste(readLines(report_source, warn = FALSE), collapse = "\n")
 assert(grepl("Model Sensitivity Summary", report_text, fixed = TRUE), "Report template is missing model sensitivity section.")
 assert(grepl("Output Manifest", report_text, fixed = TRUE), "Report template is missing output manifest section.")
