@@ -5,9 +5,8 @@
 `iBiogeobears` is a reproducible workflow, synthesis, visualization, and
 reporting layer for single-clade BioGeoBEARS analyses.
 
-Current status: `0.2.0.9000`, under development toward the first stable
-ordinary-user release. The package supports a single-clade workflow but is not
-yet intended for external user testing.
+Current status: `0.2.1-alpha`, an alpha release candidate for small-scope
+ordinary-user testing of single-clade BioGeoBEARS workflows.
 
 It currently supports:
 
@@ -33,11 +32,11 @@ install.packages("remotes")
 remotes::install_github("XuWeiEvo/iBioGeoBEARS")
 ```
 
-Install the 0.2.0 alpha release:
+Install the 0.2.1 alpha release:
 
 ```r
 install.packages("remotes")
-remotes::install_github("XuWeiEvo/iBioGeoBEARS@v0.2.0-alpha")
+remotes::install_github("XuWeiEvo/iBioGeoBEARS@v0.2.1-alpha")
 ```
 
 BioGeoBEARS must be installed separately; it is not bundled with

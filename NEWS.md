@@ -1,6 +1,6 @@
-# iBiogeobears 0.2.0.9000
+# iBiogeobears 0.2.1
 
-Development toward a stable, ordinary-user release.
+Third alpha release focused on ordinary-user stability and release readiness.
 
 - Added `run_acceptance_check()` with a CI-friendly quick mode and a full
   six-model stability gate covering model reuse, HTML reporting, result

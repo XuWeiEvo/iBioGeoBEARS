@@ -7,6 +7,7 @@ Use this checklist before publishing the next alpha release.
 - Choose the release tag:
   - `v0.1.1-alpha` for an incremental alpha after `v0.1.0-alpha`.
   - `v0.2.0-alpha` if the release should signal a larger feature step.
+  - `v0.2.1-alpha` for the ordinary-user readiness alpha after `v0.2.0-alpha`.
 - Update `DESCRIPTION` from the development version to the chosen release
   version.
 - Update `README.md` installation text if the recommended alpha tag changes.
