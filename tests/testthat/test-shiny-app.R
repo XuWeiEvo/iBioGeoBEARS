@@ -456,7 +456,7 @@ test_that("shiny_run_summary_table handles empty and fitted result states", {
   copy_download_file(resolve_run_summary_file(state), copied)
   summary_csv <- utils::read.csv(summary_path, stringsAsFactors = FALSE)
 
-  expect_equal(summary_path, file.path(paths$tables, "shiny_run_summary.csv"))
+  expect_equal(summary_path, as_path(file.path(paths$tables, "shiny_run_summary.csv")))
   expect_true(file.exists(copied))
   expect_equal(summary_csv$value[match("Best statistical model", summary_csv$item)], "DEC+J (delta AICc 0)")
 })

@@ -377,6 +377,7 @@ resolve_install_library <- function(lib = NULL) {
   if (!is.null(lib)) {
     lib <- as_path(lib)
     dir.create(lib, recursive = TRUE, showWarnings = FALSE)
+    lib <- as_path(lib)
     if (!dir.exists(lib) || file.access(lib, mode = 2) != 0L) {
       stop("R library is not writable: ", lib, call. = FALSE)
     }
