@@ -126,6 +126,90 @@ test_that("Shiny first steps table gives ordinary-user next actions", {
   expect_equal(steps$status[match("Export", steps$step)], "Action needed")
 })
 
+test_that("Shiny guided workflow table highlights the next ordinary-user action", {
+  installation <- data.frame(
+    component = c("R", "Core R packages", "Shiny", "BioGeoBEARS", "Quarto HTML"),
+    required_for = c("All workflows", "All workflows", "Graphical interface", "Real model execution", "HTML reports"),
+    required = c("yes", "yes", "yes", "yes", "no"),
+    status = c("Ready", "Ready", "Ready", "Action needed", "Action needed"),
+    version = c("4.3.1", "ok", "1.9.1", NA, NA),
+    next_step = c("Ready.", "Ready.", "Ready.", "Install BioGeoBEARS.", "Install Quarto."),
+    stringsAsFactors = FALSE
+  )
+  config <- tempfile(fileext = ".yml")
+  writeLines("project:\n  name: example", config)
+  state <- new.env(parent = emptyenv())
+  state$installation <- installation
+  state$validation <- NULL
+  state$result <- NULL
+  state$model_table <- NULL
+  state$bundle <- NULL
+  state$diagnostic_bundle <- NULL
+  state$report <- NULL
+
+  workflow <- shiny_guided_workflow_table(
+    state,
+    start_choice = "example",
+    config_path = config,
+    dry_run = TRUE
+  )
+
+  expect_equal(names(workflow), c("Step", "Status", "Next action", "Detail"))
+  expect_equal(workflow$Status[match("Data source", workflow$Step)], "Ready")
+  expect_match(workflow$`Next action`[match("Validate inputs", workflow$Step)], "Click Validate inputs", fixed = TRUE)
+
+  own_workflow <- shiny_guided_workflow_table(
+    state,
+    start_choice = "own",
+    config_path = config,
+    dry_run = TRUE
+  )
+  expect_equal(own_workflow$Status[match("Data source", own_workflow$Step)], "Action needed")
+  expect_match(own_workflow$`Next action`[match("Data source", own_workflow$Step)], "Upload tree", fixed = TRUE)
+
+  state$validation <- data.frame(check = "tree_file", ok = TRUE, stringsAsFactors = FALSE)
+  paths <- create_project(tempfile("ibgb-shiny-guided-workflow-"))
+  state$result <- list(project_paths = paths, dry_run = TRUE, validation_failed = FALSE)
+  class(state$result) <- c("iBGB_workflow_result", "list")
+  state$model_table <- data.frame(model = "DEC", status = "planned", run_action = "planned", stringsAsFactors = FALSE)
+
+  workflow <- shiny_guided_workflow_table(
+    state,
+    start_choice = "example",
+    config_path = config,
+    output_dir = paths$root,
+    dry_run = TRUE
+  )
+
+  expect_equal(workflow$Status[match("Dry run", workflow$Step)], "Ready")
+  expect_equal(workflow$Status[match("Real run", workflow$Step)], "Waiting")
+  expect_match(workflow$`Next action`[match("Real run", workflow$Step)], "Install BioGeoBEARS", fixed = TRUE)
+
+  state$result$dry_run <- FALSE
+  state$result$model_comparison <- data.frame(
+    model = "DEC",
+    logLik = -10,
+    num_params = 2,
+    AICc = 25,
+    delta_aicc = 0,
+    aicc_weight = 1,
+    stringsAsFactors = FALSE
+  )
+  state$bundle <- tempfile(fileext = ".zip")
+  writeLines("bundle", state$bundle)
+
+  workflow <- shiny_guided_workflow_table(
+    state,
+    start_choice = "existing",
+    config_path = config,
+    output_dir = paths$root,
+    dry_run = FALSE
+  )
+
+  expect_equal(workflow$Status[match("Results", workflow$Step)], "Ready")
+  expect_equal(workflow$Status[match("Export", workflow$Step)], "Partial")
+})
+
 test_that("Shiny project wizard helpers resolve uploads and defaults", {
   uploaded <- tempfile(fileext = ".csv")
   writeLines("species,A\ntaxon_a,1", uploaded)
@@ -189,6 +273,8 @@ test_that("Shiny app exposes first-run checklist and user guide action", {
 
   expect_match(panel_html, "Start Here", fixed = TRUE)
   expect_match(panel_html, "Home", fixed = TRUE)
+  expect_match(panel_html, "home_next_action", fixed = TRUE)
+  expect_match(panel_html, "guided_workflow_table", fixed = TRUE)
   expect_match(panel_html, "first_steps_table", fixed = TRUE)
   expect_match(action_html, "open_user_guide", fixed = TRUE)
 })

@@ -41,6 +41,10 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
           ".ibgb-run-summary-value{font-size:15px;font-weight:600;color:#24292f;overflow-wrap:anywhere} ",
           ".ibgb-key-files-title{font-weight:600;margin:12px 0 6px 0} ",
           ".ibgb-home-note{background:#f6f8fa;border:1px solid #d8dee4;border-radius:4px;padding:10px 12px;margin:8px 0 14px 0} ",
+          ".ibgb-next-action{border:1px solid #bfdbfe;border-left:4px solid #2563eb;background:#eff6ff;border-radius:4px;padding:10px 12px;margin:8px 0 14px 0} ",
+          ".ibgb-next-action-title{font-size:12px;font-weight:600;color:#1d4ed8;margin-bottom:4px} ",
+          ".ibgb-next-action-step{font-size:15px;font-weight:600;color:#1f2937;margin-bottom:3px} ",
+          ".ibgb-next-action-detail{color:#374151} ",
           ".ibgb-collapsible{border-top:1px solid #ddd;margin-top:12px;padding-top:10px} ",
           ".ibgb-collapsible summary{font-weight:600;cursor:pointer;margin-bottom:8px} ",
           ".ibgb-primary-result{border-top:1px solid #e5e7eb;margin-top:18px;padding-top:16px} ",
@@ -56,6 +60,16 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
         shiny::sidebarPanel(
           shiny_control_section(
             "Start",
+            shiny::radioButtons(
+              "workflow_start_choice",
+              "Start with",
+              choices = c(
+                "Example data" = "example",
+                "My own data" = "own",
+                "Existing results" = "existing"
+              ),
+              selected = "example"
+            ),
             shiny_action_grid(
               shiny::actionButton("create_example", "Create example project"),
               shiny::actionButton("validate", "Validate inputs"),
@@ -283,7 +297,10 @@ shiny_start_here_panel <- function() {
       class = "ibgb-home-note",
       "Recommended path: create the example project, validate inputs, run a dry workflow, run the real workflow, then review Results."
     ),
-    shiny::tags$div(class = "ibgb-key-files-title", "Readiness checklist"),
+    shiny::uiOutput("home_next_action"),
+    shiny::tags$div(class = "ibgb-key-files-title", "Guided workflow"),
+    shiny::tableOutput("guided_workflow_table"),
+    shiny::tags$div(class = "ibgb-key-files-title", "Detailed readiness"),
     shiny::tableOutput("first_steps_table")
   )
 }
@@ -689,6 +706,29 @@ iBGB_shiny_server <- function(input, output, session) {
           require_biogeobears = isTRUE(input$require_biogeobears)
         )
       }, striped = TRUE, bordered = TRUE, na = "")
+
+      output$guided_workflow_table <- shiny::renderTable({
+        shiny_guided_workflow_table(
+          state,
+          start_choice = input$workflow_start_choice %||% "example",
+          config_path = tryCatch(current_config_path(), error = function(e) NULL),
+          output_dir = current_output_dir(),
+          dry_run = isTRUE(input$dry_run),
+          require_biogeobears = isTRUE(input$require_biogeobears)
+        )
+      }, striped = TRUE, bordered = TRUE, na = "")
+
+      output$home_next_action <- shiny::renderUI({
+        workflow <- shiny_guided_workflow_table(
+          state,
+          start_choice = input$workflow_start_choice %||% "example",
+          config_path = tryCatch(current_config_path(), error = function(e) NULL),
+          output_dir = current_output_dir(),
+          dry_run = isTRUE(input$dry_run),
+          require_biogeobears = isTRUE(input$require_biogeobears)
+        )
+        shiny_home_next_action(workflow)
+      })
 
       output$installation_table <- shiny::renderTable({
         shiny_installation_table(state$installation)
@@ -1314,6 +1354,224 @@ shiny_summary_table <- function(state) {
       if (!is.null(state$bundle) && file.exists(state$bundle)) "available" else "not available"
     ),
     stringsAsFactors = FALSE
+  )
+}
+
+shiny_guided_workflow_table <- function(
+    state,
+    start_choice = "example",
+    config_path = NULL,
+    output_dir = NULL,
+    dry_run = TRUE,
+    require_biogeobears = FALSE) {
+  start_choice <- shiny_workflow_start_choice(start_choice)
+  config_path <- shiny_text_or_blank(config_path)
+  output_dir <- shiny_text_or_blank(output_dir)
+  if (!nzchar(output_dir) && !is.null(state$result) && !is.null(state$result$project_paths$root)) {
+    output_dir <- state$result$project_paths$root
+  }
+
+  config_ready <- nzchar(config_path) && file.exists(config_path)
+  validation <- shiny_validation_progress(state$validation)
+  bgb_ready <- shiny_installation_component_ready(state$installation, "BioGeoBEARS")
+  has_result <- !is.null(state$result)
+  dry_run_ready <- has_result && isTRUE(state$result$dry_run) && !isTRUE(state$result$validation_failed)
+  real_run_ready <- has_result && !isTRUE(state$result$dry_run) && !isTRUE(state$result$validation_failed)
+  comparison_ready <- has_result && nrow(shiny_model_comparison_table(state)) > 0L
+  primary_results_ready <- real_run_ready && comparison_ready
+  result_bundle_ready <- !is.null(state$bundle) && file.exists(state$bundle)
+  diagnostic_bundle_ready <- !is.null(state$diagnostic_bundle) && file.exists(state$diagnostic_bundle)
+  export_ready <- result_bundle_ready || diagnostic_bundle_ready
+
+  data_ready <- switch(
+    start_choice,
+    example = config_ready,
+    own = has_result || validation$available,
+    existing = has_result,
+    config_ready
+  )
+
+  data_next <- switch(
+    start_choice,
+    example = if (data_ready) "Click Validate inputs." else "Click Create example project.",
+    own = if (data_ready) "Click Validate inputs." else "Upload tree, geography, and regions, then click Create analysis project.",
+    existing = if (data_ready) "Open Results." else "Enter an output directory, then click Load existing results.",
+    "Choose a data source."
+  )
+  data_detail <- switch(
+    start_choice,
+    example = if (config_ready) as_path(config_path) else "Example project not created yet.",
+    own = if (data_ready) as_path(config_path) else "Use the file upload fields in Use your own data.",
+    existing = if (has_result) output_dir else "Use Advanced: existing project and YAML.",
+    ""
+  )
+
+  validation_status <- if (!data_ready) {
+    "Waiting"
+  } else if (validation$failed) {
+    "Needs attention"
+  } else if (validation$passed) {
+    "Ready"
+  } else {
+    "Action needed"
+  }
+  validation_next <- if (!data_ready) {
+    "Choose or create a project first."
+  } else if (validation$failed) {
+    "Open Validation and fix the failed checks."
+  } else if (validation$passed) {
+    "Run a dry workflow."
+  } else {
+    "Click Validate inputs."
+  }
+
+  dry_status <- if (dry_run_ready || real_run_ready) {
+    "Ready"
+  } else if (validation$failed || !validation$passed) {
+    "Waiting"
+  } else {
+    "Action needed"
+  }
+  dry_next <- if (dry_run_ready) {
+    if (bgb_ready) "Uncheck Dry run for real execution." else "Install BioGeoBEARS before real execution."
+  } else if (real_run_ready) {
+    "Open Results."
+  } else if (validation$failed) {
+    "Fix validation errors first."
+  } else if (validation$passed) {
+    "Keep Dry run checked, then click Run workflow."
+  } else {
+    "Validate inputs first."
+  }
+
+  real_status <- if (real_run_ready) {
+    "Ready"
+  } else if (dry_run_ready && bgb_ready) {
+    "Action needed"
+  } else {
+    "Waiting"
+  }
+  real_next <- if (real_run_ready) {
+    "Review Results."
+  } else if (dry_run_ready && bgb_ready) {
+    "Uncheck Dry run, then click Run workflow."
+  } else if (dry_run_ready && !bgb_ready) {
+    if (isTRUE(dry_run) && !isTRUE(require_biogeobears)) {
+      "Install BioGeoBEARS for real execution."
+    } else {
+      "Install BioGeoBEARS, then run again."
+    }
+  } else {
+    "Complete a dry run first."
+  }
+
+  result_status <- if (primary_results_ready) {
+    "Ready"
+  } else if (real_run_ready) {
+    "Needs attention"
+  } else {
+    "Waiting"
+  }
+  result_next <- if (primary_results_ready) {
+    "Open Results and check ancestral reconstruction, model comparison, and event summary."
+  } else if (real_run_ready) {
+    "Refresh key files or inspect Troubleshooting."
+  } else {
+    "Run or load a real workflow first."
+  }
+
+  export_status <- if (export_ready) {
+    if (result_bundle_ready && diagnostic_bundle_ready) "Ready" else "Partial"
+  } else if (primary_results_ready) {
+    "Action needed"
+  } else {
+    "Waiting"
+  }
+  export_next <- if (result_bundle_ready && diagnostic_bundle_ready) {
+    "Download result or diagnostic bundle."
+  } else if (result_bundle_ready) {
+    "Create diagnostic bundle if you need support."
+  } else if (primary_results_ready) {
+    "Click Create bundle if missing."
+  } else {
+    "Review Results first."
+  }
+
+  data.frame(
+    Step = c("Data source", "Validate inputs", "Dry run", "Real run", "Results", "Export"),
+    Status = c(
+      if (data_ready) "Ready" else "Action needed",
+      validation_status,
+      dry_status,
+      real_status,
+      result_status,
+      export_status
+    ),
+    `Next action` = c(
+      data_next,
+      validation_next,
+      dry_next,
+      real_next,
+      result_next,
+      export_next
+    ),
+    Detail = c(
+      data_detail,
+      validation$detail,
+      if (has_result) workflow_model_status_label(state$model_table) else "",
+      shiny_installation_component_detail(state$installation, "BioGeoBEARS"),
+      if (comparison_ready) "Model comparison available." else "No model comparison table yet.",
+      shiny_export_detail(result_bundle_ready, diagnostic_bundle_ready, state)
+    ),
+    check.names = FALSE,
+    stringsAsFactors = FALSE
+  )
+}
+
+shiny_workflow_start_choice <- function(start_choice) {
+  value <- tolower(shiny_text_or_blank(start_choice))
+  if (value %in% c("example", "example data")) {
+    return("example")
+  }
+  if (value %in% c("own", "my own data", "user", "user data")) {
+    return("own")
+  }
+  if (value %in% c("existing", "existing results", "load")) {
+    return("existing")
+  }
+  "example"
+}
+
+shiny_validation_progress <- function(validation) {
+  if (is.null(validation) || nrow(validation) == 0L || !"ok" %in% names(validation)) {
+    return(list(
+      available = FALSE,
+      passed = FALSE,
+      failed = FALSE,
+      detail = "Not checked yet."
+    ))
+  }
+  failed <- sum(!is.na(validation$ok) & !validation$ok)
+  passed <- sum(!is.na(validation$ok) & validation$ok)
+  list(
+    available = TRUE,
+    passed = failed == 0L,
+    failed = failed > 0L,
+    detail = paste0(passed, " passed, ", failed, " failed")
+  )
+}
+
+shiny_home_next_action <- function(workflow) {
+  if (is.null(workflow) || nrow(workflow) == 0L) {
+    return(shiny::tags$div(class = "ibgb-next-action", "Choose a data source."))
+  }
+  actionable <- workflow[workflow$Status %in% c("Action needed", "Needs attention", "Waiting", "Partial"), , drop = FALSE]
+  next_row <- if (nrow(actionable) > 0L) actionable[1L, , drop = FALSE] else workflow[nrow(workflow), , drop = FALSE]
+  shiny::tags$div(
+    class = "ibgb-next-action",
+    shiny::tags$div(class = "ibgb-next-action-title", "Next action"),
+    shiny::tags$div(class = "ibgb-next-action-step", next_row$Step[[1L]]),
+    shiny::tags$div(class = "ibgb-next-action-detail", next_row$`Next action`[[1L]])
   )
 }
 

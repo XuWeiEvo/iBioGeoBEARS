@@ -22,6 +22,9 @@ Third alpha release focused on ordinary-user stability and release readiness.
   ordinary-user workflow path.
 - Simplified the Shiny first-run interface around `Home`, focused `Results`,
   `Setup`, `Advanced`, and `Troubleshooting` views.
+- Added a guided Shiny Home workflow with a single next-action prompt for
+  example data, user data, existing results, validation, dry run, real run,
+  result review, and export.
 - Added a primary Shiny results view focused on best-model ancestral
   reconstruction, model comparison, and event summary.
 - Added deterministic range-change event summaries from highest-probability
