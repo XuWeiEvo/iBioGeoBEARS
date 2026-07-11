@@ -252,11 +252,11 @@ manifest <- create_workflow_manifest(result_dir)
 The Shiny entrypoint is a thin wrapper around the package backend. It validates
 the YAML config, runs `run_workflow()`, renders reports, and bundles results
 without moving scientific logic into Shiny server code. The default interface
-now starts with a simplified `Home` tab and a focused `Results` tab. The main
+now starts with a simplified Chinese `首页` tab and a focused `结果` tab. The main
 results shown first are the best-model ancestral reconstruction, the model
 comparison table, and a range-change event summary. Advanced diagnostics,
 full tables, figure dashboards, paths, and logs remain available under
-`Advanced` and `Troubleshooting`.
+`高级结果` and `排错`.
 
 ```r
 install.packages("shiny")
@@ -264,15 +264,16 @@ launch_app()
 ```
 
 Calling `launch_app()` without arguments prepares and loads a complete example
-project automatically. The `Setup` tab reports missing requirements and the
+project automatically. The `环境检查` tab reports missing requirements and the
 exact next action before a real analysis is started.
 
-For a new analysis, use `New project wizard` in the sidebar:
+For a new analysis, use `使用自己的数据` in the sidebar:
 
 1. Enter a project name.
 2. Upload a Newick tree, geography CSV, and regions CSV.
-3. Choose the maximum range size and models.
-4. Click `Create analysis project`.
+3. Check the lightweight upload preview table.
+4. Choose the maximum range size and models.
+5. Click `创建自己的分析项目`.
 
 The wizard copies the inputs into a portable project, writes `analysis.yml`,
 loads it into the app, and immediately displays input validation results.
@@ -281,23 +282,23 @@ edited for a new analysis.
 
 Recommended GUI flow:
 
-1. Create a project with `New project wizard`, click `Create example project`,
+1. Create a project with `使用自己的数据`, click `1 创建示例项目`,
    or provide an existing `analysis.yml`.
-2. Click `Validate inputs`.
-3. Keep `Dry run` checked for a first pass, then click `Run workflow`.
+2. Click `2 检查输入`.
+3. Keep `Dry run` checked for a first pass, then click `3 运行流程`.
 4. Uncheck `Dry run` when BioGeoBEARS is installed and a real analysis is
    intended.
-5. Click `Render report`.
-6. Review `Results` first: ancestral reconstruction, model comparison, and
+5. Click `4 生成报告`.
+6. Review `结果` first: ancestral reconstruction, model comparison, and
    event summary.
-7. Use `Advanced` only when you need the full tables and figure dashboard.
-8. Use `Troubleshooting` for warnings, failed models, logs, and output paths.
+7. Use `高级结果` only when you need the full tables and figure dashboard.
+8. Use `排错` for warnings, failed models, logs, and output paths.
 
 The Shiny result views are designed for triage:
 
-- `Home`: current readiness checklist and the next action for setup,
+- `首页`: current readiness checklist and the next action for setup,
   validation, workflow execution, report rendering, and exports.
-- `Results`: the primary interpretation view with best-model ancestral
+- `结果`: the primary interpretation view with best-model ancestral
   reconstruction, model comparison, and event summary.
 - `Model Comparison`: compact fit summary plus the full model-comparison table.
 - `Event Details`: branch-level range-change events inferred from

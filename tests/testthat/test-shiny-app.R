@@ -154,9 +154,9 @@ test_that("Shiny guided workflow table highlights the next ordinary-user action"
     dry_run = TRUE
   )
 
-  expect_equal(names(workflow), c("Step", "Status", "Next action", "Detail"))
-  expect_equal(workflow$Status[match("Data source", workflow$Step)], "Ready")
-  expect_match(workflow$`Next action`[match("Validate inputs", workflow$Step)], "Click Validate inputs", fixed = TRUE)
+  expect_equal(names(workflow), c("步骤", "状态", "下一步", "说明"))
+  expect_equal(workflow$状态[match("数据来源", workflow$步骤)], "已就绪")
+  expect_match(workflow$下一步[match("输入检查", workflow$步骤)], "检查输入", fixed = TRUE)
 
   own_workflow <- shiny_guided_workflow_table(
     state,
@@ -164,8 +164,8 @@ test_that("Shiny guided workflow table highlights the next ordinary-user action"
     config_path = config,
     dry_run = TRUE
   )
-  expect_equal(own_workflow$Status[match("Data source", own_workflow$Step)], "Action needed")
-  expect_match(own_workflow$`Next action`[match("Data source", own_workflow$Step)], "Upload tree", fixed = TRUE)
+  expect_equal(own_workflow$状态[match("数据来源", own_workflow$步骤)], "需要操作")
+  expect_match(own_workflow$下一步[match("数据来源", own_workflow$步骤)], "上传系统树", fixed = TRUE)
 
   state$validation <- data.frame(check = "tree_file", ok = TRUE, stringsAsFactors = FALSE)
   paths <- create_project(tempfile("ibgb-shiny-guided-workflow-"))
@@ -181,9 +181,9 @@ test_that("Shiny guided workflow table highlights the next ordinary-user action"
     dry_run = TRUE
   )
 
-  expect_equal(workflow$Status[match("Dry run", workflow$Step)], "Ready")
-  expect_equal(workflow$Status[match("Real run", workflow$Step)], "Waiting")
-  expect_match(workflow$`Next action`[match("Real run", workflow$Step)], "Install BioGeoBEARS", fixed = TRUE)
+  expect_equal(workflow$状态[match("Dry run", workflow$步骤)], "已就绪")
+  expect_equal(workflow$状态[match("真实运行", workflow$步骤)], "等待")
+  expect_match(workflow$下一步[match("真实运行", workflow$步骤)], "安装 BioGeoBEARS", fixed = TRUE)
 
   state$result$dry_run <- FALSE
   state$result$model_comparison <- data.frame(
@@ -206,11 +206,11 @@ test_that("Shiny guided workflow table highlights the next ordinary-user action"
     dry_run = FALSE
   )
 
-  expect_equal(workflow$Status[match("Results", workflow$Step)], "Ready")
-  expect_equal(workflow$Status[match("Export", workflow$Step)], "Partial")
+  expect_equal(workflow$状态[match("查看结果", workflow$步骤)], "已就绪")
+  expect_equal(workflow$状态[match("导出分享", workflow$步骤)], "部分完成")
 })
 
-test_that("Shiny project wizard helpers resolve uploads and defaults", {
+test_that("Shiny project wizard helpers resolve uploads, previews, and defaults", {
   uploaded <- tempfile(fileext = ".csv")
   writeLines("species,A\ntaxon_a,1", uploaded)
   upload <- data.frame(
@@ -224,6 +224,34 @@ test_that("Shiny project wizard helpers resolve uploads and defaults", {
   expect_equal(shiny_upload_path(upload, "Geography CSV"), uploaded)
   expect_true(grepl("iBiogeobears-projects$", default_project_parent()))
   expect_error(shiny_upload_path(NULL, "Tree file"), "Tree file is required")
+
+  tree <- tempfile(fileext = ".nwk")
+  writeLines("(taxon_a:1,taxon_b:1);", tree)
+  tree_upload <- data.frame(
+    name = "tree.nwk",
+    size = file.info(tree)$size,
+    type = "text/plain",
+    datapath = tree,
+    stringsAsFactors = FALSE
+  )
+  regions <- tempfile(fileext = ".csv")
+  writeLines("area,label\nA,Area A", regions)
+  regions_upload <- data.frame(
+    name = "regions.csv",
+    size = file.info(regions)$size,
+    type = "text/csv",
+    datapath = regions,
+    stringsAsFactors = FALSE
+  )
+  preview <- shiny_upload_preview_table(list(
+    wizard_tree = tree_upload,
+    wizard_geography = upload,
+    wizard_regions = regions_upload
+  ))
+
+  expect_equal(names(preview), c("文件", "状态", "摘要", "下一步"))
+  expect_true(all(preview$状态 == "可读取"))
+  expect_match(preview$摘要[preview$文件 == "分布矩阵 CSV"], "species", fixed = TRUE)
 })
 
 test_that("Shiny validation table and input templates are user-facing", {
@@ -271,8 +299,8 @@ test_that("Shiny app exposes first-run checklist and user guide action", {
     shiny::actionButton("open_user_guide", "Open user guide")
   ))
 
-  expect_match(panel_html, "Start Here", fixed = TRUE)
-  expect_match(panel_html, "Home", fixed = TRUE)
+  expect_match(panel_html, "从这里开始", fixed = TRUE)
+  expect_match(panel_html, "首页", fixed = TRUE)
   expect_match(panel_html, "home_next_action", fixed = TRUE)
   expect_match(panel_html, "guided_workflow_table", fixed = TRUE)
   expect_match(panel_html, "first_steps_table", fixed = TRUE)
@@ -284,10 +312,10 @@ test_that("Shiny simplified primary results panel helpers are available", {
 
   ui_html <- as.character(shiny_primary_results_panel())
 
-  expect_match(ui_html, "Results", fixed = TRUE)
-  expect_match(ui_html, "Ancestral reconstruction", fixed = TRUE)
-  expect_match(ui_html, "Model comparison", fixed = TRUE)
-  expect_match(ui_html, "Event summary", fixed = TRUE)
+  expect_match(ui_html, "结果", fixed = TRUE)
+  expect_match(ui_html, "祖先分布重建图", fixed = TRUE)
+  expect_match(ui_html, "模型比较表", fixed = TRUE)
+  expect_match(ui_html, "事件统计", fixed = TRUE)
   expect_match(ui_html, "primary_event_summary_table", fixed = TRUE)
 })
 

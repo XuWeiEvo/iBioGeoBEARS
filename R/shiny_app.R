@@ -59,69 +59,71 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
       shiny::sidebarLayout(
         shiny::sidebarPanel(
           shiny_control_section(
-            "Start",
+            "\u5f00\u59cb",
             shiny::radioButtons(
               "workflow_start_choice",
-              "Start with",
+              "\u4ece\u54ea\u91cc\u5f00\u59cb",
               choices = c(
-                "Example data" = "example",
-                "My own data" = "own",
-                "Existing results" = "existing"
+                "\u5185\u7f6e\u793a\u4f8b\u6570\u636e" = "example",
+                "\u6211\u81ea\u5df1\u7684\u6570\u636e" = "own",
+                "\u5df2\u6709\u5206\u6790\u7ed3\u679c" = "existing"
               ),
               selected = "example"
             ),
             shiny_action_grid(
-              shiny::actionButton("create_example", "Create example project"),
-              shiny::actionButton("validate", "Validate inputs"),
-              shiny::actionButton("run", "Run workflow"),
-              shiny::actionButton("render_report", "Render report")
+              shiny::actionButton("create_example", "1 \u521b\u5efa\u793a\u4f8b\u9879\u76ee"),
+              shiny::actionButton("validate", "2 \u68c0\u67e5\u8f93\u5165"),
+              shiny::actionButton("run", "3 \u8fd0\u884c\u6d41\u7a0b"),
+              shiny::actionButton("render_report", "4 \u751f\u6210\u62a5\u544a")
             )
           ),
           shiny_control_section(
-            "Use your own data",
-            shiny::textInput("wizard_project_name", "Project name", value = "my_clade"),
-            shiny::textInput("wizard_project_parent", "Save projects in", value = default_project_parent()),
+            "\u4f7f\u7528\u81ea\u5df1\u7684\u6570\u636e",
+            shiny::textInput("wizard_project_name", "\u9879\u76ee\u540d", value = "my_clade"),
+            shiny::textInput("wizard_project_parent", "\u9879\u76ee\u4fdd\u5b58\u4f4d\u7f6e", value = default_project_parent()),
             shiny::fileInput(
               "wizard_tree",
-              "Tree file",
+              "\u7cfb\u7edf\u6811\u6587\u4ef6",
               accept = c(".nwk", ".newick", ".tree", ".tre")
             ),
-            shiny::fileInput("wizard_geography", "Geography CSV", accept = ".csv"),
-            shiny::fileInput("wizard_regions", "Regions CSV", accept = ".csv"),
+            shiny::fileInput("wizard_geography", "\u5206\u5e03\u77e9\u9635 CSV", accept = ".csv"),
+            shiny::fileInput("wizard_regions", "\u533a\u57df\u4fe1\u606f CSV", accept = ".csv"),
             shiny::tags$div(
               class = "ibgb-downloads",
-              shiny::downloadButton("download_tree_template", "Tree template"),
-              shiny::downloadButton("download_geography_template", "Geography template"),
-              shiny::downloadButton("download_regions_template", "Regions template")
+              shiny::downloadButton("download_tree_template", "\u4e0b\u8f7d\u6811\u6a21\u677f"),
+              shiny::downloadButton("download_geography_template", "\u4e0b\u8f7d\u5206\u5e03\u77e9\u9635\u6a21\u677f"),
+              shiny::downloadButton("download_regions_template", "\u4e0b\u8f7d\u533a\u57df\u4fe1\u606f\u6a21\u677f")
             ),
-            shiny::numericInput("wizard_max_range_size", "Maximum range size", value = 3L, min = 1L, step = 1L),
+            shiny::tags$div(class = "ibgb-key-files-title", "\u4e0a\u4f20\u9884\u89c8"),
+            shiny::tableOutput("wizard_upload_preview_table"),
+            shiny::numericInput("wizard_max_range_size", "\u6700\u5927\u5206\u5e03\u533a\u6570\u91cf", value = 3L, min = 1L, step = 1L),
             shiny::checkboxGroupInput(
               "wizard_models",
-              "Models",
+              "\u8981\u8fd0\u884c\u7684\u6a21\u578b",
               choices = valid_models(),
               selected = valid_models()
             ),
             shiny_action_grid(
-              shiny::actionButton("create_analysis_project", "Create analysis project")
+              shiny::actionButton("create_analysis_project", "\u521b\u5efa\u81ea\u5df1\u7684\u5206\u6790\u9879\u76ee")
             )
           ),
           shiny_collapsible_section(
-            "Advanced: existing project and YAML",
+            "\u9ad8\u7ea7\uff1a\u5df2\u6709\u9879\u76ee\u548c YAML",
             shiny::textInput("config_path", "analysis.yml", value = default_config),
-            shiny::fileInput("config_upload", "Upload analysis.yml", accept = c(".yml", ".yaml")),
-            shiny::textInput("output_dir", "Output directory", value = default_output),
-            shiny::textInput("example_project_dir", "Example project directory", value = startup$example_project_dir),
+            shiny::fileInput("config_upload", "\u4e0a\u4f20 analysis.yml", accept = c(".yml", ".yaml")),
+            shiny::textInput("output_dir", "\u7ed3\u679c\u76ee\u5f55", value = default_output),
+            shiny::textInput("example_project_dir", "\u793a\u4f8b\u9879\u76ee\u76ee\u5f55", value = startup$example_project_dir),
             shiny_action_grid(
-              shiny::actionButton("load_results", "Load existing results")
+              shiny::actionButton("load_results", "\u52a0\u8f7d\u5df2\u6709\u7ed3\u679c")
             )
           ),
           shiny_collapsible_section(
-            "Advanced: setup and installation",
+            "\u9ad8\u7ea7\uff1a\u5b89\u88c5\u548c\u73af\u5883",
             shiny_action_grid(
-              shiny::actionButton("refresh_setup", "Refresh setup checks"),
-              shiny::actionButton("open_user_guide", "Open user guide"),
-              shiny::actionButton("show_install_plan", "Show BioGeoBEARS install plan"),
-              shiny::actionButton("install_biogeobears", "Install BioGeoBEARS")
+              shiny::actionButton("refresh_setup", "\u5237\u65b0\u73af\u5883\u68c0\u67e5"),
+              shiny::actionButton("open_user_guide", "\u6253\u5f00\u4e2d\u6587\u6559\u7a0b"),
+              shiny::actionButton("show_install_plan", "\u67e5\u770b BioGeoBEARS \u5b89\u88c5\u8ba1\u5212"),
+              shiny::actionButton("install_biogeobears", "\u5b89\u88c5 BioGeoBEARS")
             )
           ),
           shiny_collapsible_section(
@@ -137,29 +139,29 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
             shiny_constraint_inputs()
           ),
           shiny_collapsible_section(
-            "Advanced: run options",
-            shiny::checkboxInput("dry_run", "Dry run", value = TRUE),
-            shiny::checkboxInput("require_biogeobears", "Require BioGeoBEARS", value = FALSE),
+            "\u9ad8\u7ea7\uff1a\u8fd0\u884c\u9009\u9879",
+            shiny::checkboxInput("dry_run", "Dry run\uff1a\u53ea\u68c0\u67e5\uff0c\u4e0d\u771f\u6b63\u8fd0\u884c BioGeoBEARS", value = TRUE),
+            shiny::checkboxInput("require_biogeobears", "\u771f\u5b9e\u8fd0\u884c\u65f6\u8981\u6c42 BioGeoBEARS \u53ef\u7528", value = FALSE),
             shiny::checkboxInput("resume_completed_models", "Reuse completed models", value = TRUE),
             shiny::checkboxInput("retry_failed_only", "Retry failed models only", value = FALSE),
             shiny::checkboxInput("force", "Force execution after validation failure", value = FALSE),
-            shiny_action_grid(shiny::actionButton("open_output", "Open output directory"))
+            shiny_action_grid(shiny::actionButton("open_output", "\u6253\u5f00\u7ed3\u679c\u76ee\u5f55"))
           ),
           shiny_collapsible_section(
-            "Export and troubleshooting",
-            shiny::selectInput("report_format", "Report format", choices = c("source", "html", "pdf"), selected = "html"),
+            "\u5bfc\u51fa\u548c\u6392\u9519",
+            shiny::selectInput("report_format", "\u62a5\u544a\u683c\u5f0f", choices = c("source", "html", "pdf"), selected = "html"),
             shiny_action_grid(
-              shiny::actionButton("open_report", "Open report"),
-              shiny::actionButton("refresh_key_files", "Refresh key files"),
-              shiny::actionButton("bundle", "Create bundle if missing"),
-              shiny::actionButton("diagnostic_bundle", "Create diagnostic bundle")
+              shiny::actionButton("open_report", "\u6253\u5f00\u62a5\u544a"),
+              shiny::actionButton("refresh_key_files", "\u5237\u65b0\u5173\u952e\u6587\u4ef6"),
+              shiny::actionButton("bundle", "\u751f\u6210\u7ed3\u679c\u538b\u7f29\u5305"),
+              shiny::actionButton("diagnostic_bundle", "\u751f\u6210\u8bca\u65ad\u538b\u7f29\u5305")
             ),
             shiny::tags$div(
               class = "ibgb-downloads",
-              shiny::downloadButton("download_run_summary", "Download run summary"),
-              shiny::downloadButton("download_report", "Download report"),
-              shiny::downloadButton("download_bundle", "Download bundle"),
-              shiny::downloadButton("download_diagnostic_bundle", "Download diagnostic bundle")
+              shiny::downloadButton("download_run_summary", "\u4e0b\u8f7d\u8fd0\u884c\u6458\u8981"),
+              shiny::downloadButton("download_report", "\u4e0b\u8f7d\u62a5\u544a"),
+              shiny::downloadButton("download_bundle", "\u4e0b\u8f7d\u7ed3\u679c\u538b\u7f29\u5305"),
+              shiny::downloadButton("download_diagnostic_bundle", "\u4e0b\u8f7d\u8bca\u65ad\u538b\u7f29\u5305")
             )
           )
         ),
@@ -169,14 +171,14 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
             shiny_start_here_panel(),
             shiny_primary_results_panel(),
             shiny::tabPanel(
-              "Setup",
-              shiny::tags$div(class = "ibgb-key-files-title", "Installation readiness"),
+              "\u73af\u5883\u68c0\u67e5",
+              shiny::tags$div(class = "ibgb-key-files-title", "\u5b89\u88c5\u72b6\u6001"),
               shiny::tableOutput("installation_table"),
-              shiny::tags$div(class = "ibgb-key-files-title", "BioGeoBEARS installation plan"),
+              shiny::tags$div(class = "ibgb-key-files-title", "BioGeoBEARS \u5b89\u88c5\u8ba1\u5212"),
               shiny::tableOutput("biogeobears_install_plan_table")
             ),
             shiny::tabPanel(
-              "Advanced",
+              "\u9ad8\u7ea7\u7ed3\u679c",
               shiny::tabsetPanel(
                 shiny::tabPanel(
                   "Run Summary",
@@ -234,7 +236,7 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
               )
             ),
             shiny::tabPanel(
-              "Troubleshooting",
+              "\u6392\u9519",
               shiny::tags$div(class = "ibgb-key-files-title", "Warning summary"),
               shiny::tableOutput("warning_summary_table"),
               shiny::tags$div(class = "ibgb-key-files-title", "Warning details"),
@@ -251,12 +253,12 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
               shiny::verbatimTextOutput("messages_text")
             ),
             shiny::tabPanel(
-              "About/Citation",
-              shiny::tags$div(class = "ibgb-key-files-title", "Software status"),
+              "\u5173\u4e8e\u548c\u5f15\u7528",
+              shiny::tags$div(class = "ibgb-key-files-title", "\u8f6f\u4ef6\u72b6\u6001"),
               shiny::tableOutput("about_table"),
-              shiny::tags$div(class = "ibgb-key-files-title", "Report environment"),
+              shiny::tags$div(class = "ibgb-key-files-title", "\u62a5\u544a\u73af\u5883"),
               shiny::tableOutput("report_environment_table"),
-              shiny::tags$div(class = "ibgb-key-files-title", "BioGeoBEARS citation"),
+              shiny::tags$div(class = "ibgb-key-files-title", "BioGeoBEARS \u5f15\u7528"),
               shiny::verbatimTextOutput("citation_text")
             )
           )
@@ -291,41 +293,41 @@ shiny_action_grid <- function(...) {
 
 shiny_start_here_panel <- function() {
   shiny::tabPanel(
-    "Home",
-    shiny::tags$h3("Start Here"),
+    "\u9996\u9875",
+    shiny::tags$h3("\u4ece\u8fd9\u91cc\u5f00\u59cb"),
     shiny::tags$div(
       class = "ibgb-home-note",
-      "Recommended path: create the example project, validate inputs, run a dry workflow, run the real workflow, then review Results."
+      "\u63a8\u8350\u6d41\u7a0b\uff1a\u5148\u7528\u5185\u7f6e\u793a\u4f8b\u8dd1\u901a\uff0c\u518d\u6362\u6210\u81ea\u5df1\u7684\u6570\u636e\u3002\u6bcf\u4e00\u6b65\u5148\u770b\u4e0b\u9762\u7684\u201c\u4e0b\u4e00\u6b65\u201d\u3002"
     ),
     shiny::uiOutput("home_next_action"),
-    shiny::tags$div(class = "ibgb-key-files-title", "Guided workflow"),
+    shiny::tags$div(class = "ibgb-key-files-title", "\u5f15\u5bfc\u6d41\u7a0b"),
     shiny::tableOutput("guided_workflow_table"),
-    shiny::tags$div(class = "ibgb-key-files-title", "Detailed readiness"),
+    shiny::tags$div(class = "ibgb-key-files-title", "\u8be6\u7ec6\u72b6\u6001"),
     shiny::tableOutput("first_steps_table")
   )
 }
 
 shiny_primary_results_panel <- function() {
   shiny::tabPanel(
-    "Results",
-    shiny::tags$div(class = "ibgb-home-note", "Main outputs are intentionally limited to the interpretation items most users need first."),
+    "\u7ed3\u679c",
+    shiny::tags$div(class = "ibgb-home-note", "\u8fd9\u91cc\u5148\u53ea\u663e\u793a\u6700\u91cd\u8981\u7684\u4e09\u7c7b\u7ed3\u679c\u3002\u5b8c\u6574\u8868\u683c\u3001\u65e5\u5fd7\u548c\u9ad8\u7ea7\u8bca\u65ad\u5728\u201c\u9ad8\u7ea7\u7ed3\u679c\u201d\u548c\u201c\u6392\u9519\u201d\u91cc\u3002"),
     shiny::uiOutput("run_summary_cards"),
     shiny::tags$div(
       class = "ibgb-primary-result",
-      shiny::tags$h4("1. Ancestral reconstruction"),
-      shiny::tags$p("Best-model ancestral range reconstruction. Use this as the first visual result, then check model uncertainty before interpretation."),
+      shiny::tags$h4("1. \u7956\u5148\u5206\u5e03\u91cd\u5efa\u56fe"),
+      shiny::tags$p("\u5148\u770b\u6700\u4f73\u7edf\u8ba1\u6a21\u578b\u4e0b\u7684\u7956\u5148\u5206\u5e03\u91cd\u5efa\u56fe\uff0c\u518d\u7ed3\u5408\u6a21\u578b\u6bd4\u8f83\u548c +J \u63d0\u793a\u89e3\u91ca\u3002"),
       shiny::imageOutput("primary_figure_node_best")
     ),
     shiny::tags$div(
       class = "ibgb-primary-result",
-      shiny::tags$h4("2. Model comparison"),
+      shiny::tags$h4("2. \u6a21\u578b\u6bd4\u8f83\u8868"),
       shiny::tableOutput("primary_model_comparison_table"),
       shiny::imageOutput("primary_figure_model_comparison")
     ),
     shiny::tags$div(
       class = "ibgb-primary-result",
-      shiny::tags$h4("3. Event summary"),
-      shiny::tags$p("Current event summary is derived from highest-probability ancestral state changes along branches. It is not stochastic mapping event counting."),
+      shiny::tags$h4("3. \u4e8b\u4ef6\u7edf\u8ba1"),
+      shiny::tags$p("\u5f53\u524d\u4e8b\u4ef6\u7edf\u8ba1\u6765\u81ea\u6bcf\u6761\u5206\u652f\u6700\u9ad8\u6982\u7387\u7956\u5148\u72b6\u6001\u7684\u53d8\u5316\uff0c\u4e0d\u7b49\u540c\u4e8e stochastic mapping \u7684\u4e8b\u4ef6\u8ba1\u6570\u3002"),
       shiny::tableOutput("primary_event_summary_table"),
       shiny::imageOutput("primary_figure_event_summary")
     )
@@ -502,9 +504,9 @@ iBGB_shiny_server <- function(input, output, session) {
             parent <- default_project_parent()
           }
           target <- file.path(parent, project_name)
-          tree_file <- shiny_upload_path(input$wizard_tree, "Tree file")
-          geography_file <- shiny_upload_path(input$wizard_geography, "Geography CSV")
-          regions_file <- shiny_upload_path(input$wizard_regions, "Regions CSV")
+          tree_file <- shiny_upload_path(input$wizard_tree, "\u7cfb\u7edf\u6811\u6587\u4ef6")
+          geography_file <- shiny_upload_path(input$wizard_geography, "\u5206\u5e03\u77e9\u9635 CSV")
+          regions_file <- shiny_upload_path(input$wizard_regions, "\u533a\u57df\u4fe1\u606f CSV")
 
           append_app_stage(state, "Project wizard", "creating project", target)
           project <- create_analysis_project(
@@ -729,6 +731,10 @@ iBGB_shiny_server <- function(input, output, session) {
         )
         shiny_home_next_action(workflow)
       })
+
+      output$wizard_upload_preview_table <- shiny::renderTable({
+        shiny_upload_preview_table(input)
+      }, striped = TRUE, bordered = TRUE, na = "")
 
       output$installation_table <- shiny::renderTable({
         shiny_installation_table(state$installation)
@@ -1357,6 +1363,93 @@ shiny_summary_table <- function(state) {
   )
 }
 
+shiny_upload_preview_table <- function(input) {
+  rows <- list(
+    shiny_upload_preview_tree(input$wizard_tree %||% NULL),
+    shiny_upload_preview_csv(input$wizard_geography %||% NULL, "\u5206\u5e03\u77e9\u9635 CSV", expected = "\u7b2c\u4e00\u5217\u4e3a\u7269\u79cd\u540d\uff0c\u5176\u4f59\u5217\u4e3a\u5730\u7406\u533a\u57df\uff0c\u53d6\u503c\u901a\u5e38\u4e3a 0/1\u3002"),
+    shiny_upload_preview_csv(input$wizard_regions %||% NULL, "\u533a\u57df\u4fe1\u606f CSV", expected = "\u81f3\u5c11\u5305\u542b\u533a\u57df\u7f16\u53f7\u6216\u533a\u57df\u540d\u79f0\uff0c\u7528\u6765\u89e3\u91ca\u5206\u5e03\u77e9\u9635\u5217\u540d\u3002")
+  )
+  do.call(rbind, rows)
+}
+
+shiny_upload_preview_missing <- function(label, next_step) {
+  shiny_upload_preview_row(label, "\u7b49\u5f85\u4e0a\u4f20", "", next_step)
+}
+
+shiny_upload_preview_row <- function(label, status, summary, next_step) {
+  stats::setNames(
+    data.frame(
+      file = label,
+      status = status,
+      summary = summary,
+      next_step = next_step,
+      check.names = FALSE,
+      stringsAsFactors = FALSE
+    ),
+    c("\u6587\u4ef6", "\u72b6\u6001", "\u6458\u8981", "\u4e0b\u4e00\u6b65")
+  )
+}
+
+shiny_upload_preview_tree <- function(upload) {
+  path <- shiny_uploaded_datapath(upload)
+  if (is.null(path)) {
+    return(shiny_upload_preview_missing("\u7cfb\u7edf\u6811\u6587\u4ef6", "\u4e0a\u4f20 Newick \u683c\u5f0f\u7684\u6811\u6587\u4ef6\u3002"))
+  }
+  text <- tryCatch(
+    paste(readLines(path, n = 5L, warn = FALSE), collapse = " "),
+    error = function(e) NA_character_
+  )
+  if (is.na(text) || !nzchar(text)) {
+    return(shiny_upload_preview_row("\u7cfb\u7edf\u6811\u6587\u4ef6", "\u9700\u8981\u68c0\u67e5", "\u6587\u4ef6\u4e3a\u7a7a\u6216\u65e0\u6cd5\u8bfb\u53d6\u3002", "\u91cd\u65b0\u4e0a\u4f20 Newick \u6811\u6587\u4ef6\u3002"))
+  }
+  looks_newick <- grepl("\\(", text) && grepl(";", text)
+  status <- if (looks_newick) "\u53ef\u8bfb\u53d6" else "\u9700\u8981\u68c0\u67e5"
+  next_step <- if (looks_newick) "\u7ee7\u7eed\u4e0a\u4f20\u5206\u5e03\u77e9\u9635\u548c\u533a\u57df\u4fe1\u606f\u3002" else "\u68c0\u67e5\u6811\u6587\u4ef6\u662f\u5426\u4e3a Newick \u683c\u5f0f\uff0c\u4e14\u4ee5\u5206\u53f7\u7ed3\u5c3e\u3002"
+  shiny_upload_preview_row(
+    "\u7cfb\u7edf\u6811\u6587\u4ef6",
+    status,
+    paste0("\u524d\u51e0\u884c\u5171 ", nchar(text), " \u4e2a\u5b57\u7b26\u3002"),
+    next_step
+  )
+}
+
+shiny_upload_preview_csv <- function(upload, label, expected) {
+  path <- shiny_uploaded_datapath(upload)
+  if (is.null(path)) {
+    return(shiny_upload_preview_missing(label, paste0("\u4e0a\u4f20 ", label, "\u3002")))
+  }
+  table <- tryCatch(
+    utils::read.csv(path, nrows = 5L, check.names = FALSE, stringsAsFactors = FALSE),
+    error = function(e) e
+  )
+  if (inherits(table, "error")) {
+    return(shiny_upload_preview_row(label, "\u9700\u8981\u68c0\u67e5", conditionMessage(table), expected))
+  }
+  if (ncol(table) == 0L) {
+    return(shiny_upload_preview_row(label, "\u9700\u8981\u68c0\u67e5", "CSV \u6ca1\u6709\u53ef\u8bfb\u53d6\u7684\u5217\u3002", expected))
+  }
+  summary <- paste0(
+    "\u53ef\u8bfb\u53d6\uff1b\u9884\u89c8\u5230 ",
+    nrow(table),
+    " \u884c\u3001",
+    ncol(table),
+    " \u5217\uff1a",
+    paste(utils::head(names(table), 6L), collapse = ", ")
+  )
+  shiny_upload_preview_row(label, "\u53ef\u8bfb\u53d6", summary, "\u70b9\u51fb\u201c\u521b\u5efa\u81ea\u5df1\u7684\u5206\u6790\u9879\u76ee\u201d\u540e\u4f1a\u8fdb\u884c\u5b8c\u6574\u9a8c\u8bc1\u3002")
+}
+
+shiny_uploaded_datapath <- function(upload) {
+  if (is.null(upload) || nrow(upload) == 0L || !"datapath" %in% names(upload)) {
+    return(NULL)
+  }
+  path <- upload$datapath[[1L]]
+  if (is.null(path) || is.na(path) || !nzchar(path) || !file.exists(path)) {
+    return(NULL)
+  }
+  path
+}
+
 shiny_guided_workflow_table <- function(
     state,
     start_choice = "example",
@@ -1393,138 +1486,141 @@ shiny_guided_workflow_table <- function(
 
   data_next <- switch(
     start_choice,
-    example = if (data_ready) "Click Validate inputs." else "Click Create example project.",
-    own = if (data_ready) "Click Validate inputs." else "Upload tree, geography, and regions, then click Create analysis project.",
-    existing = if (data_ready) "Open Results." else "Enter an output directory, then click Load existing results.",
-    "Choose a data source."
+    example = if (data_ready) "\u70b9\u51fb\u201c\u68c0\u67e5\u8f93\u5165\u201d\u3002" else "\u70b9\u51fb\u201c\u521b\u5efa\u793a\u4f8b\u9879\u76ee\u201d\u3002",
+    own = if (data_ready) "\u70b9\u51fb\u201c\u68c0\u67e5\u8f93\u5165\u201d\u3002" else "\u4e0a\u4f20\u7cfb\u7edf\u6811\u3001\u5206\u5e03\u77e9\u9635\u548c\u533a\u57df\u4fe1\u606f\uff0c\u7136\u540e\u70b9\u51fb\u201c\u521b\u5efa\u81ea\u5df1\u7684\u5206\u6790\u9879\u76ee\u201d\u3002",
+    existing = if (data_ready) "\u6253\u5f00\u201c\u7ed3\u679c\u201d\u3002" else "\u5728\u201c\u9ad8\u7ea7\uff1a\u5df2\u6709\u9879\u76ee\u548c YAML\u201d\u91cc\u586b\u5199\u7ed3\u679c\u76ee\u5f55\uff0c\u7136\u540e\u70b9\u51fb\u201c\u52a0\u8f7d\u5df2\u6709\u7ed3\u679c\u201d\u3002",
+    "\u5148\u9009\u62e9\u5f00\u59cb\u65b9\u5f0f\u3002"
   )
   data_detail <- switch(
     start_choice,
-    example = if (config_ready) as_path(config_path) else "Example project not created yet.",
-    own = if (data_ready) as_path(config_path) else "Use the file upload fields in Use your own data.",
-    existing = if (has_result) output_dir else "Use Advanced: existing project and YAML.",
+    example = if (config_ready) as_path(config_path) else "\u8fd8\u6ca1\u6709\u521b\u5efa\u793a\u4f8b\u9879\u76ee\u3002",
+    own = if (data_ready) as_path(config_path) else "\u4f7f\u7528\u201c\u4f7f\u7528\u81ea\u5df1\u7684\u6570\u636e\u201d\u91cc\u7684\u4e0a\u4f20\u63a7\u4ef6\u3002",
+    existing = if (has_result) output_dir else "\u9700\u8981\u5148\u6307\u5b9a\u5df2\u6709\u7ed3\u679c\u76ee\u5f55\u3002",
     ""
   )
 
   validation_status <- if (!data_ready) {
-    "Waiting"
+    "\u7b49\u5f85"
   } else if (validation$failed) {
-    "Needs attention"
+    "\u9700\u8981\u5904\u7406"
   } else if (validation$passed) {
-    "Ready"
+    "\u5df2\u5c31\u7eea"
   } else {
-    "Action needed"
+    "\u9700\u8981\u64cd\u4f5c"
   }
   validation_next <- if (!data_ready) {
-    "Choose or create a project first."
+    "\u5148\u9009\u62e9\u6216\u521b\u5efa\u4e00\u4e2a\u9879\u76ee\u3002"
   } else if (validation$failed) {
-    "Open Validation and fix the failed checks."
+    "\u6253\u5f00\u201c\u9ad8\u7ea7\u7ed3\u679c > Validation\u201d\uff0c\u6309\u63d0\u793a\u4fee\u590d\u5931\u8d25\u9879\u3002"
   } else if (validation$passed) {
-    "Run a dry workflow."
+    "\u8fd0\u884c\u4e00\u6b21 dry run\u3002"
   } else {
-    "Click Validate inputs."
+    "\u70b9\u51fb\u201c\u68c0\u67e5\u8f93\u5165\u201d\u3002"
   }
 
   dry_status <- if (dry_run_ready || real_run_ready) {
-    "Ready"
+    "\u5df2\u5c31\u7eea"
   } else if (validation$failed || !validation$passed) {
-    "Waiting"
+    "\u7b49\u5f85"
   } else {
-    "Action needed"
+    "\u9700\u8981\u64cd\u4f5c"
   }
   dry_next <- if (dry_run_ready) {
-    if (bgb_ready) "Uncheck Dry run for real execution." else "Install BioGeoBEARS before real execution."
+    if (bgb_ready) "\u53d6\u6d88\u52fe\u9009 Dry run\uff0c\u51c6\u5907\u771f\u5b9e\u8fd0\u884c\u3002" else "\u5b89\u88c5 BioGeoBEARS \u540e\u518d\u771f\u5b9e\u8fd0\u884c\u3002"
   } else if (real_run_ready) {
-    "Open Results."
+    "\u6253\u5f00\u201c\u7ed3\u679c\u201d\u3002"
   } else if (validation$failed) {
-    "Fix validation errors first."
+    "\u5148\u4fee\u590d\u8f93\u5165\u68c0\u67e5\u9519\u8bef\u3002"
   } else if (validation$passed) {
-    "Keep Dry run checked, then click Run workflow."
+    "\u4fdd\u6301 Dry run \u52fe\u9009\uff0c\u7136\u540e\u70b9\u51fb\u201c\u8fd0\u884c\u6d41\u7a0b\u201d\u3002"
   } else {
-    "Validate inputs first."
+    "\u5148\u70b9\u51fb\u201c\u68c0\u67e5\u8f93\u5165\u201d\u3002"
   }
 
   real_status <- if (real_run_ready) {
-    "Ready"
+    "\u5df2\u5c31\u7eea"
   } else if (dry_run_ready && bgb_ready) {
-    "Action needed"
+    "\u9700\u8981\u64cd\u4f5c"
   } else {
-    "Waiting"
+    "\u7b49\u5f85"
   }
   real_next <- if (real_run_ready) {
-    "Review Results."
+    "\u67e5\u770b\u201c\u7ed3\u679c\u201d\u3002"
   } else if (dry_run_ready && bgb_ready) {
-    "Uncheck Dry run, then click Run workflow."
+    "\u53d6\u6d88\u52fe\u9009 Dry run\uff0c\u7136\u540e\u70b9\u51fb\u201c\u8fd0\u884c\u6d41\u7a0b\u201d\u3002"
   } else if (dry_run_ready && !bgb_ready) {
     if (isTRUE(dry_run) && !isTRUE(require_biogeobears)) {
-      "Install BioGeoBEARS for real execution."
+      "\u5b89\u88c5 BioGeoBEARS \u540e\u624d\u80fd\u771f\u5b9e\u8fd0\u884c\u3002"
     } else {
-      "Install BioGeoBEARS, then run again."
+      "\u5b89\u88c5 BioGeoBEARS\uff0c\u7136\u540e\u91cd\u65b0\u8fd0\u884c\u3002"
     }
   } else {
-    "Complete a dry run first."
+    "\u5148\u5b8c\u6210 dry run\u3002"
   }
 
   result_status <- if (primary_results_ready) {
-    "Ready"
+    "\u5df2\u5c31\u7eea"
   } else if (real_run_ready) {
-    "Needs attention"
+    "\u9700\u8981\u5904\u7406"
   } else {
-    "Waiting"
+    "\u7b49\u5f85"
   }
   result_next <- if (primary_results_ready) {
-    "Open Results and check ancestral reconstruction, model comparison, and event summary."
+    "\u6253\u5f00\u201c\u7ed3\u679c\u201d\uff0c\u67e5\u770b\u7956\u5148\u5206\u5e03\u91cd\u5efa\u56fe\u3001\u6a21\u578b\u6bd4\u8f83\u8868\u548c\u4e8b\u4ef6\u7edf\u8ba1\u3002"
   } else if (real_run_ready) {
-    "Refresh key files or inspect Troubleshooting."
+    "\u70b9\u51fb\u201c\u5237\u65b0\u5173\u952e\u6587\u4ef6\u201d\uff0c\u6216\u6253\u5f00\u201c\u6392\u9519\u201d\u67e5\u770b\u539f\u56e0\u3002"
   } else {
-    "Run or load a real workflow first."
+    "\u5148\u771f\u5b9e\u8fd0\u884c\uff0c\u6216\u52a0\u8f7d\u5df2\u6709\u771f\u5b9e\u8fd0\u884c\u7ed3\u679c\u3002"
   }
 
   export_status <- if (export_ready) {
-    if (result_bundle_ready && diagnostic_bundle_ready) "Ready" else "Partial"
+    if (result_bundle_ready && diagnostic_bundle_ready) "\u5df2\u5c31\u7eea" else "\u90e8\u5206\u5b8c\u6210"
   } else if (primary_results_ready) {
-    "Action needed"
+    "\u9700\u8981\u64cd\u4f5c"
   } else {
-    "Waiting"
+    "\u7b49\u5f85"
   }
   export_next <- if (result_bundle_ready && diagnostic_bundle_ready) {
-    "Download result or diagnostic bundle."
+    "\u4e0b\u8f7d\u7ed3\u679c\u538b\u7f29\u5305\u6216\u8bca\u65ad\u538b\u7f29\u5305\u3002"
   } else if (result_bundle_ready) {
-    "Create diagnostic bundle if you need support."
+    "\u5982\u679c\u9700\u8981\u522b\u4eba\u5e2e\u5fd9\u6392\u9519\uff0c\u518d\u751f\u6210\u8bca\u65ad\u538b\u7f29\u5305\u3002"
   } else if (primary_results_ready) {
-    "Click Create bundle if missing."
+    "\u70b9\u51fb\u201c\u751f\u6210\u7ed3\u679c\u538b\u7f29\u5305\u201d\u3002"
   } else {
-    "Review Results first."
+    "\u5148\u67e5\u770b\u7ed3\u679c\u3002"
   }
 
-  data.frame(
-    Step = c("Data source", "Validate inputs", "Dry run", "Real run", "Results", "Export"),
-    Status = c(
-      if (data_ready) "Ready" else "Action needed",
-      validation_status,
-      dry_status,
-      real_status,
-      result_status,
-      export_status
+  stats::setNames(
+    data.frame(
+      step = c("\u6570\u636e\u6765\u6e90", "\u8f93\u5165\u68c0\u67e5", "Dry run", "\u771f\u5b9e\u8fd0\u884c", "\u67e5\u770b\u7ed3\u679c", "\u5bfc\u51fa\u5206\u4eab"),
+      status = c(
+        if (data_ready) "\u5df2\u5c31\u7eea" else "\u9700\u8981\u64cd\u4f5c",
+        validation_status,
+        dry_status,
+        real_status,
+        result_status,
+        export_status
+      ),
+      next_action = c(
+        data_next,
+        validation_next,
+        dry_next,
+        real_next,
+        result_next,
+        export_next
+      ),
+      detail = c(
+        data_detail,
+        validation$detail,
+        if (has_result) workflow_model_status_label(state$model_table) else "",
+        shiny_installation_component_detail(state$installation, "BioGeoBEARS"),
+        if (comparison_ready) "\u6a21\u578b\u6bd4\u8f83\u8868\u5df2\u751f\u6210\u3002" else "\u8fd8\u6ca1\u6709\u6a21\u578b\u6bd4\u8f83\u8868\u3002",
+        shiny_export_detail(result_bundle_ready, diagnostic_bundle_ready, state)
+      ),
+      check.names = FALSE,
+      stringsAsFactors = FALSE
     ),
-    `Next action` = c(
-      data_next,
-      validation_next,
-      dry_next,
-      real_next,
-      result_next,
-      export_next
-    ),
-    Detail = c(
-      data_detail,
-      validation$detail,
-      if (has_result) workflow_model_status_label(state$model_table) else "",
-      shiny_installation_component_detail(state$installation, "BioGeoBEARS"),
-      if (comparison_ready) "Model comparison available." else "No model comparison table yet.",
-      shiny_export_detail(result_bundle_ready, diagnostic_bundle_ready, state)
-    ),
-    check.names = FALSE,
-    stringsAsFactors = FALSE
+    c("\u6b65\u9aa4", "\u72b6\u6001", "\u4e0b\u4e00\u6b65", "\u8bf4\u660e")
   )
 }
 
@@ -1548,7 +1644,7 @@ shiny_validation_progress <- function(validation) {
       available = FALSE,
       passed = FALSE,
       failed = FALSE,
-      detail = "Not checked yet."
+      detail = "\u5c1a\u672a\u68c0\u67e5\u3002"
     ))
   }
   failed <- sum(!is.na(validation$ok) & !validation$ok)
@@ -1557,7 +1653,7 @@ shiny_validation_progress <- function(validation) {
     available = TRUE,
     passed = failed == 0L,
     failed = failed > 0L,
-    detail = paste0(passed, " passed, ", failed, " failed")
+    detail = paste0(passed, " \u9879\u901a\u8fc7\uff0c", failed, " \u9879\u5931\u8d25")
   )
 }
 
@@ -1565,13 +1661,16 @@ shiny_home_next_action <- function(workflow) {
   if (is.null(workflow) || nrow(workflow) == 0L) {
     return(shiny::tags$div(class = "ibgb-next-action", "Choose a data source."))
   }
-  actionable <- workflow[workflow$Status %in% c("Action needed", "Needs attention", "Waiting", "Partial"), , drop = FALSE]
+  status <- workflow[["\u72b6\u6001"]] %||% workflow[["Status"]]
+  actionable <- workflow[status %in% c("\u9700\u8981\u64cd\u4f5c", "\u9700\u8981\u5904\u7406", "\u7b49\u5f85", "\u90e8\u5206\u5b8c\u6210", "Action needed", "Needs attention", "Waiting", "Partial"), , drop = FALSE]
   next_row <- if (nrow(actionable) > 0L) actionable[1L, , drop = FALSE] else workflow[nrow(workflow), , drop = FALSE]
+  next_step <- (next_row[["\u6b65\u9aa4"]] %||% next_row[["Step"]])[[1L]]
+  next_text <- (next_row[["\u4e0b\u4e00\u6b65"]] %||% next_row[["Next action"]])[[1L]]
   shiny::tags$div(
     class = "ibgb-next-action",
-    shiny::tags$div(class = "ibgb-next-action-title", "Next action"),
-    shiny::tags$div(class = "ibgb-next-action-step", next_row$Step[[1L]]),
-    shiny::tags$div(class = "ibgb-next-action-detail", next_row$`Next action`[[1L]])
+    shiny::tags$div(class = "ibgb-next-action-title", "\u4e0b\u4e00\u6b65"),
+    shiny::tags$div(class = "ibgb-next-action-step", next_step),
+    shiny::tags$div(class = "ibgb-next-action-detail", next_text)
   )
 }
 

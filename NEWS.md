@@ -25,6 +25,10 @@ Third alpha release focused on ordinary-user stability and release readiness.
 - Added a guided Shiny Home workflow with a single next-action prompt for
   example data, user data, existing results, validation, dry run, real run,
   result review, and export.
+- Localized the main Shiny first-run path into simplified Chinese and added
+  lightweight upload previews for user tree, geography, and regions files.
+- Added a short Chinese tester-share message for forwarding installation,
+  Shiny startup, example-data testing, user-data import, and feedback steps.
 - Added a primary Shiny results view focused on best-model ancestral
   reconstruction, model comparison, and event summary.
 - Added deterministic range-change event summaries from highest-probability

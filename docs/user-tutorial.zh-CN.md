@@ -114,23 +114,23 @@ launch_app()
 
 浏览器会打开 `iBiogeobears` 页面。第一次打开时，软件会自动准备一个临时示例项目。
 
-界面左侧是操作区，右侧是结果区。新版界面默认比较简单：
+界面左侧是操作区，右侧是结果区。新版界面默认比较简单，普通用户优先看中文入口：
 
-- `Home`：看下一步该做什么。
-- `Results`：只看最重要的结果，包括祖先重建图、模型比较表和事件汇总。
-- `Setup`：检查安装环境。
-- `Advanced`：查看完整表格、图形和高级细节。
-- `Troubleshooting`：排查 warning、失败模型、日志和路径。
+- `首页`：看“下一步”提示，按提示一步一步操作。
+- `结果`：只看最重要的结果，包括祖先重建图、模型比较表和事件统计。
+- `环境检查`：检查安装环境。
+- `高级结果`：查看完整表格、图形和高级细节。
+- `排错`：排查 warning、失败模型、日志和路径。
 
 普通用户主要用这几个按钮：
 
-- `Create example project`：创建内置示例项目。
-- `Create analysis project`：用自己的数据创建项目。
-- `Validate inputs`：检查输入文件是否合格。
-- `Run workflow`：运行分析。
-- `Render report`：生成报告。
-- `Create bundle if missing`：生成结果压缩包。
-- `Create diagnostic bundle`：生成诊断压缩包，方便排查错误。
+- `1 创建示例项目`：创建内置示例项目。
+- `创建自己的分析项目`：用自己的数据创建项目。
+- `2 检查输入`：检查输入文件是否合格。
+- `3 运行流程`：运行 dry run 或真实分析。
+- `4 生成报告`：生成报告。
+- `生成结果压缩包`：生成可分享的结果压缩包。
+- `生成诊断压缩包`：生成诊断压缩包，方便排查错误。
 
 ## 六、先用内置示例数据测试
 
@@ -144,23 +144,23 @@ library(iBiogeobears)
 launch_app()
 ```
 
-3. 在 Shiny 左侧 `Start` 区域点击 `Create example project`。
-4. 如果需要检查安装环境，打开 `Setup`，点击 `Refresh setup checks`。
-5. 点击 `Validate inputs`。
+3. 在 Shiny 左侧 `开始` 区域点击 `1 创建示例项目`。
+4. 如果需要检查安装环境，打开 `环境检查`，点击 `刷新环境检查`。
+5. 点击 `2 检查输入`。
 6. 保持 `Dry run` 勾选。
-7. 点击 `Run workflow`。
+7. 点击 `3 运行流程`。
 
 Dry run 不会真正运行 BioGeoBEARS，只检查项目、输入文件和输出目录。Dry run 通过后：
 
 1. 确认 BioGeoBEARS 已安装。
 2. 取消勾选 `Dry run`。
-3. 如果界面里有 `Require BioGeoBEARS`，真实运行时建议勾选。
-4. 点击 `Run workflow`。
+3. 如果界面里有 `真实运行时要求 BioGeoBEARS 可用`，真实运行时建议勾选。
+4. 点击 `3 运行流程`。
 5. 等六个模型运行完成。
-6. 点击 `Render report`，报告格式选 `html`。
-7. 打开 `Results`，先看祖先重建图、模型比较表和事件汇总。
-8. 如果需要打包，打开左侧 `Export and troubleshooting`，点击 `Create bundle if missing`。
-9. 如需反馈问题，点击 `Create diagnostic bundle`。
+6. 点击 `4 生成报告`，报告格式选 `html`。
+7. 打开 `结果`，先看祖先重建图、模型比较表和事件统计。
+8. 如果需要打包，打开左侧 `导出和排错`，点击 `生成结果压缩包`。
+9. 如需反馈问题，点击 `生成诊断压缩包`。
 
 如果不想用图形界面，也可以在 R 里直接运行：
 
@@ -256,22 +256,23 @@ library(iBiogeobears)
 launch_app()
 ```
 
-2. 在左侧找到 `New project wizard`。
-3. 在 `Project name` 填项目名，例如 `my_clade`。
-4. 在 `Save projects in` 填项目保存位置。
+2. 在左侧找到 `使用自己的数据`。
+3. 在 `项目名` 填项目名，例如 `my_clade`。
+4. 在 `项目保存位置` 填项目保存位置。
 5. 上传：
-   - `Tree file`
-   - `Geography CSV`
-   - `Regions CSV`
-6. 设置 `Maximum range size`。
-7. 选择要运行的模型。第一次建议保留全部六个模型。
-8. 点击 `Create analysis project`。
-9. 点击 `Validate`。
-10. 如果验证失败，先看右侧或 `tables/input_validation.csv` 的修复建议。
-11. 保持 `Dry run` 勾选，点击 `Run workflow`。
-12. Dry run 通过后，取消 `Dry run`，点击 `Run workflow` 跑真实分析。
-13. 点击 `Render report`。
-14. 点击 `Create bundle if missing`。
+   - `系统树文件`
+   - `分布矩阵 CSV`
+   - `区域信息 CSV`
+6. 看 `上传预览` 表，确认三个文件都是 `可读取`。
+7. 设置 `最大分布区数量`。
+8. 选择要运行的模型。第一次建议保留全部六个模型。
+9. 点击 `创建自己的分析项目`。
+10. 点击 `2 检查输入`。
+11. 如果验证失败，先看右侧或 `tables/input_validation.csv` 的修复建议。
+12. 保持 `Dry run` 勾选，点击 `3 运行流程`。
+13. Dry run 通过后，取消 `Dry run`，点击 `3 运行流程` 跑真实分析。
+14. 点击 `4 生成报告`。
+15. 点击 `生成结果压缩包`。
 
 如果验证失败，不建议勾选 `Force execution after validation failure`。这个选项只适合确认问题可以忽略的高级用户。
 

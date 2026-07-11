@@ -101,23 +101,23 @@ check_installation()
 launch_app()
 </code></pre>
 <p>浏览器会打开 <code>iBiogeobears</code> 页面。第一次打开时，软件会自动准备一个临时示例项目。</p>
-<p>界面左侧是操作区，右侧是结果区。新版界面默认比较简单：</p>
+<p>界面左侧是操作区，右侧是结果区。新版界面默认比较简单，普通用户优先看中文入口：</p>
 <ul>
-<li><code>Home</code>：看下一步该做什么。</li>
-<li><code>Results</code>：只看最重要的结果，包括祖先重建图、模型比较表和事件汇总。</li>
-<li><code>Setup</code>：检查安装环境。</li>
-<li><code>Advanced</code>：查看完整表格、图形和高级细节。</li>
-<li><code>Troubleshooting</code>：排查 warning、失败模型、日志和路径。</li>
+<li><code>首页</code>：看“下一步”提示，按提示一步一步操作。</li>
+<li><code>结果</code>：只看最重要的结果，包括祖先重建图、模型比较表和事件统计。</li>
+<li><code>环境检查</code>：检查安装环境。</li>
+<li><code>高级结果</code>：查看完整表格、图形和高级细节。</li>
+<li><code>排错</code>：排查 warning、失败模型、日志和路径。</li>
 </ul>
 <p>普通用户主要用这几个按钮：</p>
 <ul>
-<li><code>Create example project</code>：创建内置示例项目。</li>
-<li><code>Create analysis project</code>：用自己的数据创建项目。</li>
-<li><code>Validate inputs</code>：检查输入文件是否合格。</li>
-<li><code>Run workflow</code>：运行分析。</li>
-<li><code>Render report</code>：生成报告。</li>
-<li><code>Create bundle if missing</code>：生成结果压缩包。</li>
-<li><code>Create diagnostic bundle</code>：生成诊断压缩包，方便排查错误。</li>
+<li><code>1 创建示例项目</code>：创建内置示例项目。</li>
+<li><code>创建自己的分析项目</code>：用自己的数据创建项目。</li>
+<li><code>2 检查输入</code>：检查输入文件是否合格。</li>
+<li><code>3 运行流程</code>：运行 dry run 或真实分析。</li>
+<li><code>4 生成报告</code>：生成报告。</li>
+<li><code>生成结果压缩包</code>：生成可分享的结果压缩包。</li>
+<li><code>生成诊断压缩包</code>：生成诊断压缩包，方便排查错误。</li>
 </ul>
 <h2>六、先用内置示例数据测试</h2>
 <p>这是推荐的第一次操作流程。</p>
@@ -129,23 +129,23 @@ launch_app()
 launch_app()
 </code></pre>
 <ol start="3">
-<li>在 Shiny 左侧 <code>Start</code> 区域点击 <code>Create example project</code>。</li>
-<li>如果需要检查安装环境，打开 <code>Setup</code>，点击 <code>Refresh setup checks</code>。</li>
-<li>点击 <code>Validate inputs</code>。</li>
+<li>在 Shiny 左侧 <code>开始</code> 区域点击 <code>1 创建示例项目</code>。</li>
+<li>如果需要检查安装环境，打开 <code>环境检查</code>，点击 <code>刷新环境检查</code>。</li>
+<li>点击 <code>2 检查输入</code>。</li>
 <li>保持 <code>Dry run</code> 勾选。</li>
-<li>点击 <code>Run workflow</code>。</li>
+<li>点击 <code>3 运行流程</code>。</li>
 </ol>
 <p>Dry run 不会真正运行 BioGeoBEARS，只检查项目、输入文件和输出目录。Dry run 通过后：</p>
 <ol>
 <li>确认 BioGeoBEARS 已安装。</li>
 <li>取消勾选 <code>Dry run</code>。</li>
-<li>如果界面里有 <code>Require BioGeoBEARS</code>，真实运行时建议勾选。</li>
-<li>点击 <code>Run workflow</code>。</li>
+<li>如果界面里有 <code>真实运行时要求 BioGeoBEARS 可用</code>，真实运行时建议勾选。</li>
+<li>点击 <code>3 运行流程</code>。</li>
 <li>等六个模型运行完成。</li>
-<li>点击 <code>Render report</code>，报告格式选 <code>html</code>。</li>
-<li>打开 <code>Results</code>，先看祖先重建图、模型比较表和事件汇总。</li>
-<li>如果需要打包，打开左侧 <code>Export and troubleshooting</code>，点击 <code>Create bundle if missing</code>。</li>
-<li>如需反馈问题，点击 <code>Create diagnostic bundle</code>。</li>
+<li>点击 <code>4 生成报告</code>，报告格式选 <code>html</code>。</li>
+<li>打开 <code>结果</code>，先看祖先重建图、模型比较表和事件统计。</li>
+<li>如果需要打包，打开左侧 <code>导出和排错</code>，点击 <code>生成结果压缩包</code>。</li>
+<li>如需反馈问题，点击 <code>生成诊断压缩包</code>。</li>
 </ol>
 <p>如果不想用图形界面，也可以在 R 里直接运行：</p>
 <pre><code class="language-r">library(iBiogeobears)
@@ -220,25 +220,26 @@ C,Region C,#7570b3
 launch_app()
 </code></pre>
 <ol start="2">
-<li>在左侧找到 <code>New project wizard</code>。</li>
-<li>在 <code>Project name</code> 填项目名，例如 <code>my_clade</code>。</li>
-<li>在 <code>Save projects in</code> 填项目保存位置。</li>
+<li>在左侧找到 <code>使用自己的数据</code>。</li>
+<li>在 <code>项目名</code> 填项目名，例如 <code>my_clade</code>。</li>
+<li>在 <code>项目保存位置</code> 填项目保存位置。</li>
 <li>上传：
 <ul>
-<li><code>Tree file</code></li>
-<li><code>Geography CSV</code></li>
-<li><code>Regions CSV</code></li>
+<li><code>系统树文件</code></li>
+<li><code>分布矩阵 CSV</code></li>
+<li><code>区域信息 CSV</code></li>
 </ul>
 </li>
-<li>设置 <code>Maximum range size</code>。</li>
+<li>看 <code>上传预览</code> 表，确认三个文件都是 <code>可读取</code>。</li>
+<li>设置 <code>最大分布区数量</code>。</li>
 <li>选择要运行的模型。第一次建议保留全部六个模型。</li>
-<li>点击 <code>Create analysis project</code>。</li>
-<li>点击 <code>Validate</code>。</li>
+<li>点击 <code>创建自己的分析项目</code>。</li>
+<li>点击 <code>2 检查输入</code>。</li>
 <li>如果验证失败，先看右侧或 <code>tables/input_validation.csv</code> 的修复建议。</li>
-<li>保持 <code>Dry run</code> 勾选，点击 <code>Run workflow</code>。</li>
-<li>Dry run 通过后，取消 <code>Dry run</code>，点击 <code>Run workflow</code> 跑真实分析。</li>
-<li>点击 <code>Render report</code>。</li>
-<li>点击 <code>Create bundle if missing</code>。</li>
+<li>保持 <code>Dry run</code> 勾选，点击 <code>3 运行流程</code>。</li>
+<li>Dry run 通过后，取消 <code>Dry run</code>，点击 <code>3 运行流程</code> 跑真实分析。</li>
+<li>点击 <code>4 生成报告</code>。</li>
+<li>点击 <code>生成结果压缩包</code>。</li>
 </ol>
 <p>如果验证失败，不建议勾选 <code>Force execution after validation failure</code>。这个选项只适合确认问题可以忽略的高级用户。</p>
 <h2>九、用 R 命令导入自己的数据</h2>
