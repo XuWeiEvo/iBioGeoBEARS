@@ -49,8 +49,16 @@ library(iBiogeobears)
 open_user_guide()
 ```
 
+For the simplified Chinese guide:
+
+```r
+open_user_guide(language = "zh-CN")
+```
+
 The same guide is available in the repository at
 [`inst/docs/ordinary-user-quick-start.md`](inst/docs/ordinary-user-quick-start.md).
+The simplified Chinese version is available at
+[`inst/docs/ordinary-user-quick-start.zh-CN.md`](inst/docs/ordinary-user-quick-start.zh-CN.md).
 
 ## Continuous Integration
 
