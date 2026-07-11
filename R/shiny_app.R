@@ -40,6 +40,11 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
           ".ibgb-run-summary-label{font-size:12px;font-weight:600;color:#57606a;margin-bottom:4px} ",
           ".ibgb-run-summary-value{font-size:15px;font-weight:600;color:#24292f;overflow-wrap:anywhere} ",
           ".ibgb-key-files-title{font-weight:600;margin:12px 0 6px 0} ",
+          ".ibgb-home-note{background:#f6f8fa;border:1px solid #d8dee4;border-radius:4px;padding:10px 12px;margin:8px 0 14px 0} ",
+          ".ibgb-collapsible{border-top:1px solid #ddd;margin-top:12px;padding-top:10px} ",
+          ".ibgb-collapsible summary{font-weight:600;cursor:pointer;margin-bottom:8px} ",
+          ".ibgb-primary-result{border-top:1px solid #e5e7eb;margin-top:18px;padding-top:16px} ",
+          ".ibgb-primary-result:first-child{border-top:0;margin-top:0;padding-top:0} ",
           ".ibgb-preview img{max-width:100%;height:auto;border:1px solid #ddd} ",
           ".ibgb-figure-dashboard{display:grid;grid-template-columns:1fr;gap:18px} ",
           ".ibgb-figure-dashboard h4{margin:6px 0 8px 0} ",
@@ -50,7 +55,16 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
       shiny::sidebarLayout(
         shiny::sidebarPanel(
           shiny_control_section(
-            "New project wizard",
+            "Start",
+            shiny_action_grid(
+              shiny::actionButton("create_example", "Create example project"),
+              shiny::actionButton("validate", "Validate inputs"),
+              shiny::actionButton("run", "Run workflow"),
+              shiny::actionButton("render_report", "Render report")
+            )
+          ),
+          shiny_control_section(
+            "Use your own data",
             shiny::textInput("wizard_project_name", "Project name", value = "my_clade"),
             shiny::textInput("wizard_project_parent", "Save projects in", value = default_project_parent()),
             shiny::fileInput(
@@ -77,19 +91,18 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
               shiny::actionButton("create_analysis_project", "Create analysis project")
             )
           ),
-          shiny_control_section(
-            "Existing project",
+          shiny_collapsible_section(
+            "Advanced: existing project and YAML",
             shiny::textInput("config_path", "analysis.yml", value = default_config),
             shiny::fileInput("config_upload", "Upload analysis.yml", accept = c(".yml", ".yaml")),
             shiny::textInput("output_dir", "Output directory", value = default_output),
             shiny::textInput("example_project_dir", "Example project directory", value = startup$example_project_dir),
             shiny_action_grid(
-              shiny::actionButton("create_example", "Create example project"),
               shiny::actionButton("load_results", "Load existing results")
             )
           ),
-          shiny_control_section(
-            "Setup",
+          shiny_collapsible_section(
+            "Advanced: setup and installation",
             shiny_action_grid(
               shiny::actionButton("refresh_setup", "Refresh setup checks"),
               shiny::actionButton("open_user_guide", "Open user guide"),
@@ -97,8 +110,8 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
               shiny::actionButton("install_biogeobears", "Install BioGeoBEARS")
             )
           ),
-          shiny_control_section(
-            "Config editor",
+          shiny_collapsible_section(
+            "Advanced: config editor",
             shiny::checkboxInput("use_config_editor", "Use GUI config overrides", value = FALSE),
             shiny::textInput("project_name", "Project name", value = ""),
             shiny::textInput("tree_file", "Tree file", value = ""),
@@ -109,27 +122,19 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
             shiny::tags$div(class = "ibgb-key-files-title", "Advanced constraints"),
             shiny_constraint_inputs()
           ),
-          shiny_control_section(
-            "Run options",
+          shiny_collapsible_section(
+            "Advanced: run options",
             shiny::checkboxInput("dry_run", "Dry run", value = TRUE),
             shiny::checkboxInput("require_biogeobears", "Require BioGeoBEARS", value = FALSE),
             shiny::checkboxInput("resume_completed_models", "Reuse completed models", value = TRUE),
             shiny::checkboxInput("retry_failed_only", "Retry failed models only", value = FALSE),
-            shiny::checkboxInput("force", "Force execution after validation failure", value = FALSE)
+            shiny::checkboxInput("force", "Force execution after validation failure", value = FALSE),
+            shiny_action_grid(shiny::actionButton("open_output", "Open output directory"))
           ),
-          shiny_control_section(
-            "Workflow",
-            shiny_action_grid(
-              shiny::actionButton("validate", "Validate"),
-              shiny::actionButton("run", "Run workflow"),
-              shiny::actionButton("open_output", "Open output directory")
-            )
-          ),
-          shiny_control_section(
-            "Report and export",
+          shiny_collapsible_section(
+            "Export and troubleshooting",
             shiny::selectInput("report_format", "Report format", choices = c("source", "html", "pdf"), selected = "html"),
             shiny_action_grid(
-              shiny::actionButton("render_report", "Render report"),
               shiny::actionButton("open_report", "Open report"),
               shiny::actionButton("refresh_key_files", "Refresh key files"),
               shiny::actionButton("bundle", "Create bundle if missing"),
@@ -146,9 +151,9 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
         ),
         shiny::mainPanel(
           shiny::uiOutput("status"),
-          shiny::tableOutput("summary_table"),
           shiny::tabsetPanel(
             shiny_start_here_panel(),
+            shiny_primary_results_panel(),
             shiny::tabPanel(
               "Setup",
               shiny::tags$div(class = "ibgb-key-files-title", "Installation readiness"),
@@ -157,71 +162,79 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
               shiny::tableOutput("biogeobears_install_plan_table")
             ),
             shiny::tabPanel(
-              "Run Summary",
-              shiny::uiOutput("run_summary_cards"),
-              shiny::tags$div(class = "ibgb-key-files-title", "Key files"),
-              shiny::tableOutput("key_files_table"),
-              shiny::tableOutput("run_summary_table")
-            ),
-            shiny::tabPanel("Validation", shiny::tableOutput("validation_table")),
-            shiny::tabPanel(
-              "Run Status",
-              shiny::tags$div(class = "ibgb-key-files-title", "Failed model diagnostics"),
-              shiny::tableOutput("failed_models_table"),
-              shiny::tags$div(class = "ibgb-key-files-title", "Model status details"),
-              shiny::tableOutput("model_table")
-            ),
-            shiny::tabPanel(
-              "Model Comparison",
-              shiny::tags$div(class = "ibgb-key-files-title", "Fit summary"),
-              shiny::tableOutput("model_fit_summary_table"),
-              shiny::tags$div(class = "ibgb-key-files-title", "Model comparison details"),
-              shiny::tableOutput("model_comparison_table")
-            ),
-            shiny::tabPanel(
-              "+J Sensitivity",
-              shiny::tags$div(class = "ibgb-key-files-title", "+J sensitivity summary"),
-              shiny::tableOutput("plus_j_summary_table"),
-              shiny::tags$div(class = "ibgb-key-files-title", "+J sensitivity details"),
-              shiny::tableOutput("model_sensitivity_table")
-            ),
-            shiny::tabPanel(
-              "Warnings",
-              shiny::tags$div(class = "ibgb-key-files-title", "Warning summary"),
-              shiny::tableOutput("warning_summary_table"),
-              shiny::tags$div(class = "ibgb-key-files-title", "Warning details"),
-              shiny::tableOutput("warnings_table")
-            ),
-            shiny::tabPanel("Node States", shiny::tableOutput("node_state_summary_table")),
-            shiny::tabPanel("Node Sensitivity", shiny::tableOutput("node_state_sensitivity_table")),
-            shiny::tabPanel("Manifest", shiny::tableOutput("manifest_table")),
-            shiny::tabPanel("Report", shiny::verbatimTextOutput("report_path_text")),
-            shiny::tabPanel(
-              "Figure Dashboard",
-              shiny::tableOutput("figure_dashboard_table"),
-              shiny::tags$div(
-                class = "ibgb-figure-dashboard",
-                shiny_figure_panel("Model Comparison", "figure_model_comparison"),
-                shiny_figure_panel("Root State Probabilities", "figure_root_states"),
-                shiny_figure_panel("Best Model Node States", "figure_node_best"),
-                shiny_figure_panel("Best Non-+J Node States", "figure_node_non_j"),
-                shiny_figure_panel("Best +J Node States", "figure_node_plus_j"),
-                shiny_figure_panel("Node-State Sensitivity", "figure_node_sensitivity")
+              "Advanced",
+              shiny::tabsetPanel(
+                shiny::tabPanel(
+                  "Run Summary",
+                  shiny::tags$div(class = "ibgb-key-files-title", "Key files"),
+                  shiny::tableOutput("key_files_table"),
+                  shiny::tableOutput("run_summary_table")
+                ),
+                shiny::tabPanel("Validation", shiny::tableOutput("validation_table")),
+                shiny::tabPanel(
+                  "Model Comparison",
+                  shiny::tags$div(class = "ibgb-key-files-title", "Fit summary"),
+                  shiny::tableOutput("model_fit_summary_table"),
+                  shiny::tags$div(class = "ibgb-key-files-title", "Model comparison details"),
+                  shiny::tableOutput("model_comparison_table")
+                ),
+                shiny::tabPanel(
+                  "+J Sensitivity",
+                  shiny::tags$div(class = "ibgb-key-files-title", "+J sensitivity summary"),
+                  shiny::tableOutput("plus_j_summary_table"),
+                  shiny::tags$div(class = "ibgb-key-files-title", "+J sensitivity details"),
+                  shiny::tableOutput("model_sensitivity_table")
+                ),
+                shiny::tabPanel("Node States", shiny::tableOutput("node_state_summary_table")),
+                shiny::tabPanel("Node Sensitivity", shiny::tableOutput("node_state_sensitivity_table")),
+                shiny::tabPanel("Event Details", shiny::tableOutput("range_change_events_table")),
+                shiny::tabPanel("Manifest", shiny::tableOutput("manifest_table")),
+                shiny::tabPanel(
+                  "Figure Dashboard",
+                  shiny::tableOutput("figure_dashboard_table"),
+                  shiny::tags$div(
+                    class = "ibgb-figure-dashboard",
+                    shiny_figure_panel("Model Comparison", "figure_model_comparison"),
+                    shiny_figure_panel("Root State Probabilities", "figure_root_states"),
+                    shiny_figure_panel("Best Model Node States", "figure_node_best"),
+                    shiny_figure_panel("Best Non-+J Node States", "figure_node_non_j"),
+                    shiny_figure_panel("Best +J Node States", "figure_node_plus_j"),
+                    shiny_figure_panel("Node-State Sensitivity", "figure_node_sensitivity"),
+                    shiny_figure_panel("Event Summary", "figure_event_summary")
+                  )
+                ),
+                shiny::tabPanel(
+                  "Tables",
+                  shiny::tags$div(class = "ibgb-key-files-title", "Table status"),
+                  shiny::tableOutput("table_status_table"),
+                  shiny::selectInput("table_preview", "Table", choices = c("No CSV tables available" = "")),
+                  shiny::tableOutput("table_preview_output"),
+                  shiny::verbatimTextOutput("table_path_text")
+                ),
+                shiny::tabPanel(
+                  "Figures",
+                  shiny::selectInput("figure_preview", "Figure", choices = c("No PNG figures available" = "")),
+                  shiny::div(class = "ibgb-preview", shiny::imageOutput("figure_image")),
+                  shiny::verbatimTextOutput("figure_path_text")
+                )
               )
             ),
             shiny::tabPanel(
-              "Tables",
-              shiny::tags$div(class = "ibgb-key-files-title", "Table status"),
-              shiny::tableOutput("table_status_table"),
-              shiny::selectInput("table_preview", "Table", choices = c("No CSV tables available" = "")),
-              shiny::tableOutput("table_preview_output"),
-              shiny::verbatimTextOutput("table_path_text")
-            ),
-            shiny::tabPanel(
-              "Figures",
-              shiny::selectInput("figure_preview", "Figure", choices = c("No PNG figures available" = "")),
-              shiny::div(class = "ibgb-preview", shiny::imageOutput("figure_image")),
-              shiny::verbatimTextOutput("figure_path_text")
+              "Troubleshooting",
+              shiny::tags$div(class = "ibgb-key-files-title", "Warning summary"),
+              shiny::tableOutput("warning_summary_table"),
+              shiny::tags$div(class = "ibgb-key-files-title", "Warning details"),
+              shiny::tableOutput("warnings_table"),
+              shiny::tags$div(class = "ibgb-key-files-title", "Failed model diagnostics"),
+              shiny::tableOutput("failed_models_table"),
+              shiny::tags$div(class = "ibgb-key-files-title", "Model status details"),
+              shiny::tableOutput("model_table"),
+              shiny::tags$div(class = "ibgb-key-files-title", "Report"),
+              shiny::verbatimTextOutput("report_path_text"),
+              shiny::tags$div(class = "ibgb-key-files-title", "Paths"),
+              shiny::verbatimTextOutput("paths_text"),
+              shiny::tags$div(class = "ibgb-key-files-title", "Messages"),
+              shiny::verbatimTextOutput("messages_text")
             ),
             shiny::tabPanel(
               "About/Citation",
@@ -231,9 +244,7 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
               shiny::tableOutput("report_environment_table"),
               shiny::tags$div(class = "ibgb-key-files-title", "BioGeoBEARS citation"),
               shiny::verbatimTextOutput("citation_text")
-            ),
-            shiny::tabPanel("Paths", shiny::verbatimTextOutput("paths_text")),
-            shiny::tabPanel("Messages", shiny::verbatimTextOutput("messages_text"))
+            )
           )
         )
       )
@@ -250,15 +261,57 @@ shiny_control_section <- function(title, ...) {
   )
 }
 
+shiny_collapsible_section <- function(title, ..., open = FALSE) {
+  args <- c(
+    list(class = "ibgb-collapsible"),
+    if (isTRUE(open)) list(open = "open") else list(),
+    list(shiny::tags$summary(title)),
+    list(...)
+  )
+  do.call(shiny::tags$details, args)
+}
+
 shiny_action_grid <- function(...) {
   shiny::tags$div(class = "ibgb-action-grid", ...)
 }
 
 shiny_start_here_panel <- function() {
   shiny::tabPanel(
-    "Start Here",
+    "Home",
+    shiny::tags$h3("Start Here"),
+    shiny::tags$div(
+      class = "ibgb-home-note",
+      "Recommended path: create the example project, validate inputs, run a dry workflow, run the real workflow, then review Results."
+    ),
     shiny::tags$div(class = "ibgb-key-files-title", "Readiness checklist"),
     shiny::tableOutput("first_steps_table")
+  )
+}
+
+shiny_primary_results_panel <- function() {
+  shiny::tabPanel(
+    "Results",
+    shiny::tags$div(class = "ibgb-home-note", "Main outputs are intentionally limited to the interpretation items most users need first."),
+    shiny::uiOutput("run_summary_cards"),
+    shiny::tags$div(
+      class = "ibgb-primary-result",
+      shiny::tags$h4("1. Ancestral reconstruction"),
+      shiny::tags$p("Best-model ancestral range reconstruction. Use this as the first visual result, then check model uncertainty before interpretation."),
+      shiny::imageOutput("primary_figure_node_best")
+    ),
+    shiny::tags$div(
+      class = "ibgb-primary-result",
+      shiny::tags$h4("2. Model comparison"),
+      shiny::tableOutput("primary_model_comparison_table"),
+      shiny::imageOutput("primary_figure_model_comparison")
+    ),
+    shiny::tags$div(
+      class = "ibgb-primary-result",
+      shiny::tags$h4("3. Event summary"),
+      shiny::tags$p("Current event summary is derived from highest-probability ancestral state changes along branches. It is not stochastic mapping event counting."),
+      shiny::tableOutput("primary_event_summary_table"),
+      shiny::imageOutput("primary_figure_event_summary")
+    )
   )
 }
 
@@ -388,7 +441,7 @@ iBGB_shiny_server <- function(input, output, session) {
 
       shiny::observeEvent(input$open_user_guide, {
         run_app_action(state, {
-          guide <- open_user_guide(browse = TRUE)
+          guide <- open_user_guide(browse = TRUE, language = "zh-CN")
           append_app_message(state, paste("User guide:", guide))
         })
       })
@@ -677,6 +730,10 @@ iBGB_shiny_server <- function(input, output, session) {
         table_head(shiny_model_comparison_table(state), 30L)
       }, striped = TRUE, bordered = TRUE, na = "")
 
+      output$primary_model_comparison_table <- shiny::renderTable({
+        table_head(shiny_primary_model_comparison_table(state), 12L)
+      }, striped = TRUE, bordered = TRUE, na = "")
+
       output$plus_j_summary_table <- shiny::renderTable({
         shiny_plus_j_summary_table(state)
       }, striped = TRUE, bordered = TRUE, na = "")
@@ -699,6 +756,14 @@ iBGB_shiny_server <- function(input, output, session) {
 
       output$node_state_sensitivity_table <- shiny::renderTable({
         table_head(shiny_node_state_sensitivity_table(state), 50L)
+      }, striped = TRUE, bordered = TRUE, na = "")
+
+      output$primary_event_summary_table <- shiny::renderTable({
+        table_head(shiny_primary_event_summary_table(state), 20L)
+      }, striped = TRUE, bordered = TRUE, na = "")
+
+      output$range_change_events_table <- shiny::renderTable({
+        table_head(shiny_range_change_events_table(state), 50L)
       }, striped = TRUE, bordered = TRUE, na = "")
 
       output$manifest_table <- shiny::renderTable({
@@ -733,11 +798,19 @@ iBGB_shiny_server <- function(input, output, session) {
         shiny_named_figure_image(state, "model_comparison")
       }, deleteFile = FALSE)
 
+      output$primary_figure_model_comparison <- shiny::renderImage({
+        shiny_named_figure_image(state, "model_comparison")
+      }, deleteFile = FALSE)
+
       output$figure_root_states <- shiny::renderImage({
         shiny_named_figure_image(state, "root_state_probabilities")
       }, deleteFile = FALSE)
 
       output$figure_node_best <- shiny::renderImage({
+        shiny_named_figure_image(state, "node_state_summary_best_model")
+      }, deleteFile = FALSE)
+
+      output$primary_figure_node_best <- shiny::renderImage({
         shiny_named_figure_image(state, "node_state_summary_best_model")
       }, deleteFile = FALSE)
 
@@ -751,6 +824,14 @@ iBGB_shiny_server <- function(input, output, session) {
 
       output$figure_node_sensitivity <- shiny::renderImage({
         shiny_named_figure_image(state, "node_state_sensitivity")
+      }, deleteFile = FALSE)
+
+      output$figure_event_summary <- shiny::renderImage({
+        shiny_named_figure_image(state, "event_summary")
+      }, deleteFile = FALSE)
+
+      output$primary_figure_event_summary <- shiny::renderImage({
+        shiny_named_figure_image(state, "event_summary")
       }, deleteFile = FALSE)
 
       output$table_preview_output <- shiny::renderTable({
@@ -1124,6 +1205,8 @@ load_existing_workflow_result <- function(output_dir, refresh_manifest = TRUE) {
   model_comparison <- read_existing_output_table(project_paths, "model_comparison.csv")
   model_sensitivity_table <- read_existing_output_table(project_paths, "model_sensitivity.csv")
   node_state_sensitivity <- read_existing_output_table(project_paths, "node_state_sensitivity.csv")
+  range_change_events <- read_existing_output_table(project_paths, "range_change_events.csv")
+  event_summary <- read_existing_output_table(project_paths, "event_summary.csv")
   figure_manifest <- read_existing_figure_manifest(project_paths)
 
   standardized_tables <- list(
@@ -1133,7 +1216,9 @@ load_existing_workflow_result <- function(output_dir, refresh_manifest = TRUE) {
     ancestral_state_probabilities = read_existing_output_table(project_paths, "ancestral_state_probabilities.csv") %||% data.frame(),
     root_state_probabilities = read_existing_output_table(project_paths, "root_state_probabilities.csv") %||% data.frame(),
     node_state_summary = read_existing_output_table(project_paths, "node_state_summary.csv") %||% data.frame(),
-    node_state_sensitivity = node_state_sensitivity %||% data.frame()
+    node_state_sensitivity = node_state_sensitivity %||% data.frame(),
+    range_change_events = range_change_events %||% data.frame(),
+    event_summary = event_summary %||% data.frame()
   )
 
   result <- list(
@@ -1620,6 +1705,7 @@ shiny_key_file_specs <- function() {
     display_label = c(
       "Run summary CSV",
       "Model comparison CSV",
+      "Event summary CSV",
       "+J sensitivity CSV",
       "Workflow manifest CSV",
       "Report",
@@ -1629,6 +1715,7 @@ shiny_key_file_specs <- function() {
     relative_path = c(
       "tables/shiny_run_summary.csv",
       "tables/model_comparison.csv",
+      "tables/event_summary.csv",
       "tables/model_sensitivity.csv",
       "tables/workflow_manifest.csv",
       "reports/summary_report.html",
@@ -1638,6 +1725,7 @@ shiny_key_file_specs <- function() {
     missing_action = c(
       "Run or load workflow results, then refresh key files.",
       "Run or load workflow results.",
+      "Run or load workflow results with ancestral-state outputs.",
       "Run or load workflow results.",
       "Run or load workflow results, then refresh key files.",
       "Click Render report.",
@@ -1963,6 +2051,24 @@ shiny_model_comparison_table <- function(state) {
   table[, intersect(cols, names(table)), drop = FALSE]
 }
 
+shiny_primary_model_comparison_table <- function(state) {
+  table <- shiny_model_comparison_table(state)
+  if (nrow(table) == 0L) {
+    return(data.frame(
+      result = "No model comparison available yet",
+      next_step = "Run a real workflow or load existing results.",
+      stringsAsFactors = FALSE
+    ))
+  }
+  if ("delta_aicc" %in% names(table)) {
+    table <- table[order(table$delta_aicc), , drop = FALSE]
+  } else if ("AICc" %in% names(table)) {
+    table <- table[order(table$AICc), , drop = FALSE]
+  }
+  cols <- c("model", "logLik", "num_params", "AICc", "delta_aicc", "aicc_weight", "caution_flag")
+  table[, intersect(cols, names(table)), drop = FALSE]
+}
+
 shiny_model_sensitivity_table <- function(state) {
   table <- state$result$model_sensitivity_table %||% read_workflow_table(state$result, "model_sensitivity.csv")
   if (is.null(table) || nrow(table) == 0L) {
@@ -2032,6 +2138,85 @@ shiny_node_state_sensitivity_table <- function(state) {
   table[, intersect(cols, names(table)), drop = FALSE]
 }
 
+shiny_event_summary_table <- function(state) {
+  table <- state$result$standardized_tables$event_summary %||%
+    read_workflow_table(state$result, "event_summary.csv")
+  if (is.null(table) || nrow(table) == 0L) {
+    return(data.frame())
+  }
+  if (all(c("model", "location", "event_count") %in% names(table))) {
+    table <- table[order(table$model, table$location, -table$event_count), , drop = FALSE]
+  }
+  cols <- c("model", "location", "event_label", "event_count", "changed_edges", "interpretation_note")
+  table[, intersect(cols, names(table)), drop = FALSE]
+}
+
+shiny_primary_event_summary_table <- function(state) {
+  table <- shiny_event_summary_table(state)
+  if (nrow(table) == 0L) {
+    return(data.frame(
+      event = "No event summary available yet",
+      count = NA_integer_,
+      next_step = "Run a real workflow. Event summary is derived from ancestral range changes.",
+      stringsAsFactors = FALSE
+    ))
+  }
+
+  comparison <- shiny_model_comparison_table(state)
+  best_model <- best_model_name(comparison)
+  if (!is.null(best_model) && "model" %in% names(table)) {
+    filtered <- table[table$model == best_model, , drop = FALSE]
+    if (nrow(filtered) > 0L) {
+      table <- filtered
+    }
+  }
+  if ("location" %in% names(table) && "branch_top_at_node" %in% table$location) {
+    table <- table[table$location == "branch_top_at_node", , drop = FALSE]
+  }
+  if ("event_label" %in% names(table)) {
+    changed <- table[table$event_label != "No range change", , drop = FALSE]
+    if (nrow(changed) > 0L) {
+      table <- changed
+    }
+  }
+  if ("event_count" %in% names(table)) {
+    table <- table[order(-table$event_count), , drop = FALSE]
+  }
+  cols <- c("model", "event_label", "event_count", "changed_edges", "interpretation_note")
+  table[, intersect(cols, names(table)), drop = FALSE]
+}
+
+shiny_range_change_events_table <- function(state) {
+  table <- state$result$standardized_tables$range_change_events %||%
+    read_workflow_table(state$result, "range_change_events.csv")
+  if (is.null(table) || nrow(table) == 0L) {
+    return(data.frame())
+  }
+  if (all(c("model", "location", "node_index") %in% names(table))) {
+    table <- table[order(table$model, table$location, table$node_index), , drop = FALSE]
+  }
+  cols <- c(
+    "model", "location", "parent_node_index", "node_index", "node_label",
+    "parent_state", "child_state", "event_label", "gained_areas",
+    "lost_areas", "parent_probability", "child_probability",
+    "interpretation_note"
+  )
+  table[, intersect(cols, names(table)), drop = FALSE]
+}
+
+best_model_name <- function(comparison) {
+  if (is.null(comparison) || nrow(comparison) == 0L || !"model" %in% names(comparison)) {
+    return(NULL)
+  }
+  if ("delta_aicc" %in% names(comparison) && !all(is.na(comparison$delta_aicc))) {
+    return(comparison$model[[which.min(comparison$delta_aicc)]])
+  }
+  if ("AICc" %in% names(comparison) && !all(is.na(comparison$AICc))) {
+    return(comparison$model[[which.min(comparison$AICc)]])
+  }
+  comparison$model[[1L]]
+}
+
 read_workflow_table <- function(result, filename) {
   if (is.null(result) || is.null(result$project_paths$tables)) {
     return(NULL)
@@ -2074,6 +2259,8 @@ shiny_table_status_specs <- function() {
       "Run summary",
       "Model run status",
       "Model comparison",
+      "Event summary",
+      "Range-change events",
       "+J sensitivity",
       "Model parameters",
       "Root states",
@@ -2086,6 +2273,8 @@ shiny_table_status_specs <- function() {
       "tables/shiny_run_summary.csv",
       "tables/model_run_status.csv",
       "tables/model_comparison.csv",
+      "tables/event_summary.csv",
+      "tables/range_change_events.csv",
       "tables/model_sensitivity.csv",
       "tables/model_parameters.csv",
       "tables/root_state_probabilities.csv",
@@ -2098,6 +2287,8 @@ shiny_table_status_specs <- function() {
       "Run or load workflow results, then refresh key files.",
       "Run workflow.",
       "Run workflow with model fitting or load existing results.",
+      "Run workflow with ancestral-state outputs available.",
+      "Run workflow with ancestral-state outputs available.",
       "Run workflow with model comparison or load existing results.",
       "Run workflow with model fitting or load existing results.",
       "Run workflow with BioGeoBEARS outputs available.",
@@ -2221,7 +2412,8 @@ shiny_dashboard_figures <- function() {
       "node_state_summary_best_model",
       "node_state_summary_best_non_j",
       "node_state_summary_best_plus_j",
-      "node_state_sensitivity"
+      "node_state_sensitivity",
+      "event_summary"
     ),
     display_label = c(
       "Model Comparison",
@@ -2229,7 +2421,8 @@ shiny_dashboard_figures <- function() {
       "Best Model Node States",
       "Best Non-+J Node States",
       "Best +J Node States",
-      "Node-State Sensitivity"
+      "Node-State Sensitivity",
+      "Event Summary"
     ),
     stringsAsFactors = FALSE
   )

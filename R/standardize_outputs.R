@@ -9,7 +9,9 @@ standardize_biogeobears_outputs <- function(model_results, prepared_inputs, proj
     parameter_table = data.frame(),
     ancestral_state_probabilities = data.frame(),
     root_state_probabilities = data.frame(),
-    node_state_summary = data.frame()
+    node_state_summary = data.frame(),
+    range_change_events = data.frame(),
+    event_summary = data.frame()
   )
   if (length(completed) == 0L) {
     return(empty_outputs)
@@ -48,6 +50,12 @@ standardize_biogeobears_outputs <- function(model_results, prepared_inputs, proj
   row.names(root_state_probabilities) <- NULL
 
   node_state_summary <- summarize_top_node_states(ancestral_state_probabilities)
+  range_change_events <- summarize_range_change_events(
+    node_state_summary = node_state_summary,
+    tree_nodes = node_lookup,
+    geographic_states = geographic_states
+  )
+  event_summary <- summarize_range_change_event_counts(range_change_events)
 
   write_csv_base(geographic_states, file.path(project_paths$tables, "geographic_states.csv"))
   write_csv_base(node_lookup, file.path(project_paths$tables, "tree_nodes.csv"))
@@ -55,6 +63,8 @@ standardize_biogeobears_outputs <- function(model_results, prepared_inputs, proj
   write_csv_base(ancestral_state_probabilities, file.path(project_paths$tables, "ancestral_state_probabilities.csv"))
   write_csv_base(root_state_probabilities, file.path(project_paths$tables, "root_state_probabilities.csv"))
   write_csv_base(node_state_summary, file.path(project_paths$tables, "node_state_summary.csv"))
+  write_csv_base(range_change_events, file.path(project_paths$tables, "range_change_events.csv"))
+  write_csv_base(event_summary, file.path(project_paths$tables, "event_summary.csv"))
 
   list(
     geographic_states = geographic_states,
@@ -62,7 +72,9 @@ standardize_biogeobears_outputs <- function(model_results, prepared_inputs, proj
     parameter_table = parameter_table,
     ancestral_state_probabilities = ancestral_state_probabilities,
     root_state_probabilities = root_state_probabilities,
-    node_state_summary = node_state_summary
+    node_state_summary = node_state_summary,
+    range_change_events = range_change_events,
+    event_summary = event_summary
   )
 }
 
@@ -341,6 +353,197 @@ empty_node_state_sensitivity_table <- function() {
     state_differs = logical(),
     probability_difference = numeric(),
     probability_difference_abs = numeric(),
+    stringsAsFactors = FALSE
+  )
+}
+
+summarize_range_change_events <- function(node_state_summary, tree_nodes, geographic_states = NULL) {
+  empty <- empty_range_change_events_table()
+  if (is.null(node_state_summary) || nrow(node_state_summary) == 0L ||
+      is.null(tree_nodes) || nrow(tree_nodes) == 0L) {
+    return(empty)
+  }
+
+  required_summary <- c("model", "location", "node_index", "best_state", "best_probability")
+  required_nodes <- c("node_index", "node_type", "node_label", "parent_node_index", "edge_length")
+  if (length(setdiff(required_summary, names(node_state_summary))) > 0L ||
+      length(setdiff(required_nodes, names(tree_nodes))) > 0L) {
+    return(empty)
+  }
+
+  node_cols <- c("node_index", "node_type", "node_label", "parent_node_index", "edge_length")
+  rows <- merge(
+    node_state_summary[, required_summary, drop = FALSE],
+    tree_nodes[, node_cols, drop = FALSE],
+    by = "node_index",
+    all.x = TRUE,
+    sort = FALSE
+  )
+  rows <- rows[!is.na(rows$parent_node_index), , drop = FALSE]
+  if (nrow(rows) == 0L) {
+    return(empty)
+  }
+
+  parent_rows <- node_state_summary[, required_summary, drop = FALSE]
+  names(parent_rows) <- c(
+    "model", "location", "parent_node_index",
+    "parent_state", "parent_probability"
+  )
+  rows <- merge(
+    rows,
+    parent_rows,
+    by = c("model", "location", "parent_node_index"),
+    all.x = TRUE,
+    sort = FALSE
+  )
+  rows <- rows[!is.na(rows$parent_state) & !is.na(rows$best_state), , drop = FALSE]
+  if (nrow(rows) == 0L) {
+    return(empty)
+  }
+
+  lookup <- state_area_lookup(geographic_states)
+  event_rows <- lapply(seq_len(nrow(rows)), function(i) {
+    parent_areas <- state_areas(rows$parent_state[[i]], lookup)
+    child_areas <- state_areas(rows$best_state[[i]], lookup)
+    gained <- setdiff(child_areas, parent_areas)
+    lost <- setdiff(parent_areas, child_areas)
+    event <- classify_range_change_event(parent_areas, child_areas, gained, lost)
+
+    data.frame(
+      model = rows$model[[i]],
+      location = rows$location[[i]],
+      parent_node_index = rows$parent_node_index[[i]],
+      node_index = rows$node_index[[i]],
+      node_type = rows$node_type[[i]],
+      node_label = rows$node_label[[i]],
+      edge_length = rows$edge_length[[i]],
+      parent_state = rows$parent_state[[i]],
+      child_state = rows$best_state[[i]],
+      parent_probability = rows$parent_probability[[i]],
+      child_probability = rows$best_probability[[i]],
+      event_type = event$type,
+      event_label = event$label,
+      state_changed = !identical(rows$parent_state[[i]], rows$best_state[[i]]),
+      gained_areas = paste(gained, collapse = ";"),
+      lost_areas = paste(lost, collapse = ";"),
+      gained_count = length(gained),
+      lost_count = length(lost),
+      interpretation_note = "Deterministic summary from highest-probability ancestral states; not stochastic mapping event counts.",
+      stringsAsFactors = FALSE
+    )
+  })
+
+  out <- do.call(rbind, event_rows)
+  row.names(out) <- NULL
+  out[order(out$model, out$location, out$node_index), , drop = FALSE]
+}
+
+summarize_range_change_event_counts <- function(range_change_events) {
+  empty <- empty_event_summary_table()
+  if (is.null(range_change_events) || nrow(range_change_events) == 0L) {
+    return(empty)
+  }
+  required <- c("model", "location", "event_type", "event_label", "state_changed")
+  if (length(setdiff(required, names(range_change_events))) > 0L) {
+    return(empty)
+  }
+
+  range_change_events$edge_count <- 1L
+  range_change_events$changed_edge <- as.integer(range_change_events$state_changed)
+  summary <- stats::aggregate(
+    cbind(edge_count, changed_edge) ~
+      model + location + event_type + event_label,
+    data = range_change_events,
+    FUN = sum
+  )
+  names(summary)[names(summary) == "edge_count"] <- "event_count"
+  names(summary)[names(summary) == "changed_edge"] <- "changed_edges"
+  summary$interpretation_note <- "Summary is derived from best ancestral state changes along branches; use stochastic mapping for formal event counts."
+  summary <- summary[order(summary$model, summary$location, -summary$event_count, summary$event_type), , drop = FALSE]
+  row.names(summary) <- NULL
+  summary
+}
+
+state_area_lookup <- function(geographic_states) {
+  if (is.null(geographic_states) || nrow(geographic_states) == 0L ||
+      !all(c("state", "areas") %in% names(geographic_states))) {
+    return(list())
+  }
+  lookup <- lapply(geographic_states$areas, function(x) {
+    if (is.na(x) || !nzchar(as.character(x))) {
+      character()
+    } else {
+      strsplit(as.character(x), ";", fixed = TRUE)[[1L]]
+    }
+  })
+  names(lookup) <- geographic_states$state
+  lookup
+}
+
+state_areas <- function(state, lookup) {
+  state <- as.character(state %||% "")
+  if (!nzchar(state) || identical(tolower(state), "null")) {
+    return(character())
+  }
+  if (length(lookup) > 0L && state %in% names(lookup)) {
+    return(lookup[[state]])
+  }
+  strsplit(state, "", fixed = TRUE)[[1L]]
+}
+
+classify_range_change_event <- function(parent_areas, child_areas, gained, lost) {
+  if (length(parent_areas) == 0L && length(child_areas) > 0L) {
+    return(list(type = "range_origin", label = "Range origin from null"))
+  }
+  if (length(parent_areas) > 0L && length(child_areas) == 0L) {
+    return(list(type = "range_loss_to_null", label = "Range loss to null"))
+  }
+  if (length(gained) == 0L && length(lost) == 0L) {
+    return(list(type = "no_change", label = "No range change"))
+  }
+  if (length(gained) > 0L && length(lost) == 0L) {
+    return(list(type = "range_expansion", label = "Range expansion"))
+  }
+  if (length(gained) == 0L && length(lost) > 0L) {
+    return(list(type = "local_extinction", label = "Local extinction"))
+  }
+  list(type = "range_shift", label = "Range shift")
+}
+
+empty_range_change_events_table <- function() {
+  data.frame(
+    model = character(),
+    location = character(),
+    parent_node_index = integer(),
+    node_index = integer(),
+    node_type = character(),
+    node_label = character(),
+    edge_length = numeric(),
+    parent_state = character(),
+    child_state = character(),
+    parent_probability = numeric(),
+    child_probability = numeric(),
+    event_type = character(),
+    event_label = character(),
+    state_changed = logical(),
+    gained_areas = character(),
+    lost_areas = character(),
+    gained_count = integer(),
+    lost_count = integer(),
+    interpretation_note = character(),
+    stringsAsFactors = FALSE
+  )
+}
+
+empty_event_summary_table <- function() {
+  data.frame(
+    model = character(),
+    location = character(),
+    event_type = character(),
+    event_label = character(),
+    event_count = integer(),
+    changed_edges = integer(),
+    interpretation_note = character(),
     stringsAsFactors = FALSE
   )
 }

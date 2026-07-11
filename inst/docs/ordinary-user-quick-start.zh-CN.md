@@ -118,15 +118,17 @@ launch_app()
 
 推荐操作顺序：
 
-1. 点击 `Create example project`，或者使用 `New project wizard`。
-2. 点击 `Refresh setup checks`。
-3. 第一次运行时保持 `Dry run` 勾选，然后点击 `Run workflow`。
-4. 如果有输入检查问题，先根据提示修复。
-5. 只有在 BioGeoBEARS 已安装时，才取消 `Dry run`。
-6. 再次点击 `Run workflow`，运行真实分析。
-7. 点击 `Render report` 生成报告。
-8. 点击 `Create bundle if missing` 生成结果压缩包。
-9. 如果需要别人帮你排查问题，点击 `Create diagnostic bundle`。
+1. 在 `Home` 看下一步提示。
+2. 点击 `Create example project`，或者使用 `Use your own data` 创建项目。
+3. 点击 `Validate inputs`。
+4. 第一次运行时保持 `Dry run` 勾选，然后点击 `Run workflow`。
+5. 如果有输入检查问题，先根据提示修复。
+6. 只有在 BioGeoBEARS 已安装时，才取消 `Dry run`。
+7. 再次点击 `Run workflow`，运行真实分析。
+8. 点击 `Render report` 生成报告。
+9. 打开 `Results`，先看祖先重建图、模型比较表和事件汇总。
+10. 如果需要分享结果，点击 `Create bundle if missing`。
+11. 如果需要别人帮你排查问题，点击 `Create diagnostic bundle`。
 
 ## 5. 使用自己的数据
 
@@ -248,15 +250,16 @@ reports/summary_report.html
 
 ```text
 tables/model_comparison.csv
+tables/event_summary.csv
 tables/model_sensitivity.csv
 tables/model_run_status.csv
 ```
 
-`model_comparison.csv` 用来看模型拟合结果。`model_sensitivity.csv` 用来看
-`+J` 模型是否影响解释。`model_run_status.csv` 用来看每个模型是否成功完成、
-是否有 warning、log 文件在哪里。
+`model_comparison.csv` 用来看模型拟合结果。`event_summary.csv` 用来看根据
+最高概率祖先状态变化推导出的事件概览。`model_sensitivity.csv` 用来看 `+J`
+模型是否影响解释。`model_run_status.csv` 用来看每个模型是否成功完成、是否有
+warning、log 文件在哪里。
 
 不要只因为某个模型 AICc 最低，就直接把它写成唯一的生物学结论。特别是
 `DEC+J`、`DIVALIKE+J`、`BAYAREALIKE+J` 这类 `+J` 模型，需要结合
 `model_sensitivity.csv` 和报告里的 caution 一起解释。
-

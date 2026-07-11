@@ -251,15 +251,12 @@ manifest <- create_workflow_manifest(result_dir)
 
 The Shiny entrypoint is a thin wrapper around the package backend. It validates
 the YAML config, runs `run_workflow()`, renders reports, and bundles results
-without moving scientific logic into Shiny server code. The app also exposes
-grouped project, workflow, report, and export controls; the output manifest; a
-Start Here readiness checklist; a workflow status summary; dedicated
-model-comparison, `+J` sensitivity, warning, node-state, and node-sensitivity
-panels; report paths; table previews; figure previews; a figure dashboard for
-standard workflow graphics; status messages; report downloads; and result
-bundle downloads. Users can upload a YAML config or create the bundled example
-project directly from the GUI. Existing workflow output directories can also be
-loaded from the `Output directory` field without rerunning BioGeoBEARS.
+without moving scientific logic into Shiny server code. The default interface
+now starts with a simplified `Home` tab and a focused `Results` tab. The main
+results shown first are the best-model ancestral reconstruction, the model
+comparison table, and a range-change event summary. Advanced diagnostics,
+full tables, figure dashboards, paths, and logs remain available under
+`Advanced` and `Troubleshooting`.
 
 ```r
 install.packages("shiny")
@@ -286,25 +283,26 @@ Recommended GUI flow:
 
 1. Create a project with `New project wizard`, click `Create example project`,
    or provide an existing `analysis.yml`.
-2. Optionally check `Use GUI config overrides` and edit project name, input
-   files, `max_range_size`, selected models, or advanced constraint files.
-3. Click `Validate`.
-4. Keep `Dry run` checked for a first pass, then click `Run workflow`.
-5. Uncheck `Dry run` when BioGeoBEARS is installed and a real analysis is
+2. Click `Validate inputs`.
+3. Keep `Dry run` checked for a first pass, then click `Run workflow`.
+4. Uncheck `Dry run` when BioGeoBEARS is installed and a real analysis is
    intended.
-6. Click `Render report`.
-7. Click `Refresh key files`.
-8. Click `Create bundle if missing`.
-9. Review `Start Here`, `Run Summary`, `Model Comparison`, `+J Sensitivity`,
-   `Warnings`, `Figure Dashboard`, `Tables`, and `About/Citation`.
+5. Click `Render report`.
+6. Review `Results` first: ancestral reconstruction, model comparison, and
+   event summary.
+7. Use `Advanced` only when you need the full tables and figure dashboard.
+8. Use `Troubleshooting` for warnings, failed models, logs, and output paths.
 
 The Shiny result views are designed for triage:
 
-- `Start Here`: current readiness checklist and the next action for setup,
+- `Home`: current readiness checklist and the next action for setup,
   validation, workflow execution, report rendering, and exports.
-- `Run Summary`: fitted model count, best statistical model, `+J` caution,
-  failed model list, warning count, report path, and output path.
+- `Results`: the primary interpretation view with best-model ancestral
+  reconstruction, model comparison, and event summary.
 - `Model Comparison`: compact fit summary plus the full model-comparison table.
+- `Event Details`: branch-level range-change events inferred from
+  highest-probability ancestral states. These are quick summaries, not
+  stochastic mapping event counts.
 - `+J Sensitivity`: direct answers about whether `+J` is best or near-best,
   plus the detailed sensitivity table.
 - `Warnings`: captured optimizer/BioGeoBEARS warnings and recommended review
@@ -438,6 +436,8 @@ results/example_clade/
     root_state_probabilities.csv
     node_state_summary.csv
     node_state_sensitivity.csv
+    range_change_events.csv
+    event_summary.csv
     model_sensitivity.rds
   figures/
     figure_manifest.csv
@@ -455,6 +455,9 @@ results/example_clade/
     node_state_sensitivity.png
     node_state_sensitivity.pdf
     node_state_sensitivity.svg
+    event_summary.png
+    event_summary.pdf
+    event_summary.svg
   reports/
     summary_report.qmd
     summary_report.html
@@ -475,15 +478,17 @@ Start with these files:
 reports/summary_report.html
 tables/shiny_run_summary.csv
 tables/model_comparison.csv
+tables/event_summary.csv
 tables/model_sensitivity.csv
 tables/model_run_status.csv
 figures/figure_manifest.csv
 ```
 
 Use `model_comparison.csv` to inspect statistical fit. Use
-`model_sensitivity.csv` to decide how to report `+J` sensitivity. Use
-`model_run_status.csv` before interpretation to check failed models, warnings,
-and log paths.
+`event_summary.csv` for a quick range-change overview inferred from
+highest-probability ancestral states. Use `model_sensitivity.csv` to decide how
+to report `+J` sensitivity. Use `model_run_status.csv` before interpretation to
+check failed models, warnings, and log paths.
 
 Do not treat the lowest AICc model as an automatic biological conclusion. The
 report and Shiny app separate "best-fitting statistical model" from
@@ -535,6 +540,11 @@ The main derived tables are:
 - `node_state_sensitivity.csv`: node-by-node comparison between the best
   non-`+J` and best `+J` models, including best-state changes and probability
   differences.
+- `range_change_events.csv`: branch-level range-change details inferred from
+  highest-probability ancestral states.
+- `event_summary.csv`: counts of range expansion, local extinction, range
+  shift, range origin, and no-change categories by model and probability
+  location. This is not a stochastic mapping event-count table.
 
 ## Figures
 
@@ -549,6 +559,8 @@ Workflow execution generates:
   are available.
 - `node_state_sensitivity`: ranked node-level differences between the best
   non-`+J` and best `+J` model.
+- `event_summary`: branch-count summary of deterministic range-change
+  categories inferred from ancestral states.
 
 Figures are written in the formats configured by:
 

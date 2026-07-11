@@ -114,12 +114,19 @@ launch_app()
 
 浏览器会打开 `iBiogeobears` 页面。第一次打开时，软件会自动准备一个临时示例项目。
 
-界面左侧是操作区，右侧是结果区。普通用户主要用这几个按钮：
+界面左侧是操作区，右侧是结果区。新版界面默认比较简单：
 
-- `Refresh setup checks`：检查本机环境。
+- `Home`：看下一步该做什么。
+- `Results`：只看最重要的结果，包括祖先重建图、模型比较表和事件汇总。
+- `Setup`：检查安装环境。
+- `Advanced`：查看完整表格、图形和高级细节。
+- `Troubleshooting`：排查 warning、失败模型、日志和路径。
+
+普通用户主要用这几个按钮：
+
 - `Create example project`：创建内置示例项目。
 - `Create analysis project`：用自己的数据创建项目。
-- `Validate`：检查输入文件是否合格。
+- `Validate inputs`：检查输入文件是否合格。
 - `Run workflow`：运行分析。
 - `Render report`：生成报告。
 - `Create bundle if missing`：生成结果压缩包。
@@ -137,9 +144,9 @@ library(iBiogeobears)
 launch_app()
 ```
 
-3. 在 Shiny 左侧找到 `Existing project`。
-4. 点击 `Create example project`。
-5. 点击 `Refresh setup checks`。
+3. 在 Shiny 左侧 `Start` 区域点击 `Create example project`。
+4. 如果需要检查安装环境，打开 `Setup`，点击 `Refresh setup checks`。
+5. 点击 `Validate inputs`。
 6. 保持 `Dry run` 勾选。
 7. 点击 `Run workflow`。
 
@@ -151,8 +158,8 @@ Dry run 不会真正运行 BioGeoBEARS，只检查项目、输入文件和输出
 4. 点击 `Run workflow`。
 5. 等六个模型运行完成。
 6. 点击 `Render report`，报告格式选 `html`。
-7. 点击 `Refresh key files`。
-8. 点击 `Create bundle if missing`。
+7. 打开 `Results`，先看祖先重建图、模型比较表和事件汇总。
+8. 如果需要打包，打开左侧 `Export and troubleshooting`，点击 `Create bundle if missing`。
 9. 如需反馈问题，点击 `Create diagnostic bundle`。
 
 如果不想用图形界面，也可以在 R 里直接运行：
@@ -323,6 +330,7 @@ results/<project_name>/
 reports/summary_report.html
 tables/shiny_run_summary.csv
 tables/model_comparison.csv
+tables/event_summary.csv
 tables/model_sensitivity.csv
 tables/model_run_status.csv
 figures/
@@ -340,6 +348,8 @@ reports/summary_report.html
 
 - 成功运行了几个模型。
 - 哪个模型统计拟合最好。
+- 祖先分布重建图。
+- 事件汇总。
 - 是否触发 `+J` 模型解释 caution。
 - 是否有 warning 或失败模型。
 - 关键表格和图形。
@@ -359,7 +369,19 @@ reports/summary_report.html
 
 注意：最低 AICc 是统计拟合结果，不等于自动的生物学结论。
 
-### 3. model_sensitivity.csv
+### 3. event_summary.csv
+
+这个表用于快速看祖先状态变化对应的事件概览。常见类别包括：
+
+- `Range expansion`
+- `Local extinction`
+- `Range shift`
+- `Range origin from null`
+- `No range change`
+
+注意：这个表是根据最高概率祖先状态沿分支变化推导出来的概览，不是 stochastic mapping 的正式事件计数。
+
+### 4. model_sensitivity.csv
 
 这个表用于看 `+J` 模型是否影响解释。尤其要看：
 
@@ -369,7 +391,7 @@ reports/summary_report.html
 
 如果报告里出现 `+J caution`，这不是程序错误，而是提醒解释时要保守。
 
-### 4. model_run_status.csv
+### 5. model_run_status.csv
 
 这个表用于排查模型是否成功。重点列包括：
 
@@ -527,4 +549,3 @@ max_range_size：
 7. 最后再测试自己的数据。
 
 如果前面任何一步失败，请先停下并反馈，不要继续叠加更多操作。
-

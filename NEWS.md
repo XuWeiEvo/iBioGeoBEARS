@@ -20,6 +20,13 @@ Third alpha release focused on ordinary-user stability and release readiness.
   result-reading, and feedback instructions.
 - Added a Shiny Start Here readiness checklist and user-guide action for the
   ordinary-user workflow path.
+- Simplified the Shiny first-run interface around `Home`, focused `Results`,
+  `Setup`, `Advanced`, and `Troubleshooting` views.
+- Added a primary Shiny results view focused on best-model ancestral
+  reconstruction, model comparison, and event summary.
+- Added deterministic range-change event summaries from highest-probability
+  ancestral states, written to `range_change_events.csv`,
+  `event_summary.csv`, and `event_summary` figures.
 - Added a clean GitHub-install smoke script for release readiness checks.
 - Added Linux GLPK/libxml2 CI dependencies and actionable diagnostics for R
   packages that are installed but cannot load because a system library is

@@ -55,6 +55,40 @@ plot_dispersal_network <- function(event_table) {
     ggplot2::theme_void()
 }
 
+plot_event_summary <- function(event_summary) {
+  required <- c("model", "event_label", "event_count")
+  missing <- setdiff(required, names(event_summary))
+  if (length(missing) > 0L) {
+    stop("event_summary is missing required columns: ", paste(missing, collapse = ", "), call. = FALSE)
+  }
+  if (nrow(event_summary) == 0L) {
+    stop("event_summary must contain at least one row.", call. = FALSE)
+  }
+
+  plot_data <- event_summary[!is.na(event_summary$event_count), , drop = FALSE]
+  if ("location" %in% names(plot_data) && "branch_top_at_node" %in% plot_data$location) {
+    plot_data <- plot_data[plot_data$location == "branch_top_at_node", , drop = FALSE]
+  }
+  if (nrow(plot_data) == 0L) {
+    stop("No event summary rows are available to plot.", call. = FALSE)
+  }
+  plot_data$event_count <- as.numeric(plot_data$event_count)
+  plot_data$event_label <- stats::reorder(plot_data$event_label, plot_data$event_count)
+
+  ggplot2::ggplot(plot_data, ggplot2::aes(x = event_label, y = event_count, fill = event_label)) +
+    ggplot2::geom_col(width = 0.72, colour = "grey25", linewidth = 0.25, show.legend = FALSE) +
+    ggplot2::coord_flip() +
+    ggplot2::facet_wrap(stats::as.formula("~ model")) +
+    ggplot2::labs(
+      x = NULL,
+      y = "Branch count",
+      title = "Range-change event summary",
+      subtitle = "Derived from highest-probability ancestral states; not stochastic mapping counts"
+    ) +
+    ggplot2::theme_minimal(base_size = 11) +
+    ggplot2::theme(panel.grid.major.y = ggplot2::element_blank())
+}
+
 #' Plot model comparison results
 #'
 #' @param comparison Model comparison table returned by [compare_models()].
@@ -323,6 +357,11 @@ generate_figures <- function(model_comparison, standardized_tables, project_path
   node_sensitivity <- standardized_tables$node_state_sensitivity %||% data.frame()
   if (nrow(node_sensitivity) > 0L) {
     plots$node_state_sensitivity <- plot_node_state_sensitivity(node_sensitivity)
+  }
+
+  event_summary <- standardized_tables$event_summary %||% data.frame()
+  if (nrow(event_summary) > 0L) {
+    plots$event_summary <- plot_event_summary(event_summary)
   }
 
   manifest <- do.call(rbind, lapply(names(plots), function(name) {

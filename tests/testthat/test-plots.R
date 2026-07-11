@@ -42,6 +42,20 @@ test_that("plot_node_state_sensitivity returns a ggplot", {
   expect_s3_class(plot, "ggplot")
 })
 
+test_that("plot_event_summary returns a ggplot", {
+  event_summary <- data.frame(
+    model = c("DEC", "DEC"),
+    location = c("branch_top_at_node", "branch_top_at_node"),
+    event_label = c("Range expansion", "Local extinction"),
+    event_count = c(3L, 1L),
+    stringsAsFactors = FALSE
+  )
+
+  plot <- plot_event_summary(event_summary)
+
+  expect_s3_class(plot, "ggplot")
+})
+
 test_that("generate_figures writes node-state sensitivity figures", {
   out <- tempfile("ibgb-figures-")
   paths <- create_project(out)
@@ -73,13 +87,24 @@ test_that("generate_figures writes node-state sensitivity figures", {
       state_differs = c(FALSE, TRUE),
       probability_difference = c(-0.05, -0.05),
       probability_difference_abs = c(0.05, 0.05)
+    ),
+    event_summary = data.frame(
+      model = "DEC",
+      location = "branch_top_at_node",
+      event_label = "Range expansion",
+      event_count = 2L,
+      changed_edges = 2L,
+      interpretation_note = "derived",
+      stringsAsFactors = FALSE
     )
   )
 
   manifest <- generate_figures(comparison, standardized_tables, paths, formats = "png")
 
   expect_true(any(manifest$figure == "node_state_sensitivity" & manifest$status == "created"))
+  expect_true(any(manifest$figure == "event_summary" & manifest$status == "created"))
   expect_true(file.exists(file.path(paths$figures, "node_state_sensitivity.png")))
+  expect_true(file.exists(file.path(paths$figures, "event_summary.png")))
 })
 
 test_that("layout_tree_nodes adds plotting coordinates", {

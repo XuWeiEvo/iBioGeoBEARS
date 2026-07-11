@@ -34,6 +34,8 @@ model_sensitivity <- read_table_if_exists("model_sensitivity.csv")
 model_parameters <- read_table_if_exists("model_parameters.csv")
 node_state_summary <- read_table_if_exists("node_state_summary.csv")
 node_state_sensitivity <- read_table_if_exists("node_state_sensitivity.csv")
+event_summary <- read_table_if_exists("event_summary.csv")
+range_change_events <- read_table_if_exists("range_change_events.csv")
 root_state_probabilities <- read_table_if_exists("root_state_probabilities.csv")
 workflow_manifest <- read_table_if_exists("workflow_manifest.csv")
 
@@ -259,6 +261,32 @@ if (!is.null(model_parameters)) {
   free_or_core <- model_parameters$is_free | model_parameters$parameter %in% c("d", "e", "j")
   parameter_rows <- model_parameters[free_or_core, intersect(parameter_cols, names(model_parameters)), drop = FALSE]
   print_table(parameter_rows)
+} else {
+  print_table(NULL)
+}
+```
+
+## Event Summary
+
+This section summarizes range changes inferred from highest-probability
+ancestral states along branches. It is useful as a quick overview, but it is
+not a stochastic mapping event-count analysis.
+
+```{r}
+event_summary_png <- figure_path("event_summary")
+if (!is.null(event_summary_png)) {
+  knitr::include_graphics(event_summary_png)
+}
+```
+
+```{r}
+event_summary_cols <- c(
+  "model", "location", "event_label", "event_count", "changed_edges",
+  "interpretation_note"
+)
+if (!is.null(event_summary)) {
+  event_rows <- event_summary[order(event_summary$model, event_summary$location, -event_summary$event_count), , drop = FALSE]
+  print_table(event_rows[intersect(event_summary_cols, names(event_rows))])
 } else {
   print_table(NULL)
 }

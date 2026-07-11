@@ -105,15 +105,20 @@ test_that("run_workflow exposes model comparison when BioGeoBEARS is available",
     "parameter_table",
     "ancestral_state_probabilities",
     "root_state_probabilities",
-    "node_state_summary"
+    "node_state_summary",
+    "range_change_events",
+    "event_summary"
   ) %in% names(result$standardized_tables)))
   expect_true(file.exists(file.path(out, "tables", "model_run_status.csv")))
   expect_true(file.exists(file.path(out, "tables", "model_comparison.csv")))
   expect_true(file.exists(file.path(out, "tables", "model_sensitivity.csv")))
   expect_true(file.exists(file.path(out, "tables", "node_state_sensitivity.csv")))
+  expect_true(file.exists(file.path(out, "tables", "range_change_events.csv")))
+  expect_true(file.exists(file.path(out, "tables", "event_summary.csv")))
   expect_true(file.exists(file.path(out, "tables", "model_parameters.csv")))
   expect_true(file.exists(file.path(out, "tables", "workflow_manifest.csv")))
   expect_true(file.exists(file.path(out, "figures", "model_comparison.png")))
+  expect_true(file.exists(file.path(out, "figures", "event_summary.png")))
 
   sensitivity <- utils::read.csv(file.path(out, "tables", "model_sensitivity.csv"), check.names = FALSE)
   expect_true("best_overall_is_plus_j" %in% sensitivity$summary_item)
