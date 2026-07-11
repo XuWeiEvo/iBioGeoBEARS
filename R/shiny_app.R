@@ -92,6 +92,7 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
             "Setup",
             shiny_action_grid(
               shiny::actionButton("refresh_setup", "Refresh setup checks"),
+              shiny::actionButton("open_user_guide", "Open user guide"),
               shiny::actionButton("show_install_plan", "Show BioGeoBEARS install plan"),
               shiny::actionButton("install_biogeobears", "Install BioGeoBEARS")
             )
@@ -147,6 +148,7 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
           shiny::uiOutput("status"),
           shiny::tableOutput("summary_table"),
           shiny::tabsetPanel(
+            shiny_start_here_panel(),
             shiny::tabPanel(
               "Setup",
               shiny::tags$div(class = "ibgb-key-files-title", "Installation readiness"),
@@ -250,6 +252,14 @@ shiny_control_section <- function(title, ...) {
 
 shiny_action_grid <- function(...) {
   shiny::tags$div(class = "ibgb-action-grid", ...)
+}
+
+shiny_start_here_panel <- function() {
+  shiny::tabPanel(
+    "Start Here",
+    shiny::tags$div(class = "ibgb-key-files-title", "Readiness checklist"),
+    shiny::tableOutput("first_steps_table")
+  )
 }
 
 shiny_constraint_inputs <- function() {
@@ -373,6 +383,13 @@ iBGB_shiny_server <- function(input, output, session) {
             state,
             paste("BioGeoBEARS install plan refreshed:", missing_count, "package(s) need action.")
           )
+        })
+      })
+
+      shiny::observeEvent(input$open_user_guide, {
+        run_app_action(state, {
+          guide <- open_user_guide(browse = TRUE)
+          append_app_message(state, paste("User guide:", guide))
         })
       })
 
@@ -608,6 +625,16 @@ iBGB_shiny_server <- function(input, output, session) {
 
       output$summary_table <- shiny::renderTable({
         shiny_summary_table(state)
+      }, striped = TRUE, bordered = TRUE, na = "")
+
+      output$first_steps_table <- shiny::renderTable({
+        shiny_first_steps_table(
+          state,
+          config_path = tryCatch(current_config_path(), error = function(e) NULL),
+          output_dir = current_output_dir(),
+          dry_run = isTRUE(input$dry_run),
+          require_biogeobears = isTRUE(input$require_biogeobears)
+        )
       }, striped = TRUE, bordered = TRUE, na = "")
 
       output$installation_table <- shiny::renderTable({
@@ -1203,6 +1230,193 @@ shiny_summary_table <- function(state) {
     ),
     stringsAsFactors = FALSE
   )
+}
+
+shiny_first_steps_table <- function(
+    state,
+    config_path = NULL,
+    output_dir = NULL,
+    dry_run = TRUE,
+    require_biogeobears = FALSE) {
+  config_path <- shiny_text_or_blank(config_path)
+  output_dir <- shiny_text_or_blank(output_dir)
+  if (!nzchar(output_dir) && !is.null(state$result) && !is.null(state$result$project_paths$root)) {
+    output_dir <- state$result$project_paths$root
+  }
+
+  config_ready <- nzchar(config_path) && file.exists(config_path)
+  core_missing <- shiny_missing_required_components(state$installation, exclude = "BioGeoBEARS")
+  core_ready <- length(core_missing) == 0L
+  bgb_ready <- shiny_installation_component_ready(state$installation, "BioGeoBEARS")
+
+  validation_status <- "Not run"
+  validation_next <- "Click Validate."
+  validation_detail <- ""
+  if (!is.null(state$validation) && nrow(state$validation) > 0L && "ok" %in% names(state$validation)) {
+    failed <- sum(!is.na(state$validation$ok) & !state$validation$ok)
+    passed <- sum(!is.na(state$validation$ok) & state$validation$ok)
+    validation_detail <- paste0(passed, " passed, ", failed, " failed")
+    if (failed > 0L) {
+      validation_status <- "Needs attention"
+      validation_next <- "Open Validation and follow How to fix."
+    } else {
+      validation_status <- "Passed"
+      validation_next <- "Click Run workflow with Dry run checked."
+    }
+  }
+
+  workflow_status <- "Not run"
+  workflow_next <- "Run a dry workflow first."
+  workflow_detail <- ""
+  if (!is.null(state$result)) {
+    workflow_detail <- workflow_model_status_label(state$model_table)
+    if (isTRUE(state$result$validation_failed)) {
+      workflow_status <- "Needs attention"
+      workflow_next <- "Fix validation errors before real execution."
+    } else if (!identical(failed_models_label(state$model_table), "none")) {
+      workflow_status <- "Needs attention"
+      workflow_next <- "Open Run Status, inspect failed model logs, then retry failed models."
+    } else if (isTRUE(state$result$dry_run)) {
+      workflow_status <- "Dry run complete"
+      workflow_next <- if (bgb_ready) {
+        "Uncheck Dry run for real BioGeoBEARS execution."
+      } else {
+        "Install BioGeoBEARS before real execution."
+      }
+    } else {
+      workflow_status <- "Complete"
+      workflow_next <- "Render report and create result bundle."
+    }
+  }
+
+  report <- report_preview_path(state)
+  report_ready <- !is.null(report)
+  result_bundle_ready <- !is.null(state$bundle) && file.exists(state$bundle)
+  diagnostic_bundle_ready <- !is.null(state$diagnostic_bundle) && file.exists(state$diagnostic_bundle)
+
+  data.frame(
+    step = c(
+      "Project config",
+      "Setup checks",
+      "BioGeoBEARS",
+      "Validation",
+      "Workflow run",
+      "Report",
+      "Export"
+    ),
+    status = c(
+      if (config_ready) "Ready" else "Action needed",
+      if (core_ready) "Ready" else "Action needed",
+      if (bgb_ready) "Ready" else if (isTRUE(dry_run) && !isTRUE(require_biogeobears)) "Needed for real run" else "Action needed",
+      validation_status,
+      workflow_status,
+      if (report_ready) "Ready" else if (is.null(state$result)) "Not ready" else "Action needed",
+      shiny_export_status(result_bundle_ready, diagnostic_bundle_ready, state$result)
+    ),
+    next_step = c(
+      if (config_ready) "Click Validate." else "Create example project, create analysis project, upload analysis.yml, or enter a config path.",
+      if (core_ready) "Proceed to validation." else paste("Install or repair:", paste(core_missing, collapse = ", ")),
+      if (bgb_ready) "Real model execution is available." else "Keep Dry run checked until BioGeoBEARS is installed.",
+      validation_next,
+      workflow_next,
+      if (report_ready) "Open or download report." else "Click Render report after workflow completes.",
+      shiny_export_next_step(result_bundle_ready, diagnostic_bundle_ready, state$result)
+    ),
+    detail = c(
+      if (config_ready) as_path(config_path) else "",
+      if (core_ready) "R, core packages, and Shiny ready." else paste(core_missing, collapse = ", "),
+      shiny_installation_component_detail(state$installation, "BioGeoBEARS"),
+      validation_detail,
+      workflow_detail,
+      report %||% "",
+      shiny_export_detail(result_bundle_ready, diagnostic_bundle_ready, state)
+    ),
+    stringsAsFactors = FALSE
+  )
+}
+
+shiny_text_or_blank <- function(x) {
+  if (is.null(x) || length(x) == 0L || is.na(x[[1L]])) {
+    return("")
+  }
+  trimws(as.character(x[[1L]]))
+}
+
+shiny_missing_required_components <- function(installation, exclude = character()) {
+  if (is.null(installation) || nrow(installation) == 0L ||
+      !all(c("component", "required", "status") %in% names(installation))) {
+    return("setup checks")
+  }
+  rows <- installation[
+    installation$required == "yes" &
+      installation$status != "Ready" &
+      !installation$component %in% exclude,
+    ,
+    drop = FALSE
+  ]
+  rows$component
+}
+
+shiny_installation_component_ready <- function(installation, component) {
+  if (is.null(installation) || nrow(installation) == 0L ||
+      !all(c("component", "status") %in% names(installation))) {
+    return(FALSE)
+  }
+  rows <- installation[installation$component == component, , drop = FALSE]
+  nrow(rows) > 0L && identical(rows$status[[1L]], "Ready")
+}
+
+shiny_installation_component_detail <- function(installation, component) {
+  if (is.null(installation) || nrow(installation) == 0L ||
+      !all(c("component", "version", "next_step") %in% names(installation))) {
+    return("Run setup checks.")
+  }
+  rows <- installation[installation$component == component, , drop = FALSE]
+  if (nrow(rows) == 0L) {
+    return("Run setup checks.")
+  }
+  if (identical(rows$status[[1L]], "Ready")) {
+    version <- rows$version[[1L]]
+    if (!is.na(version) && nzchar(version)) {
+      return(paste("Version", version))
+    }
+    return("Ready.")
+  }
+  rows$next_step[[1L]]
+}
+
+shiny_export_status <- function(result_bundle_ready, diagnostic_bundle_ready, result) {
+  if (isTRUE(result_bundle_ready) && isTRUE(diagnostic_bundle_ready)) {
+    return("Ready")
+  }
+  if (is.null(result)) {
+    return("Not ready")
+  }
+  if (isTRUE(result_bundle_ready) || isTRUE(diagnostic_bundle_ready)) {
+    return("Partial")
+  }
+  "Action needed"
+}
+
+shiny_export_next_step <- function(result_bundle_ready, diagnostic_bundle_ready, result) {
+  if (is.null(result)) {
+    return("Run or load workflow results.")
+  }
+  if (!isTRUE(result_bundle_ready)) {
+    return("Click Create bundle if missing.")
+  }
+  if (!isTRUE(diagnostic_bundle_ready)) {
+    return("Click Create diagnostic bundle.")
+  }
+  "Download result or diagnostic bundle."
+}
+
+shiny_export_detail <- function(result_bundle_ready, diagnostic_bundle_ready, state) {
+  details <- c(
+    if (isTRUE(result_bundle_ready)) paste("Result:", as_path(state$bundle)) else "Result bundle missing",
+    if (isTRUE(diagnostic_bundle_ready)) paste("Diagnostics:", as_path(state$diagnostic_bundle)) else "Diagnostic bundle missing"
+  )
+  paste(details, collapse = "; ")
 }
 
 shiny_about_table <- function(state, bgb_check = check_biogeobears(required = FALSE)) {

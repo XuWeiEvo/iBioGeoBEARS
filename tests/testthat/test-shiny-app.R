@@ -84,6 +84,48 @@ test_that("Shiny BioGeoBEARS installation helpers are explicit", {
   expect_match(modal, "Cancel", fixed = TRUE)
 })
 
+test_that("Shiny first steps table gives ordinary-user next actions", {
+  installation <- data.frame(
+    component = c("R", "Core R packages", "Shiny", "BioGeoBEARS", "Quarto HTML"),
+    required_for = c("All workflows", "All workflows", "Graphical interface", "Real model execution", "HTML reports"),
+    required = c("yes", "yes", "yes", "yes", "no"),
+    status = c("Ready", "Ready", "Ready", "Action needed", "Action needed"),
+    version = c("4.3.1", "ok", "1.9.1", NA, NA),
+    next_step = c("Ready.", "Ready.", "Ready.", "Install BioGeoBEARS.", "Install Quarto."),
+    stringsAsFactors = FALSE
+  )
+  config <- tempfile(fileext = ".yml")
+  writeLines("project:\n  name: example", config)
+  state <- new.env(parent = emptyenv())
+  state$installation <- installation
+  state$validation <- NULL
+  state$result <- NULL
+  state$model_table <- NULL
+  state$bundle <- NULL
+  state$diagnostic_bundle <- NULL
+  state$report <- NULL
+
+  steps <- shiny_first_steps_table(state, config_path = config, output_dir = tempfile(), dry_run = TRUE)
+
+  expect_equal(steps$status[match("Project config", steps$step)], "Ready")
+  expect_equal(steps$status[match("BioGeoBEARS", steps$step)], "Needed for real run")
+  expect_match(steps$next_step[match("Validation", steps$step)], "Click Validate", fixed = TRUE)
+  expect_match(steps$next_step[match("Workflow run", steps$step)], "dry workflow", fixed = TRUE)
+
+  state$validation <- data.frame(check = "tree_file", ok = TRUE, stringsAsFactors = FALSE)
+  paths <- create_project(tempfile("ibgb-shiny-first-steps-"))
+  state$result <- list(project_paths = paths, dry_run = TRUE, validation_failed = FALSE)
+  class(state$result) <- c("iBGB_workflow_result", "list")
+  state$model_table <- data.frame(model = "DEC", status = "planned", run_action = "planned", stringsAsFactors = FALSE)
+
+  steps <- shiny_first_steps_table(state, config_path = config, output_dir = paths$root, dry_run = TRUE)
+
+  expect_equal(steps$status[match("Validation", steps$step)], "Passed")
+  expect_equal(steps$status[match("Workflow run", steps$step)], "Dry run complete")
+  expect_match(steps$next_step[match("Workflow run", steps$step)], "Install BioGeoBEARS", fixed = TRUE)
+  expect_equal(steps$status[match("Export", steps$step)], "Action needed")
+})
+
 test_that("Shiny project wizard helpers resolve uploads and defaults", {
   uploaded <- tempfile(fileext = ".csv")
   writeLines("species,A\ntaxon_a,1", uploaded)
@@ -135,6 +177,19 @@ test_that("Shiny sidebar helper builds grouped controls", {
   expect_match(html, "ibgb-control-title", fixed = TRUE)
   expect_match(html, "ibgb-action-grid", fixed = TRUE)
   expect_match(html, "Workflow", fixed = TRUE)
+})
+
+test_that("Shiny app exposes first-run checklist and user guide action", {
+  testthat::skip_if_not_installed("shiny")
+
+  panel_html <- as.character(shiny_start_here_panel())
+  action_html <- as.character(shiny_action_grid(
+    shiny::actionButton("open_user_guide", "Open user guide")
+  ))
+
+  expect_match(panel_html, "Start Here", fixed = TRUE)
+  expect_match(panel_html, "first_steps_table", fixed = TRUE)
+  expect_match(action_html, "open_user_guide", fixed = TRUE)
 })
 
 test_that("Shiny constraint input helpers expose advanced fields", {

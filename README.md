@@ -241,13 +241,13 @@ The Shiny entrypoint is a thin wrapper around the package backend. It validates
 the YAML config, runs `run_workflow()`, renders reports, and bundles results
 without moving scientific logic into Shiny server code. The app also exposes
 grouped project, workflow, report, and export controls; the output manifest; a
-workflow status summary; dedicated model-comparison, `+J` sensitivity, warning,
-node-state, and node-sensitivity panels; report paths; table previews; figure
-previews; a figure dashboard for standard workflow graphics; status messages;
-report downloads; and result bundle downloads. Users can upload a YAML config
-or create the bundled example project directly from the GUI. Existing workflow
-output directories can also be loaded from the `Output directory` field without
-rerunning BioGeoBEARS.
+Start Here readiness checklist; a workflow status summary; dedicated
+model-comparison, `+J` sensitivity, warning, node-state, and node-sensitivity
+panels; report paths; table previews; figure previews; a figure dashboard for
+standard workflow graphics; status messages; report downloads; and result
+bundle downloads. Users can upload a YAML config or create the bundled example
+project directly from the GUI. Existing workflow output directories can also be
+loaded from the `Output directory` field without rerunning BioGeoBEARS.
 
 ```r
 install.packages("shiny")
@@ -283,11 +283,13 @@ Recommended GUI flow:
 6. Click `Render report`.
 7. Click `Refresh key files`.
 8. Click `Create bundle if missing`.
-9. Review `Run Summary`, `Model Comparison`, `+J Sensitivity`, `Warnings`,
-   `Figure Dashboard`, `Tables`, and `About/Citation`.
+9. Review `Start Here`, `Run Summary`, `Model Comparison`, `+J Sensitivity`,
+   `Warnings`, `Figure Dashboard`, `Tables`, and `About/Citation`.
 
 The Shiny result views are designed for triage:
 
+- `Start Here`: current readiness checklist and the next action for setup,
+  validation, workflow execution, report rendering, and exports.
 - `Run Summary`: fitted model count, best statistical model, `+J` caution,
   failed model list, warning count, report path, and output path.
 - `Model Comparison`: compact fit summary plus the full model-comparison table.

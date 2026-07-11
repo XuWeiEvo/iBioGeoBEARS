@@ -13,6 +13,8 @@ Development toward a stable, ordinary-user release.
   for more reliable cross-platform archive creation.
 - Added an installed ordinary-user quick-start and troubleshooting guide,
   reachable with `open_user_guide()`.
+- Added a Shiny Start Here readiness checklist and user-guide action for the
+  ordinary-user workflow path.
 - Added Linux GLPK/libxml2 CI dependencies and actionable diagnostics for R
   packages that are installed but cannot load because a system library is
   missing.
