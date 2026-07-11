@@ -28,6 +28,10 @@ open_user_guide(browse = FALSE)
 ```
 
 ```powershell
+& 'C:\Program Files\R\R-4.3.1\bin\Rscript.exe' tools\smoke-clean-github-install.R
+```
+
+```powershell
 & 'C:\Program Files\R\R-4.3.1\bin\Rscript.exe' -e ".libPaths(c('C:/Users/xuwei/AppData/Local/R/win-library/4.3', .libPaths())); pkgload::load_all('.', quiet=TRUE); testthat::test_dir('tests/testthat', reporter='summary')"
 ```
 
