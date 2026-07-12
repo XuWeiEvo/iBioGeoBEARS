@@ -264,6 +264,17 @@ install.packages("shiny")
 launch_app()
 ```
 
+On Windows, create a double-click launcher after installing the package:
+
+```r
+create_windows_launcher()
+```
+
+This writes `start-iBiogeobears.bat` to the Desktop when possible. After that,
+ordinary users can double-click the launcher instead of opening RStudio and
+typing `launch_app()`. The launcher still requires R, `iBiogeobears`, Shiny,
+and BioGeoBEARS to be installed locally for real analyses.
+
 Calling `launch_app()` without arguments prepares and loads a complete example
 project automatically. The `环境检查` tab reports missing requirements and the
 exact next action before a real analysis is started.

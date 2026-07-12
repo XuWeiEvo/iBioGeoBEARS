@@ -6,8 +6,12 @@
 install.packages("remotes")
 remotes::install_github("XuWeiEvo/iBioGeoBEARS")
 library(iBiogeobears)
+create_windows_launcher()
 launch_app()
 ```
+
+Windows 用户运行 `create_windows_launcher()` 后，之后可以直接双击桌面上的
+`start-iBiogeobears.bat` 打开软件。
 
 第一次测试建议只跑内置示例数据：
 

@@ -108,6 +108,7 @@ test_that("installed package exposes templates, example data, and public API", {
     "create_workflow_manifest",
     "create_analysis_project",
     "create_example_project",
+    "create_windows_launcher",
     "install_biogeobears",
     "open_user_guide",
     "run_acceptance_check",

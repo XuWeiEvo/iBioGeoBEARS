@@ -18,6 +18,8 @@ Third alpha release focused on ordinary-user stability and release readiness.
 - Added a fuller simplified Chinese ordinary-user testing tutorial in Markdown
   and standalone HTML for sharing installation, Shiny, example-data, user-data,
   result-reading, and feedback instructions.
+- Added `create_windows_launcher()` and a packaged Windows `.bat` launcher so
+  ordinary users can start the GUI by double-clicking after installation.
 - Added a Shiny Start Here readiness checklist and user-guide action for the
   ordinary-user workflow path.
 - Simplified the Shiny first-run interface around `Home`, focused `Results`,

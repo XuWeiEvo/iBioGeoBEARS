@@ -9,6 +9,7 @@ test_that("ordinary-user guide is installed and reachable", {
     "create_example_project",
     "run_workflow",
     "launch_app()",
+    "create_windows_launcher()",
     "bundle_diagnostics",
     "run_acceptance_check"
   )
@@ -28,6 +29,7 @@ test_that("Chinese ordinary-user guide is installed and reachable", {
     "create_example_project",
     "run_workflow",
     "launch_app()",
+    "create_windows_launcher()",
     "bundle_diagnostics"
   )
   expect_true(all(vapply(required_text, function(x) any(grepl(x, contents, fixed = TRUE)), logical(1))))

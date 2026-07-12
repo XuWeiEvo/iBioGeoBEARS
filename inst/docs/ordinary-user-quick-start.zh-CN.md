@@ -116,6 +116,15 @@ install.packages("shiny")
 launch_app()
 ```
 
+Windows 用户也可以创建一个双击启动器：
+
+```r
+create_windows_launcher()
+```
+
+以后直接双击桌面上的 `start-iBiogeobears.bat`，不用再打开 RStudio 输入
+`launch_app()`。
+
 推荐操作顺序：
 
 1. 在 `首页` 看“下一步”提示。

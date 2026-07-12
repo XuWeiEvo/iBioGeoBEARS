@@ -103,6 +103,15 @@ Launch the app:
 launch_app()
 ```
 
+On Windows, you can create a double-click launcher:
+
+```r
+create_windows_launcher()
+```
+
+After that, double-click `start-iBiogeobears.bat` on the Desktop instead of
+opening RStudio and typing `launch_app()`.
+
 Recommended GUI flow:
 
 1. Click `Create example project` or use `New project wizard`.

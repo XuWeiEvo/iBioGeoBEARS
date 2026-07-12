@@ -112,6 +112,15 @@ library(iBiogeobears)
 launch_app()
 ```
 
+如果是 Windows，第一次安装后可以创建一个双击启动器：
+
+```r
+create_windows_launcher()
+```
+
+以后直接双击桌面上的 `start-iBiogeobears.bat`，不用再打开 RStudio 输入
+`launch_app()`。
+
 浏览器会打开 `iBiogeobears` 页面。第一次打开时，软件会自动准备一个临时示例项目。
 
 界面左侧是操作区，右侧是结果区。新版界面默认比较简单，普通用户优先看中文入口：
