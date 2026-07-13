@@ -502,6 +502,11 @@ generate_figures <- function(model_comparison, standardized_tables, project_path
     plots$process_rates_through_time <- plot_process_rates_through_time(process_rates)
   }
 
+  region_process_rates <- standardized_tables$region_process_rates_through_time %||% data.frame()
+  if (nrow(region_process_rates) > 0L) {
+    plots$region_process_rates_through_time <- plot_region_process_rates_through_time(region_process_rates)
+  }
+
   manifest <- do.call(rbind, lapply(names(plots), function(name) {
     save_plot_outputs(
       plot = plots[[name]],
@@ -571,6 +576,9 @@ plot_output_dimensions <- function(name) {
   }
   if (identical(name, "process_rates_through_time")) {
     return(list(width = 8.0, height = 5.6))
+  }
+  if (identical(name, "region_process_rates_through_time")) {
+    return(list(width = 8.6, height = 6.2))
   }
   list(width = 7, height = 4.5)
 }

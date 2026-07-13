@@ -42,6 +42,7 @@ bsm_event_summary <- read_table_if_exists("bsm_event_summary.csv")
 biogeographic_process_summary <- read_table_if_exists("biogeographic_process_summary.csv")
 region_process_budgets <- read_table_if_exists("region_process_budgets.csv")
 process_rates_through_time <- read_table_if_exists("process_rates_through_time.csv")
+region_process_rates_through_time <- read_table_if_exists("region_process_rates_through_time.csv")
 bsm_replicate_counts <- read_table_if_exists("bsm_replicate_counts.csv")
 bsm_dispersal_routes <- read_table_if_exists("bsm_dispersal_routes.csv")
 bsm_events <- read_table_if_exists("bsm_events.csv")
@@ -504,6 +505,38 @@ if (!is.null(process_rates_through_time) && nrow(process_rates_through_time) > 0
   print_table(utils::head(rate_rows[intersect(rate_cols, names(rate_rows))], 40L))
 } else {
   cat("Process rates through time are available only when BSM stochastic mapping was run.\n")
+}
+```
+
+#### Region-resolved process rates through time
+
+Each process is split by the region an event is attributed to (the region
+gained, lost, or colonized), so the regional timing of each biogeographic
+process can be compared. Region counts sum across regions to the overall
+per-process rate in each time bin.
+
+```{r}
+region_rates_png <- figure_path("region_process_rates_through_time")
+if (!is.null(region_rates_png)) {
+  knitr::include_graphics(region_rates_png)
+}
+```
+
+```{r}
+if (!is.null(region_process_rates_through_time) && nrow(region_process_rates_through_time) > 0) {
+  region_rate_cols <- c(
+    "model", "process_label", "region", "time_bin",
+    "bin_start", "bin_end", "mean_count", "sd_count", "rate"
+  )
+  region_rate_rows <- region_process_rates_through_time[
+    order(region_process_rates_through_time$model, region_process_rates_through_time$process_label,
+          region_process_rates_through_time$region, region_process_rates_through_time$time_bin),
+    ,
+    drop = FALSE
+  ]
+  print_table(utils::head(region_rate_rows[intersect(region_rate_cols, names(region_rate_rows))], 50L))
+} else {
+  cat("Region-resolved process rates are available only when BSM stochastic mapping was run.\n")
 }
 ```
 

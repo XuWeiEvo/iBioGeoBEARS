@@ -462,6 +462,7 @@ results/example_clade/
     biogeographic_process_summary.csv
     region_process_budgets.csv
     process_rates_through_time.csv
+    region_process_rates_through_time.csv
     model_sensitivity.rds
   figures/
     figure_manifest.csv
@@ -488,6 +489,7 @@ results/example_clade/
     biogeographic_process_synthesis.png
     region_process_budget.png
     process_rates_through_time.png
+    region_process_rates_through_time.png
   reports/
     summary_report.qmd
     summary_report.html
@@ -624,6 +626,11 @@ The main derived tables are:
   before present, with the mean and standard deviation of the count per
   stochastic map and the mean rate (events per unit time) in each bin. Counts
   sum across bins to the per-process synthesis mean.
+- `region_process_rates_through_time.csv`: the same rates through time split by
+  region, attributing each event to the region it gained (dispersal), lost
+  (local extinction), or colonized (founder). Region counts sum across regions
+  to the overall per-process rate in each bin. Narrow sympatry, subset sympatry,
+  and vicariance have no single attributable region and are omitted.
 
 ## Figures
 
@@ -650,6 +657,9 @@ Workflow execution generates:
 - `process_rates_through_time`: mean BSM event counts per stochastic map through
   time for each biogeographic process, with standard-deviation ribbons, split
   into cladogenetic and anagenetic process groups.
+- `region_process_rates_through_time`: one panel per process with a coloured
+  curve per region, showing the regional timing of each biogeographic process
+  (which region gained, lost, or was colonized by lineages, and when).
 - `region_process_budget`: a diverging bar chart of the per-region dispersal
   budget (immigration versus emigration) with net dispersal flux marked, so net
   source and net sink regions are read directly.

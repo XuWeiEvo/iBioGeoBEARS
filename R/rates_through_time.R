@@ -162,6 +162,210 @@ plot_process_rates_through_time <- function(process_rates) {
     ggplot2::guides(fill = "none")
 }
 
+#' Summarize region-resolved biogeographic process rates through time
+#'
+#' Like [summarize_process_rates_through_time()], but additionally split by the
+#' region each event is attributed to, so the timing of a process can be compared
+#' across regions. Each event is attributed to the region it gained (dispersal
+#' target), lost (local extinction), or colonized (founder-event target). Events
+#' whose sampled record has no such region (narrow sympatry, subset sympatry, and
+#' vicariance, which are not tied to a single dispersal/extinction region) are
+#' omitted.
+#'
+#' @param bsm_tables A list of standardized BSM tables containing at least
+#'   `bsm_events`, and optionally `bsm_event_summary`.
+#' @param n_bins Number of equal-width time bins between the present and the
+#'   oldest sampled event.
+#' @return A data frame with one row per model, process, region, and time bin.
+#'   Returns an empty table with the same columns when no region-attributable
+#'   timed events are available.
+#' @export
+summarize_region_process_rates_through_time <- function(bsm_tables, n_bins = 10L) {
+  empty <- empty_region_process_rates_table()
+  bsm_tables <- bsm_tables %||% list()
+  events <- bsm_tables$bsm_events %||% NULL
+  event_summary <- bsm_tables$bsm_event_summary %||% NULL
+  if (is.null(events) || nrow(events) == 0L) {
+    return(empty)
+  }
+  needed <- c("model", "replicate", "event_type", "event_time_before_present")
+  if (!all(needed %in% names(events))) {
+    return(empty)
+  }
+  n_bins <- max(1L, as.integer(n_bins))
+
+  taxonomy <- biogeographic_process_taxonomy()
+  ev <- events[
+    events$event_type %in% taxonomy$bsm_event_type &
+      !is.na(events$event_time_before_present),
+    ,
+    drop = FALSE
+  ]
+  if (nrow(ev) == 0L) {
+    return(empty)
+  }
+  idx <- match(ev$event_type, taxonomy$bsm_event_type)
+  ev$process_key <- taxonomy$process_key[idx]
+  ev$process_label <- taxonomy$process_label[idx]
+  ev$process_group <- taxonomy$process_group[idx]
+
+  ev$event_region <- coalesce_region(
+    ev$target_region %||% rep(NA_character_, nrow(ev)),
+    ev$extirpation_region %||% rep(NA_character_, nrow(ev)),
+    ev$source_region %||% rep(NA_character_, nrow(ev))
+  )
+  ev <- ev[!is.na(ev$event_region) & nzchar(ev$event_region), , drop = FALSE]
+  if (nrow(ev) == 0L) {
+    return(empty)
+  }
+
+  out <- do.call(rbind, lapply(split(ev, ev$model), function(model_ev) {
+    region_process_rates_for_model(model_ev, event_summary, events, n_bins)
+  }))
+  if (is.null(out) || nrow(out) == 0L) {
+    return(empty)
+  }
+  out <- out[order(out$model, out$process_group, out$process_label, out$region, out$time_bin), , drop = FALSE]
+  row.names(out) <- NULL
+  out[, names(empty), drop = FALSE]
+}
+
+coalesce_region <- function(...) {
+  cols <- list(...)
+  out <- rep(NA_character_, length(cols[[1L]]))
+  for (col in cols) {
+    col <- as.character(col)
+    take <- (is.na(out) | !nzchar(out)) & !is.na(col) & nzchar(col)
+    out[take] <- col[take]
+  }
+  out
+}
+
+region_process_rates_for_model <- function(model_ev, event_summary, events, n_bins) {
+  model <- as.character(model_ev$model[[1L]])
+  max_time <- max(model_ev$event_time_before_present, na.rm = TRUE)
+  if (!is.finite(max_time) || max_time <= 0) {
+    return(NULL)
+  }
+  breaks <- seq(0, max_time, length.out = n_bins + 1L)
+  bin_width <- max_time / n_bins
+  model_ev$bin <- findInterval(
+    model_ev$event_time_before_present, breaks,
+    rightmost.closed = TRUE, all.inside = TRUE
+  )
+
+  n_maps <- region_n_maps(event_summary, events, model)
+  replicates <- sort(unique(model_ev$replicate))
+  if (is.na(n_maps) || n_maps < length(replicates)) {
+    n_maps <- length(replicates)
+  }
+
+  combos <- unique(model_ev[, c("process_key", "process_label", "process_group", "event_region")])
+  bins <- seq_len(n_bins)
+
+  do.call(rbind, lapply(seq_len(nrow(combos)), function(i) {
+    sub <- model_ev[
+      model_ev$process_key == combos$process_key[[i]] &
+        model_ev$event_region == combos$event_region[[i]],
+      ,
+      drop = FALSE
+    ]
+    do.call(rbind, lapply(bins, function(b) {
+      in_bin <- sub[sub$bin == b, , drop = FALSE]
+      per_map <- rep(0, n_maps)
+      if (nrow(in_bin) > 0L) {
+        map_counts <- table(factor(in_bin$replicate, levels = replicates))
+        length(map_counts) <- n_maps
+        map_counts[is.na(map_counts)] <- 0
+        per_map <- as.numeric(map_counts)
+      }
+      mean_count <- mean(per_map)
+      data.frame(
+        model = model,
+        process_key = combos$process_key[[i]],
+        process_label = combos$process_label[[i]],
+        process_group = combos$process_group[[i]],
+        region = combos$event_region[[i]],
+        time_bin = b,
+        bin_start = breaks[[b]],
+        bin_end = breaks[[b + 1L]],
+        bin_midpoint = (breaks[[b]] + breaks[[b + 1L]]) / 2,
+        mean_count = mean_count,
+        sd_count = if (length(per_map) > 1L) stats::sd(per_map) else 0,
+        rate = if (bin_width > 0) mean_count / bin_width else NA_real_,
+        interpretation_note = "Mean BSM event count per map in the time bin, attributed to the region gained, lost, or colonized.",
+        stringsAsFactors = FALSE
+      )
+    }))
+  }))
+}
+
+#' Plot region-resolved process rates through time
+#'
+#' Draw the mean event count per stochastic map through time for each region,
+#' one panel per biogeographic process, so the regional timing of each process
+#' is read directly.
+#'
+#' @param region_process_rates A data frame from
+#'   [summarize_region_process_rates_through_time()].
+#' @param process Optional process key(s) or label(s) to restrict the plot to.
+#' @return A ggplot object.
+#' @export
+plot_region_process_rates_through_time <- function(region_process_rates, process = NULL) {
+  required <- c("model", "process_label", "region", "bin_midpoint", "mean_count")
+  missing <- setdiff(required, names(region_process_rates))
+  if (length(missing) > 0L) {
+    stop("region_process_rates is missing required columns: ", paste(missing, collapse = ", "), call. = FALSE)
+  }
+  data <- region_process_rates
+  if (!is.null(process)) {
+    data <- data[data$process_label %in% process | data$process_key %in% process, , drop = FALSE]
+  }
+  if (nrow(data) == 0L) {
+    stop("region_process_rates has no rows to plot.", call. = FALSE)
+  }
+
+  facets <- if (length(unique(data$model)) > 1L) {
+    ggplot2::facet_grid(stats::as.formula("process_label ~ model"), scales = "free_y")
+  } else {
+    ggplot2::facet_wrap(stats::as.formula("~ process_label"), scales = "free_y")
+  }
+
+  ggplot2::ggplot(data, ggplot2::aes(x = bin_midpoint, y = mean_count, colour = region)) +
+    ggplot2::geom_line(linewidth = 0.8) +
+    ggplot2::geom_point(size = 1.4) +
+    ggplot2::scale_x_reverse() +
+    scale_colour_ibgb() +
+    facets +
+    ggplot2::labs(
+      x = "Time before present",
+      y = "Mean events per stochastic map",
+      colour = "Region",
+      title = "Region-resolved process rates through time",
+      subtitle = "One panel per process; each region shows the timing of events it gained, lost, or was colonized by"
+    ) +
+    theme_ibgb()
+}
+
+empty_region_process_rates_table <- function() {
+  data.frame(
+    model = character(),
+    process_key = character(),
+    process_label = character(),
+    process_group = character(),
+    region = character(),
+    time_bin = integer(),
+    bin_start = numeric(),
+    bin_end = numeric(),
+    bin_midpoint = numeric(),
+    mean_count = numeric(),
+    sd_count = numeric(),
+    rate = numeric(),
+    interpretation_note = character(),
+    stringsAsFactors = FALSE
+  )
+}
+
 empty_process_rates_table <- function() {
   data.frame(
     model = character(),

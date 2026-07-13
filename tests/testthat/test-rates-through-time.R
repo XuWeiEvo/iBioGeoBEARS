@@ -56,3 +56,60 @@ test_that("plot_process_rates_through_time returns a ggplot", {
     "missing required columns"
   )
 })
+
+make_region_rates_bsm_tables <- function() {
+  events <- data.frame(
+    model = "DEC",
+    replicate = c(1L, 2L, 1L),
+    event_type = c("d", "d", "e"),
+    event_time_before_present = c(2, 7, 5),
+    target_region = c("A", "B", NA),
+    extirpation_region = c(NA, NA, "A"),
+    source_region = c(NA, NA, NA),
+    stringsAsFactors = FALSE
+  )
+  event_summary <- data.frame(
+    model = "DEC", event_type = "total_events", mean_count = 1.5, replicate_count = 2L,
+    stringsAsFactors = FALSE
+  )
+  list(bsm_events = events, bsm_event_summary = event_summary)
+}
+
+test_that("summarize_region_process_rates_through_time attributes events to regions", {
+  out <- summarize_region_process_rates_through_time(make_region_rates_bsm_tables(), n_bins = 2L)
+
+  # 3 process-region combos x 2 bins.
+  expect_equal(nrow(out), 6L)
+  expect_setequal(unique(out$region), c("A", "B"))
+
+  rexp_a <- out[out$process_key == "range_expansion" & out$region == "A", , drop = FALSE]
+  rexp_a <- rexp_a[order(rexp_a$time_bin), , drop = FALSE]
+  expect_equal(rexp_a$mean_count[[1]], 0.5) # dispersal into A in the recent bin
+  expect_equal(rexp_a$mean_count[[2]], 0)
+
+  rexp_b <- out[out$process_key == "range_expansion" & out$region == "B", , drop = FALSE]
+  expect_equal(rexp_b$mean_count[rexp_b$time_bin == 2], 0.5)
+
+  # Local extinction is attributed to the extirpation region.
+  ext_a <- out[out$process_key == "local_extinction" & out$region == "A", , drop = FALSE]
+  expect_equal(ext_a$mean_count[ext_a$time_bin == 2], 0.5)
+})
+
+test_that("summarize_region_process_rates_through_time returns an empty table without region events", {
+  empty_cols <- names(summarize_region_process_rates_through_time(list()))
+  expect_equal(nrow(summarize_region_process_rates_through_time(list())), 0L)
+  expect_true("region" %in% empty_cols)
+})
+
+test_that("plot_region_process_rates_through_time returns a ggplot and filters by process", {
+  rates <- summarize_region_process_rates_through_time(make_region_rates_bsm_tables(), n_bins = 2L)
+  expect_s3_class(plot_region_process_rates_through_time(rates), "ggplot")
+  expect_s3_class(
+    plot_region_process_rates_through_time(rates, process = "range_expansion"),
+    "ggplot"
+  )
+  expect_error(
+    plot_region_process_rates_through_time(data.frame(model = "DEC")),
+    "missing required columns"
+  )
+})
