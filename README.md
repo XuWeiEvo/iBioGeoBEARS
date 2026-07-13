@@ -461,6 +461,7 @@ results/example_clade/
     bsm_event_times.csv
     biogeographic_process_summary.csv
     region_process_budgets.csv
+    process_rates_through_time.csv
     model_sensitivity.rds
   figures/
     figure_manifest.csv
@@ -486,6 +487,7 @@ results/example_clade/
     bsm_dispersal_routes.png
     biogeographic_process_synthesis.png
     region_process_budget.png
+    process_rates_through_time.png
   reports/
     summary_report.qmd
     summary_report.html
@@ -618,6 +620,10 @@ The main derived tables are:
   immigration, emigration, net dispersal flux (immigration minus emigration, so
   a positive value is a net sink and a negative value a net source), local
   extinction, and total dispersal. Net flux sums to zero across regions.
+- `process_rates_through_time.csv`: per-process event counts binned by time
+  before present, with the mean and standard deviation of the count per
+  stochastic map and the mean rate (events per unit time) in each bin. Counts
+  sum across bins to the per-process synthesis mean.
 
 ## Figures
 
@@ -641,6 +647,9 @@ Workflow execution generates:
 - `biogeographic_process_synthesis`: the centerpiece synthesis figure of mean
   BSM event counts per named biogeographic process, coloured by process class
   (cladogenetic speciation modes versus anagenetic range changes).
+- `process_rates_through_time`: mean BSM event counts per stochastic map through
+  time for each biogeographic process, with standard-deviation ribbons, split
+  into cladogenetic and anagenetic process groups.
 - `region_process_budget`: a diverging bar chart of the per-region dispersal
   budget (immigration versus emigration) with net dispersal flux marked, so net
   source and net sink regions are read directly.

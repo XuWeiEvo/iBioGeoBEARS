@@ -41,6 +41,7 @@ bsm_run_status <- read_table_if_exists("bsm_run_status.csv")
 bsm_event_summary <- read_table_if_exists("bsm_event_summary.csv")
 biogeographic_process_summary <- read_table_if_exists("biogeographic_process_summary.csv")
 region_process_budgets <- read_table_if_exists("region_process_budgets.csv")
+process_rates_through_time <- read_table_if_exists("process_rates_through_time.csv")
 bsm_replicate_counts <- read_table_if_exists("bsm_replicate_counts.csv")
 bsm_dispersal_routes <- read_table_if_exists("bsm_dispersal_routes.csv")
 bsm_events <- read_table_if_exists("bsm_events.csv")
@@ -472,6 +473,37 @@ if (!is.null(region_process_budgets) && nrow(region_process_budgets) > 0) {
   print_table(region_process_budgets[intersect(region_budget_cols, names(region_process_budgets))])
 } else {
   cat("Regional dispersal budgets are available only when BSM stochastic mapping was run.\n")
+}
+```
+
+#### Process rates through time
+
+Sampled BSM events are binned by time before present to show when each
+biogeographic process occurred. Values are the mean event count per stochastic
+map in each time bin; counts sum across bins to the per-process synthesis mean.
+
+```{r}
+process_rates_png <- figure_path("process_rates_through_time")
+if (!is.null(process_rates_png)) {
+  knitr::include_graphics(process_rates_png)
+}
+```
+
+```{r}
+if (!is.null(process_rates_through_time) && nrow(process_rates_through_time) > 0) {
+  rate_cols <- c(
+    "model", "process_group", "process_label", "time_bin",
+    "bin_start", "bin_end", "mean_count", "sd_count", "rate"
+  )
+  rate_rows <- process_rates_through_time[
+    order(process_rates_through_time$model, process_rates_through_time$process_group,
+          process_rates_through_time$process_label, process_rates_through_time$time_bin),
+    ,
+    drop = FALSE
+  ]
+  print_table(utils::head(rate_rows[intersect(rate_cols, names(rate_rows))], 40L))
+} else {
+  cat("Process rates through time are available only when BSM stochastic mapping was run.\n")
 }
 ```
 
