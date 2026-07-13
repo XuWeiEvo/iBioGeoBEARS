@@ -138,24 +138,33 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
             )
           ),
           shiny_collapsible_section(
-            "Advanced: config editor",
-            shiny::checkboxInput("use_config_editor", "Use GUI config overrides", value = FALSE),
-            shiny::textInput("project_name", "Project name", value = ""),
-            shiny::textInput("tree_file", "Tree file", value = ""),
-            shiny::textInput("geography_file", "Geography file", value = ""),
-            shiny::textInput("regions_file", "Regions file", value = ""),
-            shiny::textInput("max_range_size", "Max range size", value = ""),
-            shiny::checkboxGroupInput("models_run", "Models", choices = valid_models(), selected = valid_models()),
-            shiny::tags$div(class = "ibgb-key-files-title", "Advanced constraints"),
+            "\u9ad8\u7ea7\uff1a\u914d\u7f6e\u7f16\u8f91\u5668",
+            shiny::checkboxInput("use_config_editor", "\u4f7f\u7528\u754c\u9762\u914d\u7f6e\u8986\u76d6", value = FALSE),
+            shiny::textInput("project_name", "\u9879\u76ee\u540d", value = ""),
+            shiny::textInput("tree_file", "\u7cfb\u7edf\u6811\u6587\u4ef6", value = ""),
+            shiny::textInput("geography_file", "\u5206\u5e03\u77e9\u9635\u6587\u4ef6", value = ""),
+            shiny::textInput("regions_file", "\u533a\u57df\u4fe1\u606f\u6587\u4ef6", value = ""),
+            shiny::textInput("max_range_size", "\u6700\u5927\u5206\u5e03\u533a\u6570\u91cf", value = ""),
+            shiny::checkboxGroupInput("models_run", "\u6a21\u578b", choices = valid_models(), selected = valid_models()),
+            shiny::tags$div(class = "ibgb-key-files-title", "\u9ad8\u7ea7\u7ea6\u675f"),
             shiny_constraint_inputs()
           ),
           shiny_collapsible_section(
             "\u9ad8\u7ea7\uff1a\u8fd0\u884c\u9009\u9879",
-            shiny::checkboxInput("dry_run", "Dry run\uff1a\u53ea\u68c0\u67e5\uff0c\u4e0d\u771f\u6b63\u8fd0\u884c BioGeoBEARS", value = TRUE),
+            shiny::checkboxInput("dry_run", "\u8bd5\u8fd0\u884c\uff1a\u53ea\u68c0\u67e5\uff0c\u4e0d\u771f\u6b63\u8fd0\u884c BioGeoBEARS", value = TRUE),
             shiny::checkboxInput("require_biogeobears", "\u771f\u5b9e\u8fd0\u884c\u65f6\u8981\u6c42 BioGeoBEARS \u53ef\u7528", value = FALSE),
-            shiny::checkboxInput("resume_completed_models", "Reuse completed models", value = TRUE),
-            shiny::checkboxInput("retry_failed_only", "Retry failed models only", value = FALSE),
-            shiny::checkboxInput("force", "Force execution after validation failure", value = FALSE)
+            shiny::checkboxInput("resume_completed_models", "\u590d\u7528\u5df2\u5b8c\u6210\u7684\u6a21\u578b", value = TRUE),
+            shiny::checkboxInput("retry_failed_only", "\u53ea\u91cd\u8dd1\u5931\u8d25\u7684\u6a21\u578b", value = FALSE),
+            shiny::checkboxInput("force", "\u9a8c\u8bc1\u5931\u8d25\u540e\u5f3a\u5236\u8fd0\u884c", value = FALSE),
+            shiny::checkboxInput("run_stochastic_mapping", "\u8fd0\u884c BSM \u968f\u673a\u6620\u5c04", value = FALSE),
+            shiny::selectInput(
+              "stochastic_mapping_model",
+              "BSM \u4f7f\u7528\u7684\u6a21\u578b",
+              choices = c("\u6700\u4f18\u7edf\u8ba1\u6a21\u578b" = "best", "\u6700\u4f18\u975e +J \u6a21\u578b" = "best_non_j", "\u6700\u4f18 +J \u6a21\u578b" = "best_plus_j", "\u6240\u6709\u5df2\u5b8c\u6210\u6a21\u578b" = "all"),
+              selected = "best"
+            ),
+            shiny::numericInput("stochastic_mapping_replicates", "BSM \u6620\u5c04\u6b21\u6570", value = 100L, min = 1L, step = 1L),
+            shiny::numericInput("stochastic_mapping_seed", "BSM \u968f\u673a\u79cd\u5b50", value = 1L, min = 1L, step = 1L)
           ),
           shiny_collapsible_section(
             "\u5bfc\u51fa\u548c\u6392\u9519",
@@ -191,56 +200,70 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
               "\u9ad8\u7ea7\u7ed3\u679c",
               shiny::tabsetPanel(
                 shiny::tabPanel(
-                  "Run Summary",
-                  shiny::tags$div(class = "ibgb-key-files-title", "Key files"),
+                  "\u8fd0\u884c\u6458\u8981",
+                  shiny::tags$div(class = "ibgb-key-files-title", "\u5173\u952e\u6587\u4ef6"),
                   shiny::tableOutput("key_files_table"),
                   shiny::tableOutput("run_summary_table")
                 ),
-                shiny::tabPanel("Validation", shiny::tableOutput("validation_table")),
+                shiny::tabPanel("\u8f93\u5165\u9a8c\u8bc1", shiny::tableOutput("validation_table")),
                 shiny::tabPanel(
-                  "Model Comparison",
-                  shiny::tags$div(class = "ibgb-key-files-title", "Fit summary"),
+                  "\u6a21\u578b\u6bd4\u8f83",
+                  shiny::tags$div(class = "ibgb-key-files-title", "\u62df\u5408\u6458\u8981"),
                   shiny::tableOutput("model_fit_summary_table"),
-                  shiny::tags$div(class = "ibgb-key-files-title", "Model comparison details"),
+                  shiny::tags$div(class = "ibgb-key-files-title", "\u6a21\u578b\u6bd4\u8f83\u8be6\u60c5"),
                   shiny::tableOutput("model_comparison_table")
                 ),
                 shiny::tabPanel(
-                  "+J Sensitivity",
-                  shiny::tags$div(class = "ibgb-key-files-title", "+J sensitivity summary"),
+                  "+J \u654f\u611f\u6027",
+                  shiny::tags$div(class = "ibgb-key-files-title", "+J \u654f\u611f\u6027\u6458\u8981"),
                   shiny::tableOutput("plus_j_summary_table"),
-                  shiny::tags$div(class = "ibgb-key-files-title", "+J sensitivity details"),
+                  shiny::tags$div(class = "ibgb-key-files-title", "+J \u654f\u611f\u6027\u8be6\u60c5"),
                   shiny::tableOutput("model_sensitivity_table")
                 ),
-                shiny::tabPanel("Node States", shiny::tableOutput("node_state_summary_table")),
-                shiny::tabPanel("Node Sensitivity", shiny::tableOutput("node_state_sensitivity_table")),
-                shiny::tabPanel("Best-Fit Events", shiny::tableOutput("best_fit_events_table")),
-                shiny::tabPanel("Event Details", shiny::tableOutput("range_change_events_table")),
-                shiny::tabPanel("Manifest", shiny::tableOutput("manifest_table")),
+                shiny::tabPanel("\u8282\u70b9\u72b6\u6001", shiny::tableOutput("node_state_summary_table")),
+                shiny::tabPanel("\u8282\u70b9\u654f\u611f\u6027", shiny::tableOutput("node_state_sensitivity_table")),
+                shiny::tabPanel("\u6700\u4f18\u6a21\u578b\u4e8b\u4ef6", shiny::tableOutput("best_fit_events_table")),
+                shiny::tabPanel("\u4e8b\u4ef6\u8be6\u60c5", shiny::tableOutput("range_change_events_table")),
                 shiny::tabPanel(
-                  "Figure Dashboard",
+                  "BSM",
+                  shiny::tags$div(class = "ibgb-key-files-title", "BSM \u8fd0\u884c\u72b6\u6001"),
+                  shiny::tableOutput("bsm_run_status_table"),
+                  shiny::tags$div(class = "ibgb-key-files-title", "BSM \u4e8b\u4ef6\u6458\u8981"),
+                  shiny::tableOutput("bsm_event_summary_table"),
+                  shiny::tags$div(class = "ibgb-key-files-title", "BSM \u6269\u6563\u8def\u7ebf"),
+                  shiny::tableOutput("bsm_dispersal_routes_table"),
+                  shiny::tags$div(class = "ibgb-key-files-title", "BSM \u4e8b\u4ef6\u65f6\u95f4"),
+                  shiny::tableOutput("bsm_event_times_table")
+                ),
+                shiny::tabPanel("\u6587\u4ef6\u6e05\u5355", shiny::tableOutput("manifest_table")),
+                shiny::tabPanel(
+                  "\u56fe\u8868\u9762\u677f",
                   shiny::tableOutput("figure_dashboard_table"),
                   shiny::tags$div(
                     class = "ibgb-figure-dashboard",
-                    shiny_figure_panel("Model Comparison", "figure_model_comparison"),
-                    shiny_figure_panel("Root State Probabilities", "figure_root_states"),
-                    shiny_figure_panel("Best Model Node States", "figure_node_best"),
-                    shiny_figure_panel("Best Non-+J Node States", "figure_node_non_j"),
-                    shiny_figure_panel("Best +J Node States", "figure_node_plus_j"),
-                    shiny_figure_panel("Node-State Sensitivity", "figure_node_sensitivity"),
-                    shiny_figure_panel("Event Summary", "figure_event_summary")
+                    shiny_figure_panel("\u6a21\u578b\u6bd4\u8f83", "figure_model_comparison"),
+                    shiny_figure_panel("\u6839\u72b6\u6001\u6982\u7387", "figure_root_states"),
+                    shiny_figure_panel("\u6700\u4f18\u6a21\u578b\u8282\u70b9\u72b6\u6001", "figure_node_best"),
+                    shiny_figure_panel("\u6700\u4f18\u975e +J \u8282\u70b9\u72b6\u6001", "figure_node_non_j"),
+                    shiny_figure_panel("\u6700\u4f18 +J \u8282\u70b9\u72b6\u6001", "figure_node_plus_j"),
+                    shiny_figure_panel("\u8282\u70b9\u72b6\u6001\u654f\u611f\u6027", "figure_node_sensitivity"),
+                    shiny_figure_panel("\u4e8b\u4ef6\u7edf\u8ba1", "figure_event_summary"),
+                    shiny_figure_panel("BSM \u4e8b\u4ef6\u6458\u8981", "figure_bsm_event_summary"),
+                    shiny_figure_panel("BSM \u4e8b\u4ef6\u65f6\u95f4", "figure_bsm_event_times"),
+                    shiny_figure_panel("BSM \u6269\u6563\u8def\u7ebf", "figure_bsm_dispersal_routes")
                   )
                 ),
                 shiny::tabPanel(
-                  "Tables",
-                  shiny::tags$div(class = "ibgb-key-files-title", "Table status"),
+                  "\u6570\u636e\u8868",
+                  shiny::tags$div(class = "ibgb-key-files-title", "\u6570\u636e\u8868\u72b6\u6001"),
                   shiny::tableOutput("table_status_table"),
-                  shiny::selectInput("table_preview", "Table", choices = c("No CSV tables available" = "")),
+                  shiny::selectInput("table_preview", "\u9009\u62e9\u6570\u636e\u8868", choices = c("\u6682\u65e0\u53ef\u7528\u7684 CSV \u6570\u636e\u8868" = "")),
                   shiny::tableOutput("table_preview_output"),
                   shiny::verbatimTextOutput("table_path_text")
                 ),
                 shiny::tabPanel(
-                  "Figures",
-                  shiny::selectInput("figure_preview", "Figure", choices = c("No PNG figures available" = "")),
+                  "\u56fe\u7247",
+                  shiny::selectInput("figure_preview", "\u9009\u62e9\u56fe\u7247", choices = c("\u6682\u65e0\u53ef\u7528\u7684 PNG \u56fe\u7247" = "")),
                   shiny::div(class = "ibgb-preview", shiny::imageOutput("figure_image")),
                   shiny::verbatimTextOutput("figure_path_text")
                 )
@@ -248,19 +271,19 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
             ),
             shiny::tabPanel(
               "\u6392\u9519",
-              shiny::tags$div(class = "ibgb-key-files-title", "Warning summary"),
+              shiny::tags$div(class = "ibgb-key-files-title", "\u8b66\u544a\u6458\u8981"),
               shiny::tableOutput("warning_summary_table"),
-              shiny::tags$div(class = "ibgb-key-files-title", "Warning details"),
+              shiny::tags$div(class = "ibgb-key-files-title", "\u8b66\u544a\u8be6\u60c5"),
               shiny::tableOutput("warnings_table"),
-              shiny::tags$div(class = "ibgb-key-files-title", "Failed model diagnostics"),
+              shiny::tags$div(class = "ibgb-key-files-title", "\u5931\u8d25\u6a21\u578b\u8bca\u65ad"),
               shiny::tableOutput("failed_models_table"),
-              shiny::tags$div(class = "ibgb-key-files-title", "Model status details"),
+              shiny::tags$div(class = "ibgb-key-files-title", "\u6a21\u578b\u72b6\u6001\u8be6\u60c5"),
               shiny::tableOutput("model_table"),
-              shiny::tags$div(class = "ibgb-key-files-title", "Report"),
+              shiny::tags$div(class = "ibgb-key-files-title", "\u62a5\u544a"),
               shiny::verbatimTextOutput("report_path_text"),
-              shiny::tags$div(class = "ibgb-key-files-title", "Paths"),
+              shiny::tags$div(class = "ibgb-key-files-title", "\u8def\u5f84"),
               shiny::verbatimTextOutput("paths_text"),
-              shiny::tags$div(class = "ibgb-key-files-title", "Messages"),
+              shiny::tags$div(class = "ibgb-key-files-title", "\u6d88\u606f"),
               shiny::verbatimTextOutput("messages_text")
             ),
             shiny::tabPanel(
@@ -338,9 +361,15 @@ shiny_primary_results_panel <- function() {
     shiny::tags$div(
       class = "ibgb-primary-result",
       shiny::tags$h4("3. \u4e8b\u4ef6\u7edf\u8ba1"),
-      shiny::tags$p("\u5f53\u524d\u4e8b\u4ef6\u7edf\u8ba1\u6765\u81ea\u6bcf\u6761\u5206\u652f\u6700\u9ad8\u6982\u7387\u7956\u5148\u72b6\u6001\u7684\u53d8\u5316\uff0c\u4e0d\u7b49\u540c\u4e8e stochastic mapping \u7684\u4e8b\u4ef6\u8ba1\u6570\u3002"),
+      shiny::tags$p("\u5982\u679c\u8fd0\u884c\u4e86 BSM \u968f\u673a\u6620\u5c04\uff0c\u8fd9\u91cc\u4f18\u5148\u663e\u793a BSM \u7ed3\u679c\uff1b\u5426\u5219\u663e\u793a\u57fa\u4e8e\u6700\u9ad8\u6982\u7387\u7956\u5148\u72b6\u6001\u7684\u786e\u5b9a\u6027\u4e8b\u4ef6\u7edf\u8ba1\u4f5c\u4e3a\u66ff\u4ee3\u3002"),
+      shiny::tableOutput("primary_bsm_event_summary_table"),
+      shiny::imageOutput("primary_figure_bsm_event_summary"),
+      shiny::tags$h4("BSM \u4e8b\u4ef6\u65f6\u95f4\u4e0e\u65b9\u5411"),
+      shiny::tableOutput("primary_bsm_event_times_table"),
+      shiny::imageOutput("primary_figure_bsm_dispersal_routes"),
+      shiny::tags$h4("\u786e\u5b9a\u6027\u66ff\u4ee3\u4e8b\u4ef6\u7edf\u8ba1"),
       shiny::tableOutput("primary_event_summary_table"),
-      shiny::tags$h4("Best-fit model \u4e8b\u4ef6\u65f6\u95f4\u548c\u65b9\u5411"),
+      shiny::tags$h4("\u6700\u4f18\u6a21\u578b\u4e8b\u4ef6\u65f6\u95f4\u548c\u65b9\u5411"),
       shiny::tags$p("\u65f6\u95f4\u4e3a\u5206\u652f\u4e2d\u70b9\u8fd1\u4f3c\u503c\uff0c\u5355\u4f4d\u4e0e\u8f93\u5165\u6811\u5206\u652f\u957f\u5ea6\u4e00\u81f4\uff1b\u65b9\u5411\u6765\u81ea\u6700\u9ad8\u6982\u7387\u7956\u5148\u72b6\u6001\u7684\u53d8\u5316\u3002"),
       shiny::tableOutput("primary_best_fit_events_table"),
       shiny::imageOutput("primary_figure_event_summary")
@@ -370,12 +399,12 @@ shiny_constraint_fields <- function() {
       "area_of_areas_file"
     ),
     label = c(
-      "Times file",
-      "Distances file",
-      "Dispersal multipliers file",
-      "Areas allowed file",
-      "Areas adjacency file",
-      "Area-of-areas file"
+      "\u65f6\u95f4\u5206\u5c42\u6587\u4ef6",
+      "\u8ddd\u79bb\u6587\u4ef6",
+      "\u6269\u6563\u4e58\u6570\u6587\u4ef6",
+      "\u5141\u8bb8\u5206\u5e03\u533a\u6587\u4ef6",
+      "\u533a\u57df\u76f8\u90bb\u6587\u4ef6",
+      "\u533a\u57df\u9762\u79ef\u6587\u4ef6"
     ),
     stringsAsFactors = FALSE
   )
@@ -403,8 +432,8 @@ iBGB_shiny_server <- function(input, output, session) {
         diagnostic_bundle = NULL,
         installation = check_installation(),
         install_plan = biogeobears_install_plan(),
-        message = "Configuration ready. Validate inputs before running.",
-        messages = "Configuration ready. Validate inputs before running.",
+        message = "\u914d\u7f6e\u5c31\u7eea\u3002\u8fd0\u884c\u524d\u8bf7\u5148\u68c0\u67e5\u8f93\u5165\u3002",
+        messages = "\u914d\u7f6e\u5c31\u7eea\u3002\u8fd0\u884c\u524d\u8bf7\u5148\u68c0\u67e5\u8f93\u5165\u3002",
         status_type = "info"
       )
   session$userData$state <- state
@@ -852,6 +881,30 @@ iBGB_shiny_server <- function(input, output, session) {
         table_head(shiny_best_fit_events_table(state), 80L)
       }, striped = TRUE, bordered = TRUE, na = "")
 
+      output$bsm_run_status_table <- shiny::renderTable({
+        table_head(shiny_bsm_run_status_table(state), 20L)
+      }, striped = TRUE, bordered = TRUE, na = "")
+
+      output$bsm_event_summary_table <- shiny::renderTable({
+        table_head(shiny_bsm_event_summary_table(state), 30L)
+      }, striped = TRUE, bordered = TRUE, na = "")
+
+      output$bsm_dispersal_routes_table <- shiny::renderTable({
+        table_head(shiny_bsm_dispersal_routes_table(state), 50L)
+      }, striped = TRUE, bordered = TRUE, na = "")
+
+      output$bsm_event_times_table <- shiny::renderTable({
+        table_head(shiny_bsm_event_times_table(state), 80L)
+      }, striped = TRUE, bordered = TRUE, na = "")
+
+      output$primary_bsm_event_summary_table <- shiny::renderTable({
+        table_head(shiny_primary_bsm_event_summary_table(state), 20L)
+      }, striped = TRUE, bordered = TRUE, na = "")
+
+      output$primary_bsm_event_times_table <- shiny::renderTable({
+        table_head(shiny_primary_bsm_event_times_table(state), 20L)
+      }, striped = TRUE, bordered = TRUE, na = "")
+
       output$manifest_table <- shiny::renderTable({
         table_head(state$manifest, 30L)
       }, striped = TRUE, bordered = TRUE, na = "")
@@ -918,6 +971,26 @@ iBGB_shiny_server <- function(input, output, session) {
 
       output$primary_figure_event_summary <- shiny::renderImage({
         shiny_named_figure_image(state, "event_summary")
+      }, deleteFile = FALSE)
+
+      output$figure_bsm_event_summary <- shiny::renderImage({
+        shiny_named_figure_image(state, "bsm_event_summary")
+      }, deleteFile = FALSE)
+
+      output$primary_figure_bsm_event_summary <- shiny::renderImage({
+        shiny_named_figure_image(state, "bsm_event_summary")
+      }, deleteFile = FALSE)
+
+      output$figure_bsm_event_times <- shiny::renderImage({
+        shiny_named_figure_image(state, "bsm_event_times")
+      }, deleteFile = FALSE)
+
+      output$figure_bsm_dispersal_routes <- shiny::renderImage({
+        shiny_named_figure_image(state, "bsm_dispersal_routes")
+      }, deleteFile = FALSE)
+
+      output$primary_figure_bsm_dispersal_routes <- shiny::renderImage({
+        shiny_named_figure_image(state, "bsm_dispersal_routes")
       }, deleteFile = FALSE)
 
       output$table_preview_output <- shiny::renderTable({
@@ -1294,6 +1367,12 @@ load_existing_workflow_result <- function(output_dir, refresh_manifest = TRUE) {
   best_fit_events <- read_existing_output_table(project_paths, "best_fit_events.csv")
   range_change_events <- read_existing_output_table(project_paths, "range_change_events.csv")
   event_summary <- read_existing_output_table(project_paths, "event_summary.csv")
+  bsm_run_status <- read_existing_output_table(project_paths, "bsm_run_status.csv")
+  bsm_event_summary <- read_existing_output_table(project_paths, "bsm_event_summary.csv")
+  bsm_replicate_counts <- read_existing_output_table(project_paths, "bsm_replicate_counts.csv")
+  bsm_dispersal_routes <- read_existing_output_table(project_paths, "bsm_dispersal_routes.csv")
+  bsm_events <- read_existing_output_table(project_paths, "bsm_events.csv")
+  bsm_event_times <- read_existing_output_table(project_paths, "bsm_event_times.csv")
   figure_manifest <- read_existing_figure_manifest(project_paths)
 
   standardized_tables <- list(
@@ -1306,7 +1385,13 @@ load_existing_workflow_result <- function(output_dir, refresh_manifest = TRUE) {
     node_state_sensitivity = node_state_sensitivity %||% data.frame(),
     best_fit_events = best_fit_events %||% data.frame(),
     range_change_events = range_change_events %||% data.frame(),
-    event_summary = event_summary %||% data.frame()
+    event_summary = event_summary %||% data.frame(),
+    bsm_run_status = bsm_run_status %||% data.frame(),
+    bsm_event_summary = bsm_event_summary %||% data.frame(),
+    bsm_replicate_counts = bsm_replicate_counts %||% data.frame(),
+    bsm_dispersal_routes = bsm_dispersal_routes %||% data.frame(),
+    bsm_events = bsm_events %||% data.frame(),
+    bsm_event_times = bsm_event_times %||% data.frame()
   )
 
   result <- list(
@@ -1321,6 +1406,14 @@ load_existing_workflow_result <- function(output_dir, refresh_manifest = TRUE) {
     model_sensitivity_table = model_sensitivity_table,
     node_state_sensitivity = node_state_sensitivity,
     best_fit_events = best_fit_events,
+    bsm_tables = list(
+      bsm_run_status = bsm_run_status %||% data.frame(),
+      bsm_event_summary = bsm_event_summary %||% data.frame(),
+      bsm_replicate_counts = bsm_replicate_counts %||% data.frame(),
+      bsm_dispersal_routes = bsm_dispersal_routes %||% data.frame(),
+      bsm_events = bsm_events %||% data.frame(),
+      bsm_event_times = bsm_event_times %||% data.frame()
+    ),
     standardized_tables = standardized_tables,
     figure_manifest = figure_manifest,
     workflow_manifest = workflow_manifest,
@@ -2122,6 +2215,8 @@ shiny_key_file_specs <- function() {
       "Model comparison CSV",
       "Event summary CSV",
       "Best-fit events CSV",
+      "BSM event summary CSV",
+      "BSM event times CSV",
       "+J sensitivity CSV",
       "Workflow manifest CSV",
       "Report",
@@ -2133,6 +2228,8 @@ shiny_key_file_specs <- function() {
       "tables/model_comparison.csv",
       "tables/event_summary.csv",
       "tables/best_fit_events.csv",
+      "tables/bsm_event_summary.csv",
+      "tables/bsm_event_times.csv",
       "tables/model_sensitivity.csv",
       "tables/workflow_manifest.csv",
       "reports/summary_report.html",
@@ -2144,6 +2241,8 @@ shiny_key_file_specs <- function() {
       "Run or load workflow results.",
       "Run or load workflow results with ancestral-state outputs.",
       "Run or load workflow results with ancestral-state outputs.",
+      "Enable BSM stochastic mapping, then run workflow.",
+      "Enable BSM stochastic mapping, then run workflow.",
       "Run or load workflow results.",
       "Run or load workflow results, then refresh key files.",
       "Click Render report.",
@@ -2660,6 +2759,98 @@ shiny_range_change_events_table <- function(state) {
   table[, intersect(cols, names(table)), drop = FALSE]
 }
 
+shiny_bsm_run_status_table <- function(state) {
+  table <- state$result$bsm_tables$bsm_run_status %||%
+    state$result$standardized_tables$bsm_run_status %||%
+    read_workflow_table(state$result, "bsm_run_status.csv")
+  if (is.null(table) || nrow(table) == 0L) {
+    return(data.frame(
+      status = "BSM not run",
+      next_step = "Enable Run BSM stochastic mapping in Advanced run options, then run a real workflow.",
+      stringsAsFactors = FALSE
+    ))
+  }
+  cols <- c(
+    "model", "status", "requested_maps", "completed_maps",
+    "maxtries_per_branch", "seed", "warning_count", "error_message", "log_file"
+  )
+  table[, intersect(cols, names(table)), drop = FALSE]
+}
+
+shiny_bsm_event_summary_table <- function(state) {
+  table <- state$result$bsm_tables$bsm_event_summary %||%
+    state$result$standardized_tables$bsm_event_summary %||%
+    read_workflow_table(state$result, "bsm_event_summary.csv")
+  if (is.null(table) || nrow(table) == 0L) {
+    return(data.frame())
+  }
+  if ("mean_count" %in% names(table)) {
+    table <- table[order(table$model, -table$mean_count), , drop = FALSE]
+  }
+  cols <- c("model", "event_label", "mean_count", "sd_count", "sum_count", "replicate_count", "interpretation_note")
+  table[, intersect(cols, names(table)), drop = FALSE]
+}
+
+shiny_primary_bsm_event_summary_table <- function(state) {
+  table <- shiny_bsm_event_summary_table(state)
+  if (nrow(table) == 0L) {
+    return(data.frame(
+      event = "No BSM summary available",
+      mean_count = NA_real_,
+      next_step = "For paper-ready event counts, enable BSM stochastic mapping and run a real workflow.",
+      stringsAsFactors = FALSE
+    ))
+  }
+  cols <- c("model", "event_label", "mean_count", "sd_count", "replicate_count")
+  table[, intersect(cols, names(table)), drop = FALSE]
+}
+
+shiny_bsm_dispersal_routes_table <- function(state) {
+  table <- state$result$bsm_tables$bsm_dispersal_routes %||%
+    state$result$standardized_tables$bsm_dispersal_routes %||%
+    read_workflow_table(state$result, "bsm_dispersal_routes.csv")
+  if (is.null(table) || nrow(table) == 0L) {
+    return(data.frame())
+  }
+  if ("mean_count" %in% names(table)) {
+    table <- table[!is.na(table$mean_count) & table$mean_count > 0, , drop = FALSE]
+    table <- table[order(table$model, table$route_type, -table$mean_count), , drop = FALSE]
+  }
+  cols <- c("model", "route_type", "direction_label", "source_region", "target_region", "mean_count", "sd_count")
+  table[, intersect(cols, names(table)), drop = FALSE]
+}
+
+shiny_bsm_event_times_table <- function(state) {
+  table <- state$result$bsm_tables$bsm_event_times %||%
+    state$result$standardized_tables$bsm_event_times %||%
+    read_workflow_table(state$result, "bsm_event_times.csv")
+  if (is.null(table) || nrow(table) == 0L) {
+    return(data.frame())
+  }
+  if ("event_time_before_present" %in% names(table)) {
+    table <- table[order(table$model, table$replicate, -table$event_time_before_present), , drop = FALSE]
+  }
+  cols <- c(
+    "model", "replicate", "event_class", "event_label",
+    "event_time_before_present", "direction_label", "parent_state",
+    "child_state", "node_label"
+  )
+  table[, intersect(cols, names(table)), drop = FALSE]
+}
+
+shiny_primary_bsm_event_times_table <- function(state) {
+  table <- shiny_bsm_event_times_table(state)
+  if (nrow(table) == 0L) {
+    return(data.frame(
+      event = "No BSM event-time table available",
+      time = NA_real_,
+      direction = "Run BSM stochastic mapping to estimate event timing and source-target directions.",
+      stringsAsFactors = FALSE
+    ))
+  }
+  table
+}
+
 best_model_name <- function(comparison) {
   if (is.null(comparison) || nrow(comparison) == 0L || !"model" %in% names(comparison)) {
     return(NULL)
@@ -2718,6 +2909,10 @@ shiny_table_status_specs <- function() {
       "Event summary",
       "Best-fit events",
       "Range-change events",
+      "BSM run status",
+      "BSM event summary",
+      "BSM dispersal routes",
+      "BSM event times",
       "+J sensitivity",
       "Model parameters",
       "Root states",
@@ -2733,6 +2928,10 @@ shiny_table_status_specs <- function() {
       "tables/event_summary.csv",
       "tables/best_fit_events.csv",
       "tables/range_change_events.csv",
+      "tables/bsm_run_status.csv",
+      "tables/bsm_event_summary.csv",
+      "tables/bsm_dispersal_routes.csv",
+      "tables/bsm_event_times.csv",
       "tables/model_sensitivity.csv",
       "tables/model_parameters.csv",
       "tables/root_state_probabilities.csv",
@@ -2748,6 +2947,10 @@ shiny_table_status_specs <- function() {
       "Run workflow with ancestral-state outputs available.",
       "Run workflow with model fitting and ancestral-state outputs available.",
       "Run workflow with ancestral-state outputs available.",
+      "Enable BSM stochastic mapping, then run workflow.",
+      "Enable BSM stochastic mapping, then run workflow.",
+      "Enable BSM stochastic mapping, then run workflow.",
+      "Enable BSM stochastic mapping, then run workflow.",
       "Run workflow with model comparison or load existing results.",
       "Run workflow with model fitting or load existing results.",
       "Run workflow with BioGeoBEARS outputs available.",
@@ -2875,13 +3078,13 @@ shiny_dashboard_figures <- function() {
       "event_summary"
     ),
     display_label = c(
-      "Model Comparison",
-      "Root State Probabilities",
-      "Best Model Node States",
-      "Best Non-+J Node States",
-      "Best +J Node States",
-      "Node-State Sensitivity",
-      "Event Summary"
+      "\u6a21\u578b\u6bd4\u8f83",
+      "\u6839\u72b6\u6001\u6982\u7387",
+      "\u6700\u4f18\u6a21\u578b\u8282\u70b9\u72b6\u6001",
+      "\u6700\u4f18\u975e +J \u8282\u70b9\u72b6\u6001",
+      "\u6700\u4f18 +J \u8282\u70b9\u72b6\u6001",
+      "\u8282\u70b9\u72b6\u6001\u654f\u611f\u6027",
+      "\u4e8b\u4ef6\u7edf\u8ba1"
     ),
     stringsAsFactors = FALSE
   )
@@ -3170,6 +3373,7 @@ apply_shiny_config_overrides <- function(config, input, output_dir = NULL) {
   if (!is.null(output_dir)) {
     cfg$project$output_dir <- output_dir
   }
+  cfg <- apply_shiny_run_option_overrides(cfg, input)
 
   if (!isTRUE(input$use_config_editor %||% FALSE)) {
     return(cfg)
@@ -3208,6 +3412,26 @@ apply_shiny_config_overrides <- function(config, input, output_dir = NULL) {
     }
   }
 
+  cfg
+}
+
+apply_shiny_run_option_overrides <- function(config, input) {
+  cfg <- config
+  cfg$analysis <- cfg$analysis %||% list()
+  cfg$analysis$run_stochastic_mapping <- isTRUE(input$run_stochastic_mapping %||% FALSE)
+  selection <- trimws(input$stochastic_mapping_model %||% "")
+  if (nzchar(selection)) {
+    cfg$analysis$stochastic_mapping_model <- selection
+  }
+  replicates <- suppressWarnings(as.integer(input$stochastic_mapping_replicates %||% NA_integer_))
+  if (!is.na(replicates) && replicates > 0L) {
+    cfg$analysis$stochastic_mapping_replicates <- replicates
+    cfg$analysis$stochastic_mapping_max_maps_to_try <- max(replicates, ceiling(replicates * 2))
+  }
+  seed <- suppressWarnings(as.integer(input$stochastic_mapping_seed %||% NA_integer_))
+  if (!is.na(seed)) {
+    cfg$analysis$stochastic_mapping_seed <- seed
+  }
   cfg
 }
 

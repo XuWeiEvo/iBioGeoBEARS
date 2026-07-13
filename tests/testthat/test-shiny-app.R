@@ -316,6 +316,8 @@ test_that("Shiny simplified primary results panel helpers are available", {
   expect_match(ui_html, "祖先分布重建图", fixed = TRUE)
   expect_match(ui_html, "模型比较表", fixed = TRUE)
   expect_match(ui_html, "事件统计", fixed = TRUE)
+  expect_match(ui_html, "primary_bsm_event_summary_table", fixed = TRUE)
+  expect_match(ui_html, "primary_bsm_event_times_table", fixed = TRUE)
   expect_match(ui_html, "primary_event_summary_table", fixed = TRUE)
   expect_match(ui_html, "primary_best_fit_events_table", fixed = TRUE)
 })
@@ -707,6 +709,8 @@ test_that("shiny_key_files_table lists common workflow outputs", {
   utils::write.csv(data.frame(item = "Best statistical model", value = "DEC"), file.path(paths$tables, "shiny_run_summary.csv"), row.names = FALSE)
   utils::write.csv(data.frame(model = "DEC", delta_aicc = 0), file.path(paths$tables, "model_comparison.csv"), row.names = FALSE)
   utils::write.csv(data.frame(section = "Caution", answer = "not triggered"), file.path(paths$tables, "model_sensitivity.csv"), row.names = FALSE)
+  utils::write.csv(data.frame(model = "DEC", event_label = "Range-expansion dispersal", mean_count = 2), file.path(paths$tables, "bsm_event_summary.csv"), row.names = FALSE)
+  utils::write.csv(data.frame(model = "DEC", event_time_before_present = 0.5, direction_label = "Area A -> Area B"), file.path(paths$tables, "bsm_event_times.csv"), row.names = FALSE)
   manifest <- create_workflow_manifest(paths$root, write = TRUE)
 
   state <- new.env(parent = emptyenv())
@@ -720,6 +724,8 @@ test_that("shiny_key_files_table lists common workflow outputs", {
 
   expect_equal(key_files$status[match("Run summary CSV", key_files$file)], "Available")
   expect_equal(key_files$status[match("Model comparison CSV", key_files$file)], "Available")
+  expect_equal(key_files$status[match("BSM event summary CSV", key_files$file)], "Available")
+  expect_equal(key_files$status[match("BSM event times CSV", key_files$file)], "Available")
   expect_equal(key_files$status[match("+J sensitivity CSV", key_files$file)], "Available")
   expect_equal(key_files$status[match("Workflow manifest CSV", key_files$file)], "Available")
   expect_equal(key_files$status[match("Report", key_files$file)], "Available")
@@ -976,6 +982,52 @@ test_that("Shiny result helpers can read workflow CSV tables", {
     file.path(paths$tables, "range_change_events.csv"),
     row.names = FALSE
   )
+  utils::write.csv(
+    data.frame(
+      model = "DEC",
+      status = "completed",
+      requested_maps = 1L,
+      completed_maps = 1L
+    ),
+    file.path(paths$tables, "bsm_run_status.csv"),
+    row.names = FALSE
+  )
+  utils::write.csv(
+    data.frame(
+      model = "DEC",
+      event_label = "Range-expansion dispersal",
+      mean_count = 2,
+      sd_count = 0,
+      replicate_count = 1L
+    ),
+    file.path(paths$tables, "bsm_event_summary.csv"),
+    row.names = FALSE
+  )
+  utils::write.csv(
+    data.frame(
+      model = "DEC",
+      route_type = "all_dispersal",
+      direction_label = "Area A -> Area B",
+      source_region = "Area A",
+      target_region = "Area B",
+      mean_count = 2,
+      sd_count = 0
+    ),
+    file.path(paths$tables, "bsm_dispersal_routes.csv"),
+    row.names = FALSE
+  )
+  utils::write.csv(
+    data.frame(
+      model = "DEC",
+      replicate = 1L,
+      event_class = "anagenetic",
+      event_label = "Range-expansion dispersal",
+      event_time_before_present = 0.5,
+      direction_label = "Area A -> Area B"
+    ),
+    file.path(paths$tables, "bsm_event_times.csv"),
+    row.names = FALSE
+  )
 
   state <- new.env(parent = emptyenv())
   state$result <- list(project_paths = paths)
@@ -991,6 +1043,12 @@ test_that("Shiny result helpers can read workflow CSV tables", {
   expect_equal(shiny_best_fit_events_table(state)$direction, "A -> B")
   expect_equal(shiny_primary_best_fit_events_table(state)$direction_label, "Area A -> Area B")
   expect_equal(shiny_range_change_events_table(state)$child_state, "AB")
+  expect_equal(shiny_bsm_run_status_table(state)$status, "completed")
+  expect_equal(shiny_bsm_event_summary_table(state)$mean_count, 2)
+  expect_equal(shiny_bsm_dispersal_routes_table(state)$direction_label, "Area A -> Area B")
+  expect_equal(shiny_bsm_event_times_table(state)$event_time_before_present, 0.5)
+  expect_equal(shiny_primary_bsm_event_summary_table(state)$event_label, "Range-expansion dispersal")
+  expect_equal(shiny_primary_bsm_event_times_table(state)$direction_label, "Area A -> Area B")
 })
 
 test_that("table preview helpers discover and read CSV outputs", {
@@ -1112,11 +1170,11 @@ test_that("figure dashboard helpers expose named workflow figures", {
   image <- shiny_named_figure_image(state, "model_comparison")
 
   expect_equal(shiny_named_figure_path(state, "model_comparison"), as_path(png_path))
-  expect_equal(dashboard$status[match("Model Comparison", dashboard$figure)], "Available")
-  expect_equal(dashboard$preview[match("Model Comparison", dashboard$figure)], "Shown below")
-  expect_equal(dashboard$status[match("Root State Probabilities", dashboard$figure)], "Missing")
+  expect_equal(dashboard$status[match("模型比较", dashboard$figure)], "Available")
+  expect_equal(dashboard$preview[match("模型比较", dashboard$figure)], "Shown below")
+  expect_equal(dashboard$status[match("根状态概率", dashboard$figure)], "Missing")
   expect_match(
-    dashboard$missing_reason[match("Root State Probabilities", dashboard$figure)],
+    dashboard$missing_reason[match("根状态概率", dashboard$figure)],
     "Expected PNG was not found",
     fixed = TRUE
   )
@@ -1143,7 +1201,7 @@ test_that("figure dashboard reports failed figure generation with next steps", {
   state$manifest <- NULL
 
   dashboard <- shiny_figure_dashboard_table(state)
-  row <- dashboard[dashboard$figure == "Node-State Sensitivity", , drop = FALSE]
+  row <- dashboard[dashboard$figure == "节点状态敏感性", , drop = FALSE]
 
   expect_equal(row$status, "Failed")
   expect_equal(row$preview, "Not shown")
