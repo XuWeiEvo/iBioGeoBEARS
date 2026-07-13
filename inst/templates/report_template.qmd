@@ -39,6 +39,7 @@ best_fit_events <- read_table_if_exists("best_fit_events.csv")
 range_change_events <- read_table_if_exists("range_change_events.csv")
 bsm_run_status <- read_table_if_exists("bsm_run_status.csv")
 bsm_event_summary <- read_table_if_exists("bsm_event_summary.csv")
+biogeographic_process_summary <- read_table_if_exists("biogeographic_process_summary.csv")
 bsm_replicate_counts <- read_table_if_exists("bsm_replicate_counts.csv")
 bsm_dispersal_routes <- read_table_if_exists("bsm_dispersal_routes.csv")
 bsm_events <- read_table_if_exists("bsm_events.csv")
@@ -340,6 +341,34 @@ This section reports formal BioGeoBEARS stochastic mapping output when
 `analysis$run_stochastic_mapping` was enabled. These tables should be preferred
 over deterministic best-state changes when discussing event counts, event
 timing, and source-to-target dispersal directions.
+
+#### Biogeographic process synthesis
+
+The synthesis below translates BSM event codes into named biogeographic
+processes, split into cladogenetic speciation modes (in-situ/sympatric
+speciation, subset sympatry, vicariance, and founder-event jump speciation) and
+anagenetic range changes (range expansion, local extinction, and range
+switching). Proportions are reported within each process group and across all
+processes, so the relative importance of each process can be read directly.
+
+```{r}
+process_synthesis_png <- figure_path("biogeographic_process_synthesis")
+if (!is.null(process_synthesis_png)) {
+  knitr::include_graphics(process_synthesis_png)
+}
+```
+
+```{r}
+process_cols <- c(
+  "model", "process_group", "process_label", "mean_count", "sd_count",
+  "proportion_within_group", "proportion_overall"
+)
+if (!is.null(biogeographic_process_summary) && nrow(biogeographic_process_summary) > 0) {
+  print_table(biogeographic_process_summary[intersect(process_cols, names(biogeographic_process_summary))])
+} else {
+  cat("Process synthesis is available only when BSM stochastic mapping was run.\n")
+}
+```
 
 ```{r}
 if (!is.null(bsm_run_status)) {

@@ -1,3 +1,24 @@
+# iBiogeobears 1.1.0
+
+Adds the biogeographic process synthesis: the interpretive layer that turns
+raw BioGeoBEARS stochastic mapping into named biogeographic processes, intended
+as the analytical centerpiece for reporting and publication.
+
+- Added `biogeographic_process_taxonomy()`, a canonical mapping from
+  BioGeoBEARS event codes (`y`, `s`, `v`, `j`, `d`, `e`, `a`) to interpretable
+  biogeographic processes (in-situ/sympatric speciation, subset sympatry,
+  vicariance, founder-event jump speciation, range expansion, local extinction,
+  range switching), grouped into cladogenetic speciation modes and anagenetic
+  range changes.
+- Added `summarize_biogeographic_processes()`, which aggregates the BSM event
+  summary into a per-process table with mean counts and within-group and
+  overall proportions, written to `biogeographic_process_summary.csv`.
+- Added `plot_biogeographic_process_synthesis()` and a
+  `biogeographic_process_synthesis` workflow figure that displays mean event
+  counts per process, coloured by process class.
+- Surfaced the process synthesis as the headline of the report's stochastic
+  mapping section and documented the new table and figure.
+
 # iBiogeobears 1.0.0
 
 First beta release (beta 1.0): a publishable, feature-complete reproducible

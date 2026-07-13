@@ -5,8 +5,9 @@
 `iBiogeobears` is a reproducible workflow, synthesis, visualization, and
 reporting layer for single-clade BioGeoBEARS analyses.
 
-Current status: `1.0.0` (beta 1.0), the first publishable beta release for
-single-clade BioGeoBEARS workflows.
+Current status: `1.1.0` (beta), a publishable beta release for single-clade
+BioGeoBEARS workflows, adding the biogeographic process synthesis for
+interpreting stochastic mapping output.
 
 It currently supports:
 
@@ -32,11 +33,11 @@ install.packages("remotes")
 remotes::install_github("XuWeiEvo/iBioGeoBEARS")
 ```
 
-Install the 1.0.0 beta release:
+Install the 1.1.0 beta release:
 
 ```r
 install.packages("remotes")
-remotes::install_github("XuWeiEvo/iBioGeoBEARS@v1.0.0-beta")
+remotes::install_github("XuWeiEvo/iBioGeoBEARS@v1.1.0-beta")
 ```
 
 BioGeoBEARS must be installed separately; it is not bundled with
@@ -458,6 +459,7 @@ results/example_clade/
     bsm_dispersal_routes.csv
     bsm_events.csv
     bsm_event_times.csv
+    biogeographic_process_summary.csv
     model_sensitivity.rds
   figures/
     figure_manifest.csv
@@ -481,6 +483,7 @@ results/example_clade/
     bsm_event_summary.png
     bsm_event_times.png
     bsm_dispersal_routes.png
+    biogeographic_process_synthesis.png
   reports/
     summary_report.qmd
     summary_report.html
@@ -603,6 +606,12 @@ The main derived tables are:
 - `bsm_events.csv`: row-level sampled stochastic mapping events.
 - `bsm_event_times.csv`: compact event timing and direction table for sampled
   stochastic mapping events.
+- `biogeographic_process_summary.csv`: BSM event counts translated into named
+  biogeographic processes (in-situ/sympatric speciation, subset sympatry,
+  vicariance, founder-event jump speciation, range expansion, local extinction,
+  range switching), grouped into cladogenetic and anagenetic classes, with mean
+  counts and within-group and overall proportions. See
+  `biogeographic_process_taxonomy()` for the full code-to-process mapping.
 
 ## Figures
 
@@ -623,6 +632,9 @@ Workflow execution generates:
 - `bsm_event_times`: cumulative timing distribution for sampled BSM events.
 - `bsm_dispersal_routes`: heatmap of mean BSM source -> target dispersal
   directions.
+- `biogeographic_process_synthesis`: the centerpiece synthesis figure of mean
+  BSM event counts per named biogeographic process, coloured by process class
+  (cladogenetic speciation modes versus anagenetic range changes).
 
 Figures are written in the formats configured by:
 

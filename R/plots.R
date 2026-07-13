@@ -487,6 +487,11 @@ generate_figures <- function(model_comparison, standardized_tables, project_path
     plots$bsm_dispersal_routes <- plot_bsm_dispersal_routes(bsm_routes)
   }
 
+  process_summary <- standardized_tables$biogeographic_process_summary %||% data.frame()
+  if (nrow(process_summary) > 0L) {
+    plots$biogeographic_process_synthesis <- plot_biogeographic_process_synthesis(process_summary)
+  }
+
   manifest <- do.call(rbind, lapply(names(plots), function(name) {
     save_plot_outputs(
       plot = plots[[name]],
@@ -547,6 +552,9 @@ plot_output_dimensions <- function(name) {
   }
   if (identical(name, "bsm_dispersal_routes")) {
     return(list(width = 7.2, height = 5.6))
+  }
+  if (identical(name, "biogeographic_process_synthesis")) {
+    return(list(width = 8.2, height = 5.2))
   }
   list(width = 7, height = 4.5)
 }
