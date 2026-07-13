@@ -184,6 +184,62 @@ plot_bsm_dispersal_routes <- function(bsm_dispersal_routes, route_type = "all_di
     ggplot2::theme(panel.grid = ggplot2::element_blank())
 }
 
+#' Plot BSM dispersal as a directed arrow network
+#'
+#' Draw region-to-region BSM dispersal as a directed graph: nodes are regions
+#' and directed arrows run source to target with arrow width proportional to the
+#' mean dispersal count per stochastic map.
+#'
+#' @param bsm_dispersal_routes Standardized BSM dispersal routes table.
+#' @param route_type Route type to plot; defaults to `"all_dispersal"`.
+#' @param model Optional model name; defaults to the first model present.
+#' @return A ggraph/ggplot object.
+#' @export
+plot_bsm_dispersal_network <- function(bsm_dispersal_routes, route_type = "all_dispersal", model = NULL) {
+  required <- c("route_type", "source_region", "target_region", "mean_count")
+  missing <- setdiff(required, names(bsm_dispersal_routes))
+  if (length(missing) > 0L) {
+    stop("bsm_dispersal_routes is missing required columns: ", paste(missing, collapse = ", "), call. = FALSE)
+  }
+  data <- bsm_dispersal_routes[bsm_dispersal_routes$route_type == route_type, , drop = FALSE]
+  if (!is.null(model) && "model" %in% names(data)) {
+    data <- data[data$model == model, , drop = FALSE]
+  } else if ("model" %in% names(data) && length(unique(data$model)) > 1L) {
+    data <- data[data$model == unique(data$model)[[1L]], , drop = FALSE]
+  }
+  data <- data[!is.na(data$mean_count) & data$mean_count > 0 &
+    !is.na(data$source_region) & !is.na(data$target_region), , drop = FALSE]
+  data <- data[data$source_region != data$target_region, , drop = FALSE]
+  if (nrow(data) == 0L) {
+    stop("No positive between-region BSM dispersal routes are available to plot.", call. = FALSE)
+  }
+
+  edges <- stats::aggregate(mean_count ~ source_region + target_region, data = data, FUN = sum)
+  nodes <- data.frame(name = sort(unique(c(edges$source_region, edges$target_region))), stringsAsFactors = FALSE)
+  graph <- igraph::graph_from_data_frame(edges, directed = TRUE, vertices = nodes)
+
+  ggraph::ggraph(graph, layout = "circle") +
+    ggraph::geom_edge_arc(
+      ggplot2::aes(width = mean_count),
+      strength = 0.12, alpha = 0.6, colour = "#D55E00",
+      arrow = grid::arrow(length = grid::unit(3.2, "mm"), type = "closed"),
+      start_cap = ggraph::circle(6, "mm"), end_cap = ggraph::circle(6, "mm")
+    ) +
+    ggraph::geom_node_point(ggplot2::aes(colour = name), size = 9, show.legend = FALSE) +
+    ggraph::geom_node_text(ggplot2::aes(label = name), repel = TRUE, size = 3.3, colour = ibgb_palette()$ink) +
+    ggraph::scale_edge_width(range = c(0.4, 3.2), name = "Mean count") +
+    scale_colour_ibgb() +
+    ggplot2::labs(title = "BSM dispersal network", subtitle = route_type) +
+    ggplot2::coord_fixed(clip = "off") +
+    ggplot2::theme_void(base_size = 12) +
+    ggplot2::theme(
+      plot.title = ggplot2::element_text(face = "bold", size = ggplot2::rel(1.15), colour = ibgb_palette()$ink),
+      plot.subtitle = ggplot2::element_text(size = ggplot2::rel(0.9), colour = ibgb_palette()$muted, margin = ggplot2::margin(b = 8)),
+      legend.position = "bottom",
+      plot.margin = ggplot2::margin(10, 18, 10, 18)
+    )
+}
+
 #' Plot model comparison results
 #'
 #' @param comparison Model comparison table returned by [compare_models()].
@@ -485,6 +541,10 @@ generate_figures <- function(model_comparison, standardized_tables, project_path
   bsm_routes <- standardized_tables$bsm_dispersal_routes %||% data.frame()
   if (nrow(bsm_routes) > 0L && any(bsm_routes$route_type == "all_dispersal" & bsm_routes$mean_count > 0, na.rm = TRUE)) {
     plots$bsm_dispersal_routes <- plot_bsm_dispersal_routes(bsm_routes)
+    network <- tryCatch(plot_bsm_dispersal_network(bsm_routes), error = function(e) NULL)
+    if (!is.null(network)) {
+      plots$bsm_dispersal_network <- network
+    }
   }
 
   process_summary <- standardized_tables$biogeographic_process_summary %||% data.frame()
@@ -567,6 +627,9 @@ plot_output_dimensions <- function(name) {
   }
   if (identical(name, "bsm_dispersal_routes")) {
     return(list(width = 7.2, height = 5.6))
+  }
+  if (identical(name, "bsm_dispersal_network")) {
+    return(list(width = 7.0, height = 6.4))
   }
   if (identical(name, "biogeographic_process_synthesis")) {
     return(list(width = 8.2, height = 5.2))

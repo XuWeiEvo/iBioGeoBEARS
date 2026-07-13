@@ -207,3 +207,19 @@ test_that("select_node_state_plot_models returns non-duplicated model roles", {
   expect_equal(selected$figure, c("node_state_summary_best_model", "node_state_summary_best_plus_j"))
   expect_equal(selected$model, c("DEC", "DEC+J"))
 })
+
+test_that("plot_bsm_dispersal_network returns a ggraph/ggplot", {
+  routes <- data.frame(
+    model = "DEC+J", route_type = "all_dispersal",
+    source_region = c("A", "B", "C", "A"),
+    target_region = c("B", "C", "A", "C"),
+    mean_count = c(2, 1.5, 0.5, 1),
+    stringsAsFactors = FALSE
+  )
+  plot <- plot_bsm_dispersal_network(routes)
+  expect_s3_class(plot, "ggplot")
+  expect_error(
+    plot_bsm_dispersal_network(data.frame(route_type = "all_dispersal")),
+    "missing required columns"
+  )
+})

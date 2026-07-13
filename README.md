@@ -487,6 +487,7 @@ results/example_clade/
     bsm_event_summary.png
     bsm_event_times.png
     bsm_dispersal_routes.png
+    bsm_dispersal_network.png
     biogeographic_process_synthesis.png
     region_process_budget.png
     process_rates_through_time.png
@@ -657,6 +658,8 @@ Workflow execution generates:
 - `bsm_event_times`: cumulative timing distribution for sampled BSM events.
 - `bsm_dispersal_routes`: heatmap of mean BSM source -> target dispersal
   directions.
+- `bsm_dispersal_network`: directed arrow network of BSM dispersal, with
+  region-coloured nodes and arrow width proportional to mean dispersal count.
 - `biogeographic_process_synthesis`: the centerpiece synthesis figure of mean
   BSM event counts per named biogeographic process, coloured by process class
   (cladogenetic speciation modes versus anagenetic range changes).
