@@ -226,6 +226,8 @@ create_iBGB_shiny_app <- function(config = NULL, output_dir = NULL) {
                 shiny::tabPanel("\u4e8b\u4ef6\u8be6\u60c5", shiny::tableOutput("range_change_events_table")),
                 shiny::tabPanel(
                   "BSM",
+                  shiny::tags$div(class = "ibgb-key-files-title", "BSM \u53ef\u9760\u6027\u68c0\u67e5"),
+                  shiny::tableOutput("bsm_qc_table"),
                   shiny::tags$div(class = "ibgb-key-files-title", "BSM \u8fd0\u884c\u72b6\u6001"),
                   shiny::tableOutput("bsm_run_status_table"),
                   shiny::tags$div(class = "ibgb-key-files-title", "BSM \u4e8b\u4ef6\u6458\u8981"),
@@ -907,6 +909,10 @@ iBGB_shiny_server <- function(input, output, session) {
 
       output$bsm_run_status_table <- shiny::renderTable({
         table_head(shiny_bsm_run_status_table(state), 20L)
+      }, striped = TRUE, bordered = TRUE, na = "")
+
+      output$bsm_qc_table <- shiny::renderTable({
+        table_head(shiny_bsm_qc_table(state), 30L)
       }, striped = TRUE, bordered = TRUE, na = "")
 
       output$bsm_event_summary_table <- shiny::renderTable({
@@ -2836,6 +2842,21 @@ shiny_range_change_events_table <- function(state) {
     "parent_probability", "child_probability",
     "interpretation_note"
   )
+  table[, intersect(cols, names(table)), drop = FALSE]
+}
+
+shiny_bsm_qc_table <- function(state) {
+  table <- state$result$bsm_tables$bsm_qc %||%
+    state$result$standardized_tables$bsm_qc %||%
+    read_workflow_table(state$result, "bsm_qc.csv")
+  if (is.null(table) || nrow(table) == 0L) {
+    return(data.frame(
+      check = "No reliability checks available",
+      next_step = "Enable BSM stochastic mapping and run a real workflow to generate reliability checks.",
+      stringsAsFactors = FALSE
+    ))
+  }
+  cols <- c("check", "model", "status", "observed", "expected", "detail")
   table[, intersect(cols, names(table)), drop = FALSE]
 }
 

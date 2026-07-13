@@ -463,6 +463,7 @@ results/example_clade/
     region_process_budgets.csv
     process_rates_through_time.csv
     region_process_rates_through_time.csv
+    bsm_qc.csv
     model_sensitivity.rds
   figures/
     figure_manifest.csv
@@ -631,6 +632,11 @@ The main derived tables are:
   (local extinction), or colonized (founder). Region counts sum across regions
   to the overall per-process rate in each bin. Narrow sympatry, subset sympatry,
   and vicariance have no single attributable region and are omitted.
+- `bsm_qc.csv`: automated reliability checks confirming the process outputs
+  faithfully re-present the BSM (counts reconcile with BioGeoBEARS class totals,
+  net dispersal flux sums to zero, rates reconstruct the synthesis mean across
+  bins and regions, and the requested stochastic maps completed), each reported
+  as `Pass`, `Warning`, or `Fail`.
 
 ## Figures
 
@@ -729,6 +735,13 @@ BioGeoBEARS' `all_clado` total, the three anagenetic process means sum to
 verified in `tests/testthat/test-event-synthesis.R` against the BioGeoBEARS
 `summary_counts_BSMs` structure, so the synthesis re-presents BioGeoBEARS output
 without altering the underlying counts.
+
+Every real run also writes `bsm_qc.csv` (via `summarize_bsm_qc()`), which
+re-runs these checks on that run's own outputs — the class-total reconciliation,
+the zero net dispersal flux, and the rate reconstructions across time bins and
+regions — and reports each as `Pass`, `Warning`, or `Fail`. The report and the
+Shiny `BSM` view show this table as per-run evidence that the results are
+internally consistent.
 
 ## Citation and License
 

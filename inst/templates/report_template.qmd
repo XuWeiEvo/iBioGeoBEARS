@@ -43,6 +43,7 @@ biogeographic_process_summary <- read_table_if_exists("biogeographic_process_sum
 region_process_budgets <- read_table_if_exists("region_process_budgets.csv")
 process_rates_through_time <- read_table_if_exists("process_rates_through_time.csv")
 region_process_rates_through_time <- read_table_if_exists("region_process_rates_through_time.csv")
+bsm_qc <- read_table_if_exists("bsm_qc.csv")
 bsm_replicate_counts <- read_table_if_exists("bsm_replicate_counts.csv")
 bsm_dispersal_routes <- read_table_if_exists("bsm_dispersal_routes.csv")
 bsm_events <- read_table_if_exists("bsm_events.csv")
@@ -344,6 +345,22 @@ This section reports formal BioGeoBEARS stochastic mapping output when
 `analysis$run_stochastic_mapping` was enabled. These tables should be preferred
 over deterministic best-state changes when discussing event counts, event
 timing, and source-to-target dispersal directions.
+
+#### Reliability checks (QC)
+
+These automated checks confirm that the biogeographic process outputs faithfully
+re-present the underlying BioGeoBEARS stochastic mapping: per-process counts
+reconcile with BioGeoBEARS' class totals, regional net dispersal flux sums to
+zero, rates reconstruct the synthesis mean across time bins and across regions,
+and the requested stochastic maps completed.
+
+```{r}
+if (!is.null(bsm_qc) && nrow(bsm_qc) > 0) {
+  print_table(bsm_qc[intersect(c("check", "model", "status", "observed", "expected", "detail"), names(bsm_qc))])
+} else {
+  cat("Reliability checks are available only when BSM stochastic mapping was run.\n")
+}
+```
 
 #### Biogeographic process synthesis
 
