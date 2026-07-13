@@ -492,6 +492,11 @@ generate_figures <- function(model_comparison, standardized_tables, project_path
     plots$biogeographic_process_synthesis <- plot_biogeographic_process_synthesis(process_summary)
   }
 
+  region_budgets <- standardized_tables$region_process_budgets %||% data.frame()
+  if (nrow(region_budgets) > 0L) {
+    plots$region_process_budget <- plot_region_process_budget(region_budgets)
+  }
+
   manifest <- do.call(rbind, lapply(names(plots), function(name) {
     save_plot_outputs(
       plot = plots[[name]],
@@ -555,6 +560,9 @@ plot_output_dimensions <- function(name) {
   }
   if (identical(name, "biogeographic_process_synthesis")) {
     return(list(width = 8.2, height = 5.2))
+  }
+  if (identical(name, "region_process_budget")) {
+    return(list(width = 7.8, height = 5.0))
   }
   list(width = 7, height = 4.5)
 }

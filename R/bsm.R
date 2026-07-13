@@ -586,6 +586,7 @@ combine_bsm_outputs <- function(outputs) {
     bsm_event_times = combine("bsm_event_times", empty_bsm_event_times_table())
   )
   tables$biogeographic_process_summary <- summarize_biogeographic_processes(tables)
+  tables$region_process_budgets <- summarize_region_process_budgets(tables)
   tables
 }
 
@@ -597,6 +598,7 @@ write_bsm_standardized_tables <- function(tables, project_paths) {
   write_csv_base(tables$bsm_events %||% empty_bsm_events_table(), file.path(project_paths$tables, "bsm_events.csv"))
   write_csv_base(tables$bsm_event_times %||% empty_bsm_event_times_table(), file.path(project_paths$tables, "bsm_event_times.csv"))
   write_csv_base(tables$biogeographic_process_summary %||% empty_process_summary_table(), file.path(project_paths$tables, "biogeographic_process_summary.csv"))
+  write_csv_base(tables$region_process_budgets %||% empty_region_process_budgets_table(), file.path(project_paths$tables, "region_process_budgets.csv"))
   invisible(tables)
 }
 
@@ -764,7 +766,8 @@ empty_bsm_standardized_tables <- function(status = empty_bsm_run_status_table())
     bsm_dispersal_routes = empty_bsm_dispersal_routes_table(),
     bsm_events = empty_bsm_events_table(),
     bsm_event_times = empty_bsm_event_times_table(),
-    biogeographic_process_summary = empty_process_summary_table()
+    biogeographic_process_summary = empty_process_summary_table(),
+    region_process_budgets = empty_region_process_budgets_table()
   )
 }
 

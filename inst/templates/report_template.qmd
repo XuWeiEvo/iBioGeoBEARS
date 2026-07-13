@@ -40,6 +40,7 @@ range_change_events <- read_table_if_exists("range_change_events.csv")
 bsm_run_status <- read_table_if_exists("bsm_run_status.csv")
 bsm_event_summary <- read_table_if_exists("bsm_event_summary.csv")
 biogeographic_process_summary <- read_table_if_exists("biogeographic_process_summary.csv")
+region_process_budgets <- read_table_if_exists("region_process_budgets.csv")
 bsm_replicate_counts <- read_table_if_exists("bsm_replicate_counts.csv")
 bsm_dispersal_routes <- read_table_if_exists("bsm_dispersal_routes.csv")
 bsm_events <- read_table_if_exists("bsm_events.csv")
@@ -445,6 +446,32 @@ if (!is.null(bsm_event_times)) {
   print_table(utils::head(time_rows[intersect(bsm_time_cols, names(time_rows))], 50L))
 } else {
   print_table(NULL)
+}
+```
+
+#### Regional dispersal budget
+
+The regional budget summarizes mean dispersal into and out of each region and
+mean local extinction per stochastic map. Net dispersal flux is immigration
+minus emigration, so a positive value marks a net sink and a negative value a
+net source; net flux sums to zero across regions.
+
+```{r}
+region_budget_png <- figure_path("region_process_budget")
+if (!is.null(region_budget_png)) {
+  knitr::include_graphics(region_budget_png)
+}
+```
+
+```{r}
+region_budget_cols <- c(
+  "model", "region", "immigration", "emigration", "net_dispersal_flux",
+  "local_extinction", "total_dispersal"
+)
+if (!is.null(region_process_budgets) && nrow(region_process_budgets) > 0) {
+  print_table(region_process_budgets[intersect(region_budget_cols, names(region_process_budgets))])
+} else {
+  cat("Regional dispersal budgets are available only when BSM stochastic mapping was run.\n")
 }
 ```
 
