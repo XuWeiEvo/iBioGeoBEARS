@@ -369,6 +369,7 @@ acceptance_add_environment <- function(checks, mode) {
   )
 }
 
+#' @export
 print.iBGB_acceptance_result <- function(x, ...) {
   print(x$checks[, c("check", "required", "status", "detail"), drop = FALSE], row.names = FALSE)
   cat(

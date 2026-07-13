@@ -7,9 +7,8 @@
 open_user_guide(browse = interactive(), language = c("en", "zh-CN", "zh"))
 }
 \arguments{
-\item{browse}{Logical. If \code{TRUE}, open the guide with
-\code{\link[utils:browseURL]{utils::browseURL()}}. Defaults to
-\code{interactive()}.}
+\item{browse}{Logical. If \code{TRUE}, open the guide with \code{\link[utils:browseURL]{utils::browseURL()}}.
+Defaults to \code{interactive()}.}
 
 \item{language}{Character. Guide language, either \code{"en"}, \code{"zh-CN"}, or
 \code{"zh"}. Defaults to \code{"en"}.}

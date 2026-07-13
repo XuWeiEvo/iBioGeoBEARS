@@ -1,3 +1,27 @@
+# iBiogeobears 1.0.0
+
+First beta release (beta 1.0): a publishable, feature-complete reproducible
+workflow, GUI, and reporting layer for single-clade BioGeoBEARS analyses.
+
+- Added BioGeoBEARS BSM stochastic mapping for completed model results,
+  including `bsm_run_status.csv`, `bsm_event_summary.csv`,
+  `bsm_replicate_counts.csv`, `bsm_dispersal_routes.csv`, `bsm_events.csv`,
+  `bsm_event_times.csv`, raw per-model BSM RDS outputs, report sections, Shiny
+  views, and BSM figures.
+- Completed the simplified Chinese localization of the Shiny interface,
+  translating the advanced config editor, run options, BSM controls, advanced
+  constraint fields, all advanced-results and troubleshooting sub-tabs, figure
+  dashboard labels, and the initial status message so the guided flow and
+  advanced views share one consistent language.
+- Fixed a ggplot2 3.5 deprecation warning in the best-model node-state figure by
+  replacing the deprecated `label.size` argument with `linewidth`.
+- Fixed an R CMD check NOTE by declaring `sd_count` as a known global variable
+  used in the BSM event-summary figure.
+- Made package metadata publication-ready: set a real maintainer email,
+  consolidated authorship into a single `Authors@R` entry, and rewrote
+  `inst/CITATION` to use `bibentry()` with an auto-synced package version.
+- Achieved a clean `R CMD check --no-manual` with no errors, warnings, or notes.
+
 # iBiogeobears 0.2.1
 
 Third alpha release focused on ordinary-user stability and release readiness.

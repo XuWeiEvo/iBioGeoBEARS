@@ -15,5 +15,5 @@ The validation data frame with \code{label}, \code{status}, and \code{next_step}
 columns added while preserving the machine-readable fields.
 }
 \description{
-Add user-facing labels and repair guidance to validation results.
+Add user-facing labels and repair guidance to validation results
 }

@@ -5,8 +5,8 @@
 `iBiogeobears` is a reproducible workflow, synthesis, visualization, and
 reporting layer for single-clade BioGeoBEARS analyses.
 
-Current status: `0.2.1-alpha`, an alpha release candidate for small-scope
-ordinary-user testing of single-clade BioGeoBEARS workflows.
+Current status: `1.0.0` (beta 1.0), the first publishable beta release for
+single-clade BioGeoBEARS workflows.
 
 It currently supports:
 
@@ -32,11 +32,11 @@ install.packages("remotes")
 remotes::install_github("XuWeiEvo/iBioGeoBEARS")
 ```
 
-Install the 0.2.1 alpha release:
+Install the 1.0.0 beta release:
 
 ```r
 install.packages("remotes")
-remotes::install_github("XuWeiEvo/iBioGeoBEARS@v0.2.1-alpha")
+remotes::install_github("XuWeiEvo/iBioGeoBEARS@v1.0.0-beta")
 ```
 
 BioGeoBEARS must be installed separately; it is not bundled with
@@ -452,6 +452,12 @@ results/example_clade/
     range_change_events.csv
     best_fit_events.csv
     event_summary.csv
+    bsm_run_status.csv
+    bsm_event_summary.csv
+    bsm_replicate_counts.csv
+    bsm_dispersal_routes.csv
+    bsm_events.csv
+    bsm_event_times.csv
     model_sensitivity.rds
   figures/
     figure_manifest.csv
@@ -472,6 +478,9 @@ results/example_clade/
     event_summary.png
     event_summary.pdf
     event_summary.svg
+    bsm_event_summary.png
+    bsm_event_times.png
+    bsm_dispersal_routes.png
   reports/
     summary_report.qmd
     summary_report.html
@@ -494,6 +503,8 @@ tables/shiny_run_summary.csv
 tables/model_comparison.csv
 tables/event_summary.csv
 tables/best_fit_events.csv
+tables/bsm_event_summary.csv
+tables/bsm_event_times.csv
 tables/model_sensitivity.csv
 tables/model_run_status.csv
 figures/figure_manifest.csv
@@ -503,9 +514,25 @@ Use `model_comparison.csv` to inspect statistical fit. Use
 `event_summary.csv` for a quick range-change overview inferred from
 highest-probability ancestral states. Use `best_fit_events.csv` for approximate
 best-fit event timing and source -> target direction. Use
+`bsm_event_summary.csv`, `bsm_dispersal_routes.csv`, and `bsm_event_times.csv`
+for formal BioGeoBEARS stochastic mapping counts, source -> target dispersal
+directions, and event timing when BSM is enabled. Use
 `model_sensitivity.csv` to decide how to report `+J` sensitivity. Use
 `model_run_status.csv` before interpretation to check failed models, warnings,
 and log paths.
+
+To enable BSM stochastic mapping in YAML:
+
+```yaml
+analysis:
+  run_stochastic_mapping: true
+  stochastic_mapping_model: best
+  stochastic_mapping_replicates: 100
+```
+
+BioGeoBEARS BSM requires one-character area codes in the geography matrix
+(`A`, `B`, `C`, ...). Put full region names in `regions.csv`; iBiogeobears uses
+those labels in BSM output tables and figures.
 
 Do not treat the lowest AICc model as an automatic biological conclusion. The
 report and Shiny app separate "best-fitting statistical model" from
@@ -565,6 +592,17 @@ The main derived tables are:
 - `event_summary.csv`: counts of range expansion, local extinction, range
   shift, range origin, and no-change categories by model and probability
   location. This is not a stochastic mapping event-count table.
+- `bsm_run_status.csv`: stochastic mapping status, requested/completed map
+  counts, seeds, log paths, and errors or warnings.
+- `bsm_event_summary.csv`: formal BioGeoBEARS stochastic mapping mean, standard
+  deviation, and summed event counts by event type.
+- `bsm_replicate_counts.csv`: per-map event totals for stochastic mapping.
+- `bsm_dispersal_routes.csv`: mean source -> target route counts for all
+  dispersal, anagenetic dispersal, founder-event dispersal, range switching,
+  and range expansion.
+- `bsm_events.csv`: row-level sampled stochastic mapping events.
+- `bsm_event_times.csv`: compact event timing and direction table for sampled
+  stochastic mapping events.
 
 ## Figures
 
@@ -581,6 +619,10 @@ Workflow execution generates:
   non-`+J` and best `+J` model.
 - `event_summary`: branch-count summary of deterministic range-change
   categories inferred from ancestral states.
+- `bsm_event_summary`: formal stochastic mapping event-count summary.
+- `bsm_event_times`: cumulative timing distribution for sampled BSM events.
+- `bsm_dispersal_routes`: heatmap of mean BSM source -> target dispersal
+  directions.
 
 Figures are written in the formats configured by:
 
