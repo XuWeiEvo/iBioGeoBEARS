@@ -667,6 +667,20 @@ The report separates statistical fit from biological interpretation. If a `+J`
 model is best or near-best, the software flags sensitivity and interpretation
 cautions instead of declaring a simple biological conclusion.
 
+## Validation of Event Statistics
+
+The biogeographic process statistics are not recomputed by `iBiogeobears`; they
+are BioGeoBEARS' own stochastic mapping event counts (from
+`count_ana_clado_events()`), relabelled into named processes and grouped into
+cladogenetic speciation modes and anagenetic range changes. Because the mapping
+is one-to-one and exhaustive, the per-process counts reconcile exactly with
+BioGeoBEARS' aggregate class totals: the four cladogenetic process means sum to
+BioGeoBEARS' `all_clado` total, the three anagenetic process means sum to
+`all_ana`, and together they sum to `total_events`. This reconciliation is
+verified in `tests/testthat/test-event-synthesis.R` against the BioGeoBEARS
+`summary_counts_BSMs` structure, so the synthesis re-presents BioGeoBEARS output
+without altering the underlying counts.
+
 ## Citation and License
 
 BioGeoBEARS is authored by Nicholas J. Matzke and is licensed under GPL
