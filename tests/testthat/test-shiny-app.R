@@ -367,6 +367,28 @@ test_that("Environment check lives in a top-level section, not the help step", {
   expect_false(grepl("installation_table", help_html, fixed = TRUE))
 })
 
+test_that("Results step drops the intro and slims exports to bundle and report", {
+  testthat::skip_if_not_installed("shiny")
+
+  ui <- as.character(wizard_step_results())
+  expect_false(grepl("ibgb-step-intro", ui, fixed = TRUE))
+  expect_match(ui, "download_bundle", fixed = TRUE)
+  expect_match(ui, "download_report", fixed = TRUE)
+  # The redundant export controls were removed from this step.
+  expect_false(grepl("report_format", ui, fixed = TRUE))
+  expect_false(grepl("open_report", ui, fixed = TRUE))
+  expect_false(grepl("download_diagnostic_bundle", ui, fixed = TRUE))
+  expect_false(grepl("download_run_summary", ui, fixed = TRUE))
+})
+
+test_that("Preview image containers size to their content, not a fixed height", {
+  testthat::skip_if_not_installed("shiny")
+
+  styles <- as.character(iBGB_head_styles()$children[[1]]$children[[1]])
+  expect_match(styles, ".ibgb-preview .shiny-image-output", fixed = TRUE)
+  expect_match(styles, "height:auto !important", fixed = TRUE)
+})
+
 test_that("constraint_template_path resolves every constraint template", {
   fields <- shiny_constraint_fields()$field
   for (field in fields) {

@@ -3408,10 +3408,12 @@ iBGB_head_styles <- function() {
       ".ibgb-collapsible summary{font-weight:600;cursor:pointer;margin-bottom:8px} ",
       ".ibgb-primary-result{border-top:1px solid #e5e7eb;margin-top:18px;padding-top:16px} ",
       ".ibgb-primary-result:first-child{border-top:0;margin-top:0;padding-top:0} ",
-      ".ibgb-preview img{max-width:100%;height:auto;border:1px solid #ddd} ",
+      ".ibgb-preview img{max-width:100%;height:auto;border:1px solid #ddd;display:block} ",
+      ".ibgb-preview .shiny-image-output{height:auto !important;min-height:0} ",
       ".ibgb-figure-dashboard{display:grid;grid-template-columns:1fr;gap:18px} ",
       ".ibgb-figure-dashboard h4{margin:6px 0 8px 0} ",
-      ".ibgb-figure-dashboard img{max-width:100%;height:auto;border:1px solid #ddd} ",
+      ".ibgb-figure-dashboard img{max-width:100%;height:auto;border:1px solid #ddd;display:block} ",
+      ".ibgb-figure-dashboard .shiny-image-output{height:auto !important;min-height:0} ",
       "#wizard_nav{margin-top:6px} ",
       "#wizard_nav.nav-tabs{border-bottom:2px solid #d0d7de} ",
       "#wizard_nav.nav-tabs>li>a{font-weight:600;color:#57606a;border:0;margin-right:2px} ",
@@ -3588,26 +3590,13 @@ wizard_step_analysis <- function() {
 wizard_step_results <- function() {
   shiny::tabPanel(
     "3 \u00b7 \u7ed3\u679c",
-    shiny::tags$p(
-      class = "ibgb-step-intro",
-      "\u7b2c\u4e09\u6b65\uff1a\u5148\u770b\u6700\u91cd\u8981\u7684\u7ed3\u679c\u9884\u89c8\u2014\u2014\u7956\u5148\u5206\u5e03\u91cd\u5efa\u3001\u6a21\u578b\u6bd4\u8f83\u3001\u751f\u7269\u5730\u7406\u8fc7\u7a0b\u7efc\u5408\u3001\u4e8b\u4ef6\u7edf\u8ba1\u3002\u5b8c\u6574\u8868\u683c\u3001\u56fe\u7247\u548c\u6392\u9519\u5728\u4e0b\u9762\u7684\u201c\u9ad8\u7ea7\u7ed3\u679c\u201d\u91cc\uff0c\u9ad8\u6e05\u56fe\u53ef\u5728\u201c\u56fe\u7247\u201d\u91cc\u4e0b\u8f7d\u3002"
-    ),
     shiny_primary_results_body(),
-    shiny_collapsible_section(
-      "\u5bfc\u51fa\u4e0e\u62a5\u544a",
-      shiny::selectInput("report_format", "\u62a5\u544a\u683c\u5f0f", choices = c("source", "html", "pdf"), selected = "html"),
-      shiny_action_grid(
-        shiny::actionButton("open_report", "\u6253\u5f00\u62a5\u544a"),
-        shiny::actionButton("refresh_key_files", "\u5237\u65b0\u5173\u952e\u6587\u4ef6"),
-        shiny::actionButton("bundle", "\u751f\u6210\u7ed3\u679c\u538b\u7f29\u5305"),
-        shiny::actionButton("diagnostic_bundle", "\u751f\u6210\u8bca\u65ad\u538b\u7f29\u5305")
-      ),
+    shiny_control_section(
+      "\u5bfc\u51fa",
       shiny::tags$div(
         class = "ibgb-downloads",
-        shiny::downloadButton("download_run_summary", "\u4e0b\u8f7d\u8fd0\u884c\u6458\u8981"),
-        shiny::downloadButton("download_report", "\u4e0b\u8f7d\u62a5\u544a"),
-        shiny::downloadButton("download_bundle", "\u4e0b\u8f7d\u7ed3\u679c\u538b\u7f29\u5305"),
-        shiny::downloadButton("download_diagnostic_bundle", "\u4e0b\u8f7d\u8bca\u65ad\u538b\u7f29\u5305")
+        shiny::downloadButton("download_bundle", "\u4e0b\u8f7d\u7ed3\u679c\u538b\u7f29\u5305\uff08\u5168\u90e8\u7ed3\u679c\u6587\u4ef6\uff09"),
+        shiny::downloadButton("download_report", "\u4e0b\u8f7d\u62a5\u544a")
       )
     ),
     shiny_collapsible_section(
