@@ -136,25 +136,16 @@ shiny_constraint_fields <- function() {
 shiny_wizard_constraint_inputs <- function() {
   fields <- shiny_constraint_fields()
   shiny::tagList(lapply(seq_len(nrow(fields)), function(i) {
-    shiny::fileInput(
-      inputId = paste0("wizard_constraint_", fields$field[[i]]),
-      label = fields$label[[i]],
-      accept = c(".txt", ".tsv", ".csv")
+    shiny::tags$div(
+      class = "ibgb-upload-row",
+      shiny::fileInput(
+        inputId = paste0("wizard_constraint_", fields$field[[i]]),
+        label = fields$label[[i]],
+        accept = c(".txt", ".tsv", ".csv")
+      ),
+      shiny::downloadButton(paste0("download_constraint_", fields$field[[i]]), "\u6a21\u677f")
     )
   }))
-}
-
-shiny_constraint_template_downloads <- function() {
-  fields <- shiny_constraint_fields()
-  shiny::tags$div(
-    class = "ibgb-downloads",
-    lapply(seq_len(nrow(fields)), function(i) {
-      shiny::downloadButton(
-        outputId = paste0("download_constraint_", fields$field[[i]]),
-        label = fields$label[[i]]
-      )
-    })
-  )
 }
 
 constraint_template_path <- function(field) {
@@ -316,7 +307,7 @@ iBGB_shiny_server <- function(input, output, session) {
             dry_run = isTRUE(input$dry_run),
             require_biogeobears = isTRUE(input$require_biogeobears),
             force = isTRUE(input$force),
-            resume_completed_models = isTRUE(input$resume_completed_models),
+            resume_completed_models = isTRUE(input$resume_completed_models %||% TRUE),
             retry_failed_only = isTRUE(input$retry_failed_only)
           )
           state$result <- result
@@ -3505,7 +3496,9 @@ iBGB_head_styles <- function() {
   shiny::tags$head(
     shiny::tags$style(shiny::HTML(
       ".container-fluid{max-width:1180px} .well{border-radius:4px} ",
-      ".btn{border-radius:4px} .ibgb-status{font-weight:600;margin:8px 0} ",
+      ".btn,a.btn{border-radius:4px;background-color:#1868b8;border:1px solid #14528f;color:#fff;font-weight:600} ",
+      ".btn:hover,.btn:focus,.btn:active,a.btn:hover,a.btn:focus,a.btn:active{background-color:#14528f;color:#fff} ",
+      ".ibgb-status{font-weight:600;margin:8px 0} ",
       ".ibgb-status.info{color:#22577a} .ibgb-status.error{color:#b00020} ",
       ".ibgb-control-section{border-top:1px solid #ddd;margin-top:14px;padding-top:12px} ",
       ".ibgb-control-section:first-child{border-top:0;margin-top:0;padding-top:0} ",
@@ -3546,7 +3539,10 @@ iBGB_head_styles <- function() {
       ".ibgb-choice-card{border:1px solid #d8dee4;border-radius:6px;padding:14px;background:#fff} ",
       ".ibgb-output-row{display:flex;gap:8px;align-items:flex-end} ",
       ".ibgb-output-row .form-group{flex:1;margin-bottom:0} ",
-      ".ibgb-output-row .btn{white-space:nowrap;padding:6px 12px}"
+      ".ibgb-output-row .btn{white-space:nowrap;padding:6px 12px} ",
+      ".ibgb-upload-row{display:flex;gap:10px;align-items:flex-start} ",
+      ".ibgb-upload-row>.form-group{flex:1;margin-bottom:8px} ",
+      ".ibgb-upload-row>.btn{white-space:nowrap;margin-top:25px}"
     ))
   )
 }
@@ -3592,34 +3588,36 @@ wizard_step_data <- function(default_config, default_output, example_project_dir
       class = "ibgb-choice-card",
       shiny::tags$div(class = "ibgb-control-title", "\u4f7f\u7528\u4f60\u81ea\u5df1\u7684\u6570\u636e"),
       shiny::textInput("wizard_project_name", "\u9879\u76ee\u540d", value = "my_clade"),
-      shiny::fileInput(
-        "wizard_tree",
-        "\u7cfb\u7edf\u6811\u6587\u4ef6",
-        accept = c(".nwk", ".newick", ".tree", ".tre")
+      shiny::tags$div(
+        class = "ibgb-upload-row",
+        shiny::fileInput(
+          "wizard_tree",
+          "\u7cfb\u7edf\u6811\u6587\u4ef6",
+          accept = c(".nwk", ".newick", ".tree", ".tre")
+        ),
+        shiny::downloadButton("download_tree_template", "\u6a21\u677f")
       ),
-      shiny::fileInput("wizard_geography", "\u5206\u5e03\u77e9\u9635 CSV", accept = ".csv"),
-      shiny::fileInput("wizard_regions", "\u533a\u57df\u4fe1\u606f CSV", accept = ".csv"),
+      shiny::tags$div(
+        class = "ibgb-upload-row",
+        shiny::fileInput("wizard_geography", "\u5206\u5e03\u77e9\u9635 CSV", accept = ".csv"),
+        shiny::downloadButton("download_geography_template", "\u6a21\u677f")
+      ),
+      shiny::tags$div(
+        class = "ibgb-upload-row",
+        shiny::fileInput("wizard_regions", "\u533a\u57df\u4fe1\u606f CSV", accept = ".csv"),
+        shiny::downloadButton("download_regions_template", "\u6a21\u677f")
+      ),
+      shiny::tags$div(
+        class = "ibgb-home-note",
+        "\u6ca1\u6709\u6570\u636e\uff1f\u70b9\u6bcf\u4e2a\u4e0a\u4f20\u6846\u53f3\u4fa7\u7684\u201c\u6a21\u677f\u201d\u4e0b\u8f7d\u2014\u2014\u5b83\u4eec\u5c31\u662f\u5185\u7f6e\u793a\u4f8b\u6570\u636e\uff08\u51e0\u4e2a\u7269\u79cd\u3001\u51e0\u4e2a\u533a\u57df\uff09\uff0c\u6539\u6210\u4f60\u81ea\u5df1\u7684\u6570\u636e\u540e\u518d\u4e0a\u4f20\u3002"
+      ),
       shiny_collapsible_section(
         "\u9ad8\u7ea7\u7ea6\u675f\uff08\u53ef\u9009\uff0c\u65f6\u95f4\u5206\u5c42\u7b49\u9ad8\u7ea7\u5206\u6790\u7528\uff09",
         shiny::tags$p(
           class = "ibgb-home-note",
-          "\u8fd9\u4e9b\u6587\u4ef6\u7528\u4e8e\u65f6\u95f4\u5206\u5c42\u3001\u6269\u6563\u4e58\u6570\u3001\u533a\u57df\u76f8\u90bb\u7b49\u9ad8\u7ea7\u5206\u6790\uff0c\u4e00\u822c\u7528\u4e0d\u5230\uff0c\u53ef\u7559\u7a7a\u3002\u683c\u5f0f\u8bf7\u5bf9\u7167\u4e0b\u9762\u7684\u6a21\u677f\u3002"
+          "\u8fd9\u4e9b\u6587\u4ef6\u7528\u4e8e\u65f6\u95f4\u5206\u5c42\u3001\u6269\u6563\u4e58\u6570\u3001\u533a\u57df\u76f8\u90bb\u7b49\u9ad8\u7ea7\u5206\u6790\uff0c\u4e00\u822c\u7528\u4e0d\u5230\uff0c\u53ef\u7559\u7a7a\u3002\u6bcf\u4e2a\u4e0a\u4f20\u6846\u53f3\u4fa7\u7684\u201c\u6a21\u677f\u201d\u53ef\u4e0b\u8f7d\u793a\u4f8b\u683c\u5f0f\u3002"
         ),
-        shiny_wizard_constraint_inputs(),
-        shiny_collapsible_section(
-          "\u9ad8\u7ea7\u7ea6\u675f\u6a21\u677f",
-          shiny_constraint_template_downloads()
-        )
-      ),
-      shiny::tags$div(
-        class = "ibgb-downloads",
-        shiny::downloadButton("download_tree_template", "\u4e0b\u8f7d\u6811\u6a21\u677f"),
-        shiny::downloadButton("download_geography_template", "\u4e0b\u8f7d\u5206\u5e03\u77e9\u9635\u6a21\u677f"),
-        shiny::downloadButton("download_regions_template", "\u4e0b\u8f7d\u533a\u57df\u4fe1\u606f\u6a21\u677f")
-      ),
-      shiny::tags$div(
-        class = "ibgb-home-note",
-        "\u6ca1\u6709\u6570\u636e\uff1f\u4e0b\u8f7d\u4e0a\u9762\u4e09\u4e2a\u6a21\u677f\u5373\u53ef\u2014\u2014\u5b83\u4eec\u5c31\u662f\u5185\u7f6e\u793a\u4f8b\u6570\u636e\uff08\u51e0\u4e2a\u7269\u79cd\u3001\u51e0\u4e2a\u533a\u57df\uff09\uff0c\u6539\u6210\u4f60\u81ea\u5df1\u7684\u6570\u636e\u540e\u518d\u4e0a\u4f20\u3002"
+        shiny_wizard_constraint_inputs()
       ),
       shiny::numericInput("wizard_max_range_size", "\u6700\u5927\u5206\u5e03\u533a\u6570\u91cf", value = 3L, min = 1L, step = 1L),
       shiny::checkboxGroupInput(
@@ -3647,20 +3645,20 @@ wizard_step_data <- function(default_config, default_output, example_project_dir
         "\u4e0a\u4f20\u6570\u636e\u540e\u8fd9\u91cc\u663e\u793a\u6982\u51b5\uff08\u7c7b\u4f3c RASP\uff09\uff1a\u6811\u91cc\u6709\u591a\u5c11\u4e2a tip\u3001\u6bcf\u4e2a\u533a\u57df\u6709\u591a\u5c11\u7269\u79cd\u3001\u5206\u5e03\u533a\u5927\u5c0f\u5982\u4f55\u5206\u5e03\u3002\u70b9\u201c\u68c0\u67e5\u8f93\u5165\u201d\u505a\u4e00\u81f4\u6027\u6821\u9a8c\u3002"
       ),
       shiny_action_grid(shiny::actionButton("validate", "\u68c0\u67e5\u8f93\u5165")),
+      shiny::tableOutput("data_overview_table"),
       shiny::tags$div(
         class = "ibgb-two-col",
         shiny::tags$div(
-          shiny::tableOutput("data_overview_table"),
           shiny::tags$div(class = "ibgb-key-files-title", "\u5404\u533a\u57df\u7269\u79cd\u6570"),
-          shiny::tableOutput("region_occupancy_table"),
-          shiny::tags$div(class = "ibgb-key-files-title", "\u5206\u5e03\u533a\u5927\u5c0f\u5206\u5e03"),
-          shiny::tableOutput("range_size_table")
+          shiny::tableOutput("region_occupancy_table")
         ),
         shiny::tags$div(
-          shiny::tags$div(class = "ibgb-key-files-title", "\u8f93\u5165\u9a8c\u8bc1"),
-          shiny::tableOutput("validation_table")
+          shiny::tags$div(class = "ibgb-key-files-title", "\u5206\u5e03\u533a\u5927\u5c0f\u5206\u5e03"),
+          shiny::tableOutput("range_size_table")
         )
-      )
+      ),
+      shiny::tags$div(class = "ibgb-key-files-title", "\u8f93\u5165\u9a8c\u8bc1"),
+      shiny::tableOutput("validation_table")
     ),
     shiny::tags$div(
       style = "display:none;",
@@ -3680,14 +3678,7 @@ wizard_step_analysis <- function() {
         "\u8fd0\u884c\u7ed3\u675f\u540e\u4f1a\u81ea\u52a8\u751f\u6210\u62a5\u544a\uff0c\u5230\u201c3 \u00b7 \u7ed3\u679c\u201d\u6807\u7b7e\u67e5\u770b\u8be6\u60c5\u548c\u4e0b\u8f7d\u3002"
       )
     ),
-    shiny_collapsible_section(
-      "\u8fd0\u884c\u9009\u9879",
-      shiny::checkboxInput("dry_run", "\u8bd5\u8fd0\u884c\uff1a\u53ea\u68c0\u67e5\uff0c\u4e0d\u771f\u6b63\u8fd0\u884c BioGeoBEARS", value = TRUE),
-      shiny::checkboxInput("require_biogeobears", "\u771f\u5b9e\u8fd0\u884c\u65f6\u8981\u6c42 BioGeoBEARS \u53ef\u7528", value = FALSE),
-      shiny::checkboxInput("resume_completed_models", "\u590d\u7528\u5df2\u5b8c\u6210\u7684\u6a21\u578b", value = TRUE),
-      shiny::checkboxInput("retry_failed_only", "\u53ea\u91cd\u8dd1\u5931\u8d25\u7684\u6a21\u578b", value = FALSE),
-      shiny::checkboxInput("force", "\u9a8c\u8bc1\u5931\u8d25\u540e\u5f3a\u5236\u8fd0\u884c", value = FALSE)
-    ),
+    shiny::checkboxInput("dry_run", "\u8bd5\u8fd0\u884c\uff1a\u53ea\u68c0\u67e5\uff0c\u4e0d\u771f\u6b63\u8fd0\u884c BioGeoBEARS", value = TRUE),
     shiny_collapsible_section(
       "BSM \u968f\u673a\u6620\u5c04",
       shiny::checkboxInput("run_stochastic_mapping", "\u8fd0\u884c BSM \u968f\u673a\u6620\u5c04", value = FALSE),

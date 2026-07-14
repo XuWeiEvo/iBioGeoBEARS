@@ -300,11 +300,13 @@ test_that("Wizard data step is a single own-data card with merged output locatio
   ))
 
   expect_match(panel_html, "数据", fixed = TRUE)
-  # Own-data inputs and templates are present.
+  # Own-data inputs and templates are present, with each template inline in an
+  # upload row beside its file input.
   expect_match(panel_html, "wizard_tree", fixed = TRUE)
   expect_match(panel_html, "wizard_geography", fixed = TRUE)
   expect_match(panel_html, "download_geography_template", fixed = TRUE)
-  # Advanced constraint uploads and their templates live on the data step.
+  expect_match(panel_html, "ibgb-upload-row", fixed = TRUE)
+  # Advanced constraint uploads and their inline templates live on the data step.
   expect_match(panel_html, "高级约束", fixed = TRUE)
   expect_match(panel_html, "wizard_constraint_times_file", fixed = TRUE)
   expect_match(panel_html, "download_constraint_dispersal_multipliers_file", fixed = TRUE)
@@ -336,18 +338,21 @@ test_that("Wizard data step is a single own-data card with merged output locatio
   expect_match(action_html, "open_user_guide", fixed = TRUE)
 })
 
-test_that("Analysis step is the run action plus run and BSM option folds", {
+test_that("Analysis step is the run action, a bare dry-run toggle, and the BSM fold", {
   testthat::skip_if_not_installed("shiny")
 
   analysis_html <- as.character(wizard_step_analysis())
-  # A single primary run action (renamed) and the two option folds.
+  # A single primary run action (renamed) and a bare dry-run checkbox.
   expect_match(analysis_html, "点击开始分析", fixed = TRUE)
-  expect_match(analysis_html, "运行选项", fixed = TRUE)
+  expect_match(analysis_html, "dry_run", fixed = TRUE)
   expect_match(analysis_html, "BSM 随机映射", fixed = TRUE)
   expect_match(analysis_html, "run_stochastic_mapping", fixed = TRUE)
   expect_match(analysis_html, "stochastic_mapping_replicates", fixed = TRUE)
-  # The report button, config editor, env-install fold, and constraint inputs
-  # were removed from this step.
+  # The run-options fold and its extra toggles, plus the report button, config
+  # editor, env-install fold, and constraint inputs, were removed from this step.
+  expect_false(grepl("运行选项", analysis_html, fixed = TRUE))
+  expect_false(grepl("resume_completed_models", analysis_html, fixed = TRUE))
+  expect_false(grepl("retry_failed_only", analysis_html, fixed = TRUE))
   expect_false(grepl("render_report", analysis_html, fixed = TRUE))
   expect_false(grepl("use_config_editor", analysis_html, fixed = TRUE))
   expect_false(grepl("constraint_times_file", analysis_html, fixed = TRUE))
@@ -458,6 +463,10 @@ test_that("Preview image containers size to their content, not a fixed height", 
   styles <- as.character(iBGB_head_styles()$children[[1]]$children[[1]])
   expect_match(styles, ".ibgb-preview .shiny-image-output", fixed = TRUE)
   expect_match(styles, "height:auto !important", fixed = TRUE)
+  # Buttons are highlighted with a filled accent so they read as clickable,
+  # and upload rows lay the template download beside the file input.
+  expect_match(styles, "background-color:#1868b8", fixed = TRUE)
+  expect_match(styles, ".ibgb-upload-row{display:flex", fixed = TRUE)
 })
 
 test_that("constraint_template_path resolves every constraint template", {
