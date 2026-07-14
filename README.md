@@ -691,8 +691,11 @@ figures:
 ## Cross-Clade Comparison
 
 Process rates through time can be compared across separately analysed clades.
-Each clade's run writes `tables/process_rates_through_time.csv`; collect that
-file from every clade and combine them:
+`tables/process_rates_through_time.csv` (and its per-region companion) are BSM
+outputs: a clade only writes them when its run has stochastic mapping enabled
+(`analysis.run_stochastic_mapping: true`, or the "运行 BSM 随机映射" checkbox in
+the GUI). Run each clade with BSM, then collect that file from every clade and
+combine them:
 
 ```r
 combined <- combine_process_rates_across_clades(

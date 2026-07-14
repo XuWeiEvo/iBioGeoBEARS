@@ -3519,7 +3519,10 @@ iBGB_head_styles <- function() {
       ".ibgb-next-action-step{font-size:15px;font-weight:600;color:#1f2937;margin-bottom:3px} ",
       ".ibgb-next-action-detail{color:#374151} ",
       ".ibgb-collapsible{border-top:1px solid #ddd;margin-top:12px;padding-top:10px} ",
-      ".ibgb-collapsible summary{font-weight:600;cursor:pointer;margin-bottom:8px} ",
+      ".ibgb-collapsible>summary{font-weight:600;cursor:pointer;margin-bottom:8px;list-style:none} ",
+      ".ibgb-collapsible>summary::-webkit-details-marker{display:none} ",
+      ".ibgb-collapsible>summary::before{content:\"\u25b6\";color:#1868b8;font-size:11px;margin-right:8px;display:inline-block;transition:transform .15s} ",
+      ".ibgb-collapsible[open]>summary::before{transform:rotate(90deg)} ",
       ".ibgb-primary-result{border-top:1px solid #e5e7eb;margin-top:18px;padding-top:16px} ",
       ".ibgb-primary-result:first-child{border-top:0;margin-top:0;padding-top:0} ",
       ".ibgb-preview img{max-width:100%;height:auto;border:1px solid #ddd;display:block} ",
@@ -3681,6 +3684,10 @@ wizard_step_analysis <- function() {
     shiny::checkboxInput("dry_run", "\u8bd5\u8fd0\u884c\uff1a\u53ea\u68c0\u67e5\uff0c\u4e0d\u771f\u6b63\u8fd0\u884c BioGeoBEARS", value = TRUE),
     shiny_collapsible_section(
       "BSM \u968f\u673a\u6620\u5c04",
+      shiny::tags$div(
+        class = "ibgb-home-note",
+        "\u52fe\u9009\u540e\u624d\u4f1a\u751f\u6210\u4e8b\u4ef6\u7edf\u8ba1\u3001\u751f\u7269\u5730\u7406\u8fc7\u7a0b\u7efc\u5408\u3001\u8fc7\u7a0b\u901f\u7387\u968f\u65f6\u95f4\u7b49\u7ed3\u679c\uff08\u8de8\u7c7b\u7fa4\u6574\u5408\u7528\u7684 process_rates_through_time.csv \u548c region_process_rates_through_time.csv \u4e5f\u5728\u8fd9\u91cc\u4ea7\u751f\uff09\u3002\u4e0d\u52fe\u9009\u5219\u53ea\u505a\u6a21\u578b\u62df\u5408\u548c\u7956\u5148\u5206\u5e03\u4f30\u8ba1\u3002"
+      ),
       shiny::checkboxInput("run_stochastic_mapping", "\u8fd0\u884c BSM \u968f\u673a\u6620\u5c04", value = FALSE),
       shiny::selectInput(
         "stochastic_mapping_model",
@@ -3725,6 +3732,14 @@ wizard_step_results <- function() {
 wizard_step_cross_clade <- function() {
   shiny::tabPanel(
     "4 \u00b7 \u8de8\u7c7b\u7fa4",
+    shiny::tags$div(
+      class = "ibgb-next-action",
+      shiny::tags$div(class = "ibgb-next-action-title", "\u9700\u8981\u5148\u8dd1 BSM"),
+      shiny::tags$div(
+        class = "ibgb-next-action-detail",
+        "process_rates_through_time.csv \u548c region_process_rates_through_time.csv \u53ea\u6709\u5728\u201c2 \u00b7 \u5206\u6790\u201d\u91cc\u52fe\u9009\u201c\u8fd0\u884c BSM \u968f\u673a\u6620\u5c04\u201d\u5e76\u771f\u5b9e\u8fd0\u884c\u540e\u624d\u4f1a\u5199\u5165\u5404\u9879\u76ee\u7684 tables/ \u76ee\u5f55\u3002\u82e5\u4f60\u7684 tables/ \u91cc\u6ca1\u6709\u8fd9\u4e24\u4e2a\u6587\u4ef6\uff0c\u8bf4\u660e\u90a3\u6b21\u5206\u6790\u6ca1\u6709\u8dd1 BSM\uff0c\u8bf7\u91cd\u8dd1\u5e76\u52fe\u9009 BSM\u3002"
+      )
+    ),
     shiny::tags$div(
       class = "ibgb-choice-card",
       shiny::tags$div(class = "ibgb-control-title", "\u603b\u4f53\u8fc7\u7a0b\u901f\u7387\uff08\u8de8\u7c7b\u7fa4\uff09"),

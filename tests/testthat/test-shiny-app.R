@@ -467,6 +467,9 @@ test_that("Preview image containers size to their content, not a fixed height", 
   # and upload rows lay the template download beside the file input.
   expect_match(styles, "background-color:#1868b8", fixed = TRUE)
   expect_match(styles, ".ibgb-upload-row{display:flex", fixed = TRUE)
+  # Collapsible/dropdown summaries get a highlighted arrow marker that rotates.
+  expect_match(styles, ".ibgb-collapsible>summary::before", fixed = TRUE)
+  expect_match(styles, ".ibgb-collapsible[open]>summary::before{transform:rotate(90deg)}", fixed = TRUE)
 })
 
 test_that("constraint_template_path resolves every constraint template", {
