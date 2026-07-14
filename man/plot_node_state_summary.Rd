@@ -2,11 +2,12 @@
 % Please edit documentation in R/plots.R
 \name{plot_node_state_summary}
 \alias{plot_node_state_summary}
-\title{Plot best ancestral range state by tree node}
+\title{Plot ancestral range states on the tree}
 \usage{
 plot_node_state_summary(
   tree_nodes,
   node_state_summary,
+  ancestral_state_probabilities = NULL,
   model = NULL,
   location = "branch_top_at_node",
   label_tips = TRUE,
@@ -20,20 +21,29 @@ plot_node_state_summary(
 \item{node_state_summary}{Node-state summary table from
 \code{standardized_tables$node_state_summary}.}
 
+\item{ancestral_state_probabilities}{Optional long-format per-node per-state
+probability table from \code{standardized_tables$ancestral_state_probabilities};
+when supplied, node pies show the full distribution.}
+
 \item{model}{Optional model name to plot. Defaults to the first model in
 \code{node_state_summary}.}
 
 \item{location}{BioGeoBEARS probability location to plot. Defaults to
 \code{"branch_top_at_node"} when available.}
 
-\item{label_tips}{Logical. If \code{TRUE}, label tip nodes.}
+\item{label_tips}{Logical. If \code{TRUE}, label tip nodes with taxon and best
+state.}
 
-\item{label_internal_nodes}{Logical. If \code{TRUE}, label internal nodes by
-best state and probability.}
+\item{label_internal_nodes}{Deprecated; kept for backward compatibility and
+ignored (internal nodes are shown as pies).}
 }
 \value{
 A ggplot object.
 }
 \description{
-Plot best ancestral range state by tree node
+Draw a rectangular phylogram with a pie chart at every node showing the
+probability of each ancestral range state, so the reconstruction reads like a
+standard BioGeoBEARS ancestral-state figure. When the full state distribution
+is not supplied, each node falls back to a single point coloured by its best
+state.
 }

@@ -299,22 +299,32 @@ plot_root_state_probabilities <- function(root_state_probabilities, top_n = 8L) 
     ggplot2::theme(panel.grid.major.y = ggplot2::element_blank())
 }
 
-#' Plot best ancestral range state by tree node
+#' Plot ancestral range states on the tree
+#'
+#' Draw a rectangular phylogram with a pie chart at every node showing the
+#' probability of each ancestral range state, so the reconstruction reads like a
+#' standard BioGeoBEARS ancestral-state figure. When the full state distribution
+#' is not supplied, each node falls back to a single point coloured by its best
+#' state.
 #'
 #' @param tree_nodes Tree node metadata table from
 #'   `standardized_tables$tree_nodes`.
 #' @param node_state_summary Node-state summary table from
 #'   `standardized_tables$node_state_summary`.
+#' @param ancestral_state_probabilities Optional long-format per-node per-state
+#'   probability table from `standardized_tables$ancestral_state_probabilities`;
+#'   when supplied, node pies show the full distribution.
 #' @param model Optional model name to plot. Defaults to the first model in
 #'   `node_state_summary`.
 #' @param location BioGeoBEARS probability location to plot. Defaults to
 #'   `"branch_top_at_node"` when available.
-#' @param label_tips Logical. If `TRUE`, label tip nodes.
-#' @param label_internal_nodes Logical. If `TRUE`, label internal nodes by
-#'   best state and probability.
+#' @param label_tips Logical. If `TRUE`, label tip nodes with taxon and best
+#'   state.
+#' @param label_internal_nodes Deprecated; kept for backward compatibility and
+#'   ignored (internal nodes are shown as pies).
 #' @return A ggplot object.
 #' @export
-plot_node_state_summary <- function(tree_nodes, node_state_summary, model = NULL, location = "branch_top_at_node", label_tips = TRUE, label_internal_nodes = TRUE) {
+plot_node_state_summary <- function(tree_nodes, node_state_summary, ancestral_state_probabilities = NULL, model = NULL, location = "branch_top_at_node", label_tips = TRUE, label_internal_nodes = TRUE) {
   node_required <- c("node_index", "node_type", "node_label", "parent_node_index", "edge_length")
   summary_required <- c("model", "location", "node_index", "best_state", "best_probability")
   missing_nodes <- setdiff(node_required, names(tree_nodes))
@@ -337,85 +347,140 @@ plot_node_state_summary <- function(tree_nodes, node_state_summary, model = NULL
     location <- available_locations[1L]
   }
 
+  # Rescale distance-from-root (x) so it spans a range comparable to the tip
+  # axis (y). With coord_fixed() this keeps the node pies circular while the
+  # axis still reports true distances. The tree shape is preserved (uniform
+  # scale) and the y positions are the usual tip order.
   layout <- layout_tree_nodes(tree_nodes)
-  summary_rows <- node_state_summary[
+  n_tips <- sum(tree_nodes$node_type == "tip", na.rm = TRUE)
+  y_span <- max(1, n_tips - 1L)
+  x_max <- suppressWarnings(max(layout$x, na.rm = TRUE))
+  if (!is.finite(x_max) || x_max <= 0) {
+    x_max <- 1
+  }
+  x_scale <- y_span / x_max
+  layout$xp <- layout$x * x_scale
+  layout$parent_xp <- layout$parent_x * x_scale
+
+  best <- node_state_summary[
     node_state_summary$model == model & node_state_summary$location == location,
     c("node_index", "best_state", "best_probability"),
     drop = FALSE
   ]
-  plot_data <- merge(layout, summary_rows, by = "node_index", all.x = TRUE, sort = FALSE)
-  plot_data$plot_probability <- ifelse(is.na(plot_data$best_probability), 0, plot_data$best_probability)
-  plot_data$best_state_label <- ifelse(is.na(plot_data$best_state), "not estimated", plot_data$best_state)
-  plot_data$probability_label <- ifelse(
-    is.na(plot_data$best_probability),
-    "NA",
-    format(round(plot_data$best_probability, 2L), nsmall = 2L, trim = TRUE)
+  layout <- merge(layout, best, by = "node_index", all.x = TRUE, sort = FALSE)
+  layout$best_state_label <- ifelse(is.na(layout$best_state), "not estimated", layout$best_state)
+
+  ed <- layout[
+    !is.na(layout$parent_node_index) & !is.na(layout$parent_xp) & !is.na(layout$parent_y),
+    ,
+    drop = FALSE
+  ]
+  edge_segments <- rbind(
+    data.frame(x = ed$parent_xp, y = ed$y, xend = ed$xp, yend = ed$y, stringsAsFactors = FALSE),
+    data.frame(x = ed$parent_xp, y = ed$parent_y, xend = ed$parent_xp, yend = ed$y, stringsAsFactors = FALSE)
   )
 
-  edges <- plot_data[!is.na(plot_data$parent_node_index), , drop = FALSE]
-  edges <- edges[!is.na(edges$parent_x) & !is.na(edges$parent_y), , drop = FALSE]
-  edge_segments <- tree_edge_segments(edges)
-  tip_labels <- if (isTRUE(label_tips)) plot_data[plot_data$node_type == "tip", , drop = FALSE] else plot_data[0L, , drop = FALSE]
-  tip_labels$tip_display <- if (nrow(tip_labels) > 0L) {
-    paste0(tip_labels$node_label, " [", tip_labels$best_state_label, "]")
-  } else {
-    character(0)
-  }
-  internal_labels <- if (isTRUE(label_internal_nodes)) plot_data[plot_data$node_type == "internal", , drop = FALSE] else plot_data[0L, , drop = FALSE]
-  internal_labels$internal_node_label <- if (nrow(internal_labels) > 0L) {
-    paste0(internal_labels$best_state_label, "\n", internal_labels$probability_label)
-  } else {
-    character(0)
-  }
+  radius <- 0.16
+  pie_df <- node_state_pie_wedges(ancestral_state_probabilities, layout, model, location, radius)
 
-  ggplot2::ggplot() +
+  tip_rows <- layout[layout$node_type == "tip", , drop = FALSE]
+  tip_rows$tip_display <- paste0(tip_rows$node_label, "  [", tip_rows$best_state_label, "]")
+
+  plot <- ggplot2::ggplot() +
     ggplot2::geom_segment(
       data = edge_segments,
       ggplot2::aes(x = x, y = y, xend = xend, yend = yend),
-      linewidth = 0.45,
-      colour = "#64748b"
+      linewidth = 0.55,
+      colour = ibgb_palette()$ink,
+      lineend = "round"
+    )
+
+  if (!is.null(pie_df)) {
+    plot <- plot +
+      ggforce::geom_arc_bar(
+        data = pie_df,
+        ggplot2::aes(x0 = x0, y0 = y0, r0 = 0, r = radius, start = start, end = end, fill = state),
+        colour = "white", linewidth = 0.18
+      )
+  } else {
+    plot <- plot +
+      ggplot2::geom_point(
+        data = layout,
+        ggplot2::aes(x = xp, y = y, fill = best_state_label),
+        shape = 21, size = 5, colour = ibgb_palette()$ink, stroke = 0.4
+      )
+  }
+
+  if (isTRUE(label_tips) && nrow(tip_rows) > 0L) {
+    plot <- plot +
+      ggplot2::geom_text(
+        data = tip_rows,
+        ggplot2::aes(x = xp, y = y, label = tip_display),
+        hjust = 0, nudge_x = radius + 0.08, size = 3.2,
+        colour = ibgb_palette()$ink
+      )
+  }
+
+  true_breaks <- pretty(c(0, x_max))
+  true_breaks <- true_breaks[true_breaks >= 0 & true_breaks <= x_max + 1e-9]
+
+  plot +
+    scale_fill_ibgb() +
+    ggplot2::scale_x_continuous(
+      breaks = true_breaks * x_scale,
+      labels = true_breaks,
+      expand = ggplot2::expansion(mult = c(0.03, 0.28))
     ) +
-    ggplot2::geom_point(
-      data = plot_data,
-      ggplot2::aes(x = x, y = y, fill = best_state_label, size = plot_probability),
-      shape = 21,
-      colour = "#1f2937",
-      stroke = 0.35,
-      alpha = 0.95
-    ) +
-    ggplot2::geom_text(
-      data = tip_labels,
-      ggplot2::aes(x = x, y = y, label = tip_display),
-      hjust = -0.05,
-      size = 3.1
-    ) +
-    ggplot2::geom_label(
-      data = internal_labels,
-      ggplot2::aes(x = x, y = y, label = internal_node_label),
-      nudge_y = 0.22,
-      size = 2.8,
-      colour = "#111827",
-      fill = "white",
-      linewidth = 0.15,
-      alpha = 0.9
-    ) +
-    ggplot2::scale_size_continuous(limits = c(0, 1), range = c(2.4, 7.2), name = "Best-state probability") +
-    ggplot2::scale_x_continuous(expand = ggplot2::expansion(mult = c(0.03, 0.2))) +
-    ggplot2::coord_cartesian(clip = "off") +
+    ggplot2::coord_fixed(clip = "off") +
     ggplot2::labs(
-      title = paste("Best ancestral ranges:", model),
-      subtitle = location,
+      title = paste("Ancestral ranges:", model),
       x = "Distance from root",
       y = NULL,
-      fill = "Best state"
+      fill = "Range"
     ) +
     theme_ibgb() +
     ggplot2::theme(
-      panel.grid = ggplot2::element_blank(),
+      panel.grid.major = ggplot2::element_blank(),
+      panel.grid.minor = ggplot2::element_blank(),
       axis.text.y = ggplot2::element_blank(),
       axis.ticks.y = ggplot2::element_blank(),
-      plot.margin = ggplot2::margin(8, 44, 8, 8)
+      plot.margin = ggplot2::margin(8, 60, 8, 8)
     )
+}
+
+node_state_pie_wedges <- function(ancestral_state_probabilities, layout, model, location, radius) {
+  ap <- ancestral_state_probabilities
+  needed <- c("model", "location", "node_index", "state", "probability")
+  if (is.null(ap) || nrow(ap) == 0L || !all(needed %in% names(ap))) {
+    return(NULL)
+  }
+  ap <- ap[ap$model == model & ap$location == location & !is.na(ap$probability) & ap$probability > 0, , drop = FALSE]
+  if (nrow(ap) == 0L) {
+    return(NULL)
+  }
+  x_positions <- if ("xp" %in% names(layout)) layout$xp else layout$x
+  pieces <- lapply(split(seq_len(nrow(ap)), ap$node_index), function(idx) {
+    d <- ap[idx, , drop = FALSE]
+    d <- d[order(d$state), , drop = FALSE]
+    node_index <- d$node_index[[1L]]
+    x0 <- x_positions[match(node_index, layout$node_index)]
+    y0 <- layout$y[match(node_index, layout$node_index)]
+    if (length(x0) == 0L || is.na(x0) || is.na(y0)) {
+      return(NULL)
+    }
+    end <- cumsum(d$probability / sum(d$probability)) * (2 * pi)
+    start <- c(0, utils::head(end, -1L))
+    data.frame(
+      x0 = x0, y0 = y0, state = d$state,
+      start = start, end = end,
+      stringsAsFactors = FALSE
+    )
+  })
+  pieces <- pieces[!vapply(pieces, is.null, logical(1))]
+  if (length(pieces) == 0L) {
+    return(NULL)
+  }
+  do.call(rbind, pieces)
 }
 
 #' Plot node-state sensitivity between non-+J and +J models
@@ -507,12 +572,14 @@ generate_figures <- function(model_comparison, standardized_tables, project_path
 
   node_table <- standardized_tables$node_state_summary %||% data.frame()
   tree_nodes <- standardized_tables$tree_nodes %||% data.frame()
+  ancestral_probs <- standardized_tables$ancestral_state_probabilities %||% data.frame()
   if (nrow(node_table) > 0L && nrow(tree_nodes) > 0L) {
     node_plot_models <- select_node_state_plot_models(model_comparison)
     for (i in seq_len(nrow(node_plot_models))) {
       plots[[node_plot_models$figure[[i]]]] <- plot_node_state_summary(
         tree_nodes = tree_nodes,
         node_state_summary = node_table,
+        ancestral_state_probabilities = ancestral_probs,
         model = node_plot_models$model[[i]]
       )
     }

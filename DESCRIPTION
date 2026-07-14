@@ -24,6 +24,7 @@ Imports:
     stats,
     yaml,
     ggplot2,
+    ggforce,
     igraph,
     ggraph,
     ape,

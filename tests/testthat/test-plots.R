@@ -20,6 +20,40 @@ test_that("plot_node_state_summary returns a ggplot", {
   expect_s3_class(plot, "ggplot")
 })
 
+test_that("plot_node_state_summary draws node pies from the state distribution", {
+  tree_nodes <- data.frame(
+    node_index = c(1L, 2L, 3L),
+    node_type = c("tip", "tip", "internal"),
+    node_label = c("sp1", "sp2", "node_3"),
+    parent_node_index = c(3L, 3L, NA_integer_),
+    edge_length = c(1, 1, NA_real_),
+    is_root = c(FALSE, FALSE, TRUE)
+  )
+  node_state_summary <- data.frame(
+    model = "DEC", location = "branch_top_at_node",
+    node_index = c(1L, 2L, 3L),
+    best_state = c("A", "B", "AB"),
+    best_probability = c(1, 1, 0.6)
+  )
+  ancestral <- data.frame(
+    model = "DEC", location = "branch_top_at_node",
+    node_index = c(1L, 2L, 3L, 3L),
+    state = c("A", "B", "AB", "A"),
+    probability = c(1, 1, 0.6, 0.4),
+    stringsAsFactors = FALSE
+  )
+
+  # Each node's pie wedges close a full circle.
+  wedges <- node_state_pie_wedges(
+    ancestral, layout_tree_nodes(tree_nodes), "DEC", "branch_top_at_node", 0.16
+  )
+  expect_true(all(c("x0", "y0", "state", "start", "end") %in% names(wedges)))
+  expect_true(any(abs(wedges$end - 2 * pi) < 1e-8))
+
+  plot <- plot_node_state_summary(tree_nodes, node_state_summary, ancestral)
+  expect_s3_class(plot, "ggplot")
+})
+
 test_that("plot_node_state_sensitivity returns a ggplot", {
   node_state_sensitivity <- data.frame(
     location = rep("branch_top_at_node", 3L),

@@ -7,13 +7,13 @@ if (getRversion() >= "2.15.1") {
     "best_state", "best_state_label", "comparison", "delta_aicc",
     "event_count", "event_label", "event_time", "event_type", "frequency",
     "bin_midpoint", "ci_lower", "ci_upper", "clade", "count", "direction", "emigration",
-    "event_time_before_present", "group_label", "immigration",
+    "end", "event_time_before_present", "group_label", "immigration",
     "internal_node_label", "mean_count", "model",
     "name", "net_dispersal_flux", "node_display", "node_label", "parent_x", "parent_y",
     "plot_probability", "plus_j", "probability", "probability_difference_abs",
     "process_label", "region",
-    "route_type", "sd_count", "source_region", "state", "state_change", "target_region",
-    "tip_display", "x", "xend", "y", "yend"
+    "route_type", "sd_count", "source_region", "start", "state", "state_change", "target_region",
+    "tip_display", "x", "x0", "xend", "xp", "y", "y0", "yend"
   ))
 }
 
