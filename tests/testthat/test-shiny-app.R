@@ -404,30 +404,31 @@ test_that("output_file_legend describes bundle files", {
   expect_true(all(nzchar(legend$description)))
 })
 
-test_that("Cross-clade step is numbered, adds per-region and CI, and export buttons", {
+test_that("Cross-clade step takes bundle uploads and shows integrated panels", {
   testthat::skip_if_not_installed("shiny")
 
   ui <- as.character(wizard_step_cross_clade())
   expect_match(ui, "4 · 跨类群", fixed = TRUE)
-  expect_false(grepl("ibgb-step-intro", ui, fixed = TRUE))
-  # Batch uploads (overall + per-region) come first.
-  expect_match(ui, "cross_clade_files", fixed = TRUE)
-  expect_match(ui, "cross_clade_region_files", fixed = TRUE)
-  # Integrated result previews and the CI note.
+  # One result-bundle zip per clade drives everything.
+  expect_match(ui, "cross_clade_bundles", fixed = TRUE)
+  # Integrated panels: synthesis, rates (overall + region), exchange matrix,
+  # network, heatmap, budget, event times, event stats.
+  expect_match(ui, "cc_synth_plot", fixed = TRUE)
   expect_match(ui, "cross_clade_plot", fixed = TRUE)
   expect_match(ui, "cross_clade_region_plot", fixed = TRUE)
-  expect_match(ui, "95% CI", fixed = TRUE)
-  # Export buttons for both combined tables.
+  expect_match(ui, "cc_exchange_table", fixed = TRUE)
+  expect_match(ui, "cc_network_plot", fixed = TRUE)
+  expect_match(ui, "cc_heatmap_plot", fixed = TRUE)
+  expect_match(ui, "cc_budget_plot", fixed = TRUE)
+  expect_match(ui, "cc_etimes_plot", fixed = TRUE)
+  expect_match(ui, "cc_esum_table", fixed = TRUE)
+  # Export + report.
   expect_match(ui, "download_cross_clade", fixed = TRUE)
-  expect_match(ui, "download_cross_clade_region", fixed = TRUE)
-  # The cross-clade report lives on this tab (moved off the single-clade tab).
   expect_match(ui, "render_xclade_report", fixed = TRUE)
   expect_match(ui, "download_xclade_report", fixed = TRUE)
-  # Only figures on the tab; the long tables live in the report, not here.
-  expect_false(grepl("cross_clade_table", ui, fixed = TRUE))
-  expect_false(grepl("cross_clade_region_table", ui, fixed = TRUE))
-  # Single-clade event panels are NOT copied here.
-  expect_false(grepl("primary_figure_process_synthesis", ui, fixed = TRUE))
+  # The old per-CSV uploads are gone.
+  expect_false(grepl("cross_clade_files", ui, fixed = TRUE))
+  expect_false(grepl("cross_clade_region_files", ui, fixed = TRUE))
 })
 
 test_that("Help step becomes an about-and-citation panel", {
@@ -442,34 +443,42 @@ test_that("Help step becomes an about-and-citation panel", {
   expect_false(grepl("failed_models_table", ui, fixed = TRUE))
 })
 
-test_that("Shiny cross-clade server combines per-region uploads", {
+test_that("Shiny cross-clade server combines uploaded result bundles", {
   testthat::skip_if_not_installed("shiny")
 
-  write_region_file <- function(path) {
-    df <- do.call(rbind, lapply(c("A", "B"), function(r) {
-      data.frame(
-        model = "DEC+J", process_label = "Range expansion", region = r,
-        time_bin = 1:2, bin_midpoint = c(0.5, 1.5), mean_count = c(1, 2),
-        ci_lower = c(0.8, 1.8), ci_upper = c(1.2, 2.2),
-        stringsAsFactors = FALSE
-      )
-    }))
-    utils::write.csv(df, path, row.names = FALSE)
-    path
+  make_bundle_zip <- function(clade) {
+    root <- tempfile(paste0(clade, "-"))
+    dir.create(file.path(root, "tables"), recursive = TRUE)
+    pr <- data.frame(
+      model = "DEC", process_key = "range_expansion", process_label = "Range expansion",
+      process_group = "anagenetic", time_bin = 1:2, bin_midpoint = c(0.5, 1.5),
+      mean_count = c(1, 2), ci_lower = c(0.8, 1.8), ci_upper = c(1.2, 2.2),
+      stringsAsFactors = FALSE
+    )
+    utils::write.csv(pr, file.path(root, "tables", "process_rates_through_time.csv"), row.names = FALSE)
+    rr <- do.call(rbind, lapply(c("Region A", "Region B"), function(r) data.frame(
+      model = "DEC", process_key = "immigration", process_label = "Immigration",
+      process_group = "anagenetic", region = r, time_bin = 1:2, bin_midpoint = c(0.5, 1.5),
+      mean_count = c(1, 2), stringsAsFactors = FALSE
+    )))
+    utils::write.csv(rr, file.path(root, "tables", "region_process_rates_through_time.csv"), row.names = FALSE)
+    zipf <- tempfile(paste0(clade, "-"), fileext = ".zip")
+    zip::zip(zipfile = zipf, files = "tables", root = root)
+    zipf
   }
-  fa <- write_region_file(tempfile("cladeA-", fileext = ".csv"))
-  fb <- write_region_file(tempfile("cladeB-", fileext = ".csv"))
+  za <- make_bundle_zip("CladeA")
+  zb <- make_bundle_zip("CladeB")
 
   shiny::testServer(iBGB_shiny_server, {
-    session$setInputs(cross_clade_region_files = data.frame(
-      name = c("CladeA.csv", "CladeB.csv"),
-      datapath = c(fa, fb),
+    session$setInputs(cross_clade_bundles = data.frame(
+      name = c("CladeA.zip", "CladeB.zip"),
+      datapath = c(za, zb),
       stringsAsFactors = FALSE
     ))
-    combined <- cross_clade_region_combined()
-    expect_true(all(c("clade", "region") %in% names(combined)))
-    expect_setequal(unique(combined$clade), c("CladeA", "CladeB"))
-    expect_setequal(unique(combined$region), c("A", "B"))
+    rates <- cc_rates()
+    rrates <- cc_rrates()
+    expect_setequal(unique(rates$clade), c("CladeA", "CladeB"))
+    expect_setequal(unique(rrates$region), c("Region A", "Region B"))
   })
 })
 
@@ -547,7 +556,7 @@ test_that("Wizard shell renders all steps including elevated cross-clade", {
 
   expect_match(ui_html, "wizard_nav", fixed = TRUE)
   expect_match(ui_html, "跨类群", fixed = TRUE)
-  expect_match(ui_html, "cross_clade_files", fixed = TRUE)
+  expect_match(ui_html, "cross_clade_bundles", fixed = TRUE)
   expect_match(ui_html, "data_overview_table", fixed = TRUE)
   expect_match(ui_html, "status", fixed = TRUE)
 })

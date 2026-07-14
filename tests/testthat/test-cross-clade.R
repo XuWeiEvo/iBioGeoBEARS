@@ -156,19 +156,19 @@ test_that("render_cross_clade_report writes a self-contained HTML with figures",
   r2 <- write_clade_region_rates(root, "Phelsuma", c("A", "B"), c(3, 2, 1))
   region <- combine_region_process_rates_across_clades(c(r1, r2))
 
-  html <- render_cross_clade_report(overall, region)
+  html <- render_cross_clade_report(list(rates = overall, region_rates = region))
   expect_true(file.exists(html))
   txt <- paste(readLines(html, warn = FALSE), collapse = "\n")
   expect_match(txt, "Cross-clade synthesis", fixed = TRUE)
-  expect_match(txt, "Overall process rates through time", fixed = TRUE)
-  expect_match(txt, "Region-resolved", fixed = TRUE)
+  expect_match(txt, "Process rates through time (overall)", fixed = TRUE)
+  expect_match(txt, "Process rates through time (by region)", fixed = TRUE)
   expect_match(txt, "data:image/png;base64", fixed = TRUE)
 
   # Both the full per-clade long table and the clade-pooled summary appear.
   expect_match(txt, "Combined rates per clade", fixed = TRUE)
   expect_match(txt, "all clades pooled", fixed = TRUE)
   expect_match(txt, "Summed mean events", fixed = TRUE)
-  expect_error(render_cross_clade_report(NULL, NULL), "No cross-clade results")
+  expect_error(render_cross_clade_report(list()), "No cross-clade results")
 })
 
 test_that("keep_first_model drops extra models so cross-clade curves are single", {

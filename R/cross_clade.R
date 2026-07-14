@@ -93,6 +93,170 @@ keep_first_model <- function(df) {
   df
 }
 
+# ---- Cross-clade integration from per-clade result-bundle zip archives ----
+
+# Read one table (tables/<name>.csv) out of a result-bundle zip archive.
+read_bundle_table <- function(zip_path, table) {
+  if (is.null(zip_path) || !nzchar(zip_path) || !file.exists(zip_path)) {
+    return(NULL)
+  }
+  entries <- tryCatch(utils::unzip(zip_path, list = TRUE)$Name, error = function(e) character())
+  if (length(entries) == 0L) {
+    return(NULL)
+  }
+  want <- paste0(table, ".csv")
+  cand <- entries[basename(entries) == want]
+  if (length(cand) == 0L) {
+    return(NULL)
+  }
+  pref <- cand[grepl("tables/", cand, fixed = TRUE)]
+  target <- if (length(pref) > 0L) pref[[1L]] else cand[[1L]]
+  tmp <- tempfile("ibgb-bundle-")
+  dir.create(tmp)
+  on.exit(unlink(tmp, recursive = TRUE), add = TRUE)
+  ok <- tryCatch({
+    utils::unzip(zip_path, files = target, exdir = tmp)
+    TRUE
+  }, error = function(e) FALSE)
+  if (!isTRUE(ok)) {
+    return(NULL)
+  }
+  f <- file.path(tmp, target)
+  if (!file.exists(f)) {
+    return(NULL)
+  }
+  tryCatch(utils::read.csv(f, stringsAsFactors = FALSE), error = function(e) NULL)
+}
+
+# Read one table from several bundles, keep a single model per clade, tag clade.
+read_clade_bundle_tables <- function(zip_paths, clade_names, table) {
+  zip_paths <- as.character(zip_paths %||% character())
+  if (length(zip_paths) == 0L) {
+    return(NULL)
+  }
+  clade_names <- as.character(clade_names %||% rep(NA_character_, length(zip_paths)))
+  pieces <- lapply(seq_along(zip_paths), function(i) {
+    df <- read_bundle_table(zip_paths[[i]], table)
+    if (is.null(df) || nrow(df) == 0L) {
+      return(NULL)
+    }
+    df <- keep_first_model(df)
+    lab <- if (length(clade_names) >= i && !is.na(clade_names[[i]]) && nzchar(clade_names[[i]])) {
+      clade_names[[i]]
+    } else {
+      derive_clade_name(zip_paths[[i]])
+    }
+    df$clade <- lab
+    df
+  })
+  pieces <- pieces[!vapply(pieces, is.null, logical(1))]
+  if (length(pieces) == 0L) {
+    return(NULL)
+  }
+  labels <- make.unique(vapply(pieces, function(d) d$clade[[1L]], character(1)), sep = " ")
+  pieces <- Map(function(d, l) {
+    d$clade <- l
+    d
+  }, pieces, labels)
+  common <- Reduce(intersect, lapply(pieces, names))
+  common <- c("clade", setdiff(common, "clade"))
+  do.call(rbind, lapply(pieces, function(d) d[, common, drop = FALSE]))
+}
+
+# Sum a per-clade combined table across clades over grouping columns, giving one
+# integrated table tagged model = "All clades" (so single-clade plots pool it).
+aggregate_across_clades <- function(df, group_cols, sum_cols, label = "All clades") {
+  if (is.null(df) || nrow(df) == 0L) {
+    return(NULL)
+  }
+  group_cols <- intersect(group_cols, names(df))
+  sum_cols <- intersect(sum_cols, names(df))
+  if (length(group_cols) == 0L || length(sum_cols) == 0L) {
+    return(NULL)
+  }
+  values <- df[, sum_cols, drop = FALSE]
+  values[] <- lapply(values, function(x) suppressWarnings(as.numeric(x)))
+  agg <- stats::aggregate(values, by = as.list(df[, group_cols, drop = FALSE]), FUN = function(x) sum(x, na.rm = TRUE))
+  names(agg)[seq_along(group_cols)] <- group_cols
+  agg$model <- label
+  agg
+}
+
+combine_process_rates_from_bundles <- function(zip_paths, clade_names = NULL) {
+  read_clade_bundle_tables(zip_paths, clade_names, "process_rates_through_time")
+}
+
+combine_region_rates_from_bundles <- function(zip_paths, clade_names = NULL) {
+  read_clade_bundle_tables(zip_paths, clade_names, "region_process_rates_through_time")
+}
+
+combine_process_synthesis_across_clades <- function(zip_paths, clade_names = NULL) {
+  df <- read_clade_bundle_tables(zip_paths, clade_names, "biogeographic_process_summary")
+  agg <- aggregate_across_clades(df, c("process_group", "process_key", "process_label"), c("mean_count"))
+  if (!is.null(agg)) {
+    agg$sd_count <- NA_real_
+  }
+  agg
+}
+
+combine_dispersal_routes_across_clades <- function(zip_paths, clade_names = NULL) {
+  df <- read_clade_bundle_tables(zip_paths, clade_names, "bsm_dispersal_routes")
+  aggregate_across_clades(df, c("route_type", "source_region", "target_region"), c("mean_count"))
+}
+
+combine_region_budgets_across_clades <- function(zip_paths, clade_names = NULL) {
+  df <- read_clade_bundle_tables(zip_paths, clade_names, "region_process_budgets")
+  agg <- aggregate_across_clades(df, c("region"), c("immigration", "emigration", "local_extinction", "total_dispersal"))
+  if (!is.null(agg)) {
+    agg$net_dispersal_flux <- agg$immigration - agg$emigration
+  }
+  agg
+}
+
+combine_event_summary_across_clades <- function(zip_paths, clade_names = NULL) {
+  df <- read_clade_bundle_tables(zip_paths, clade_names, "bsm_event_summary")
+  aggregate_across_clades(df, c("event_type", "event_label"), c("mean_count"))
+}
+
+combine_event_times_across_clades <- function(zip_paths, clade_names = NULL) {
+  df <- read_clade_bundle_tables(zip_paths, clade_names, "bsm_event_times")
+  if (is.null(df) || nrow(df) == 0L) {
+    return(NULL)
+  }
+  df$model <- "All clades"
+  df
+}
+
+# Sum each clade's region exchange matrix (dispersal off-diagonal + in-situ
+# diagonal) across clades. Per clade uses its own map count normalisation.
+combine_exchange_matrix_across_clades <- function(zip_paths, clade_names = NULL) {
+  zip_paths <- as.character(zip_paths %||% character())
+  if (length(zip_paths) == 0L) {
+    return(NULL)
+  }
+  clade_names <- as.character(clade_names %||% rep(NA_character_, length(zip_paths)))
+  pieces <- lapply(seq_along(zip_paths), function(i) {
+    routes <- keep_first_model(read_bundle_table(zip_paths[[i]], "bsm_dispersal_routes"))
+    events <- keep_first_model(read_bundle_table(zip_paths[[i]], "bsm_events"))
+    esum <- read_bundle_table(zip_paths[[i]], "bsm_event_summary")
+    long <- summarize_region_exchange_matrix(list(
+      bsm_dispersal_routes = routes, bsm_events = events, bsm_event_summary = esum
+    ))
+    if (is.null(long) || nrow(long) == 0L) {
+      return(NULL)
+    }
+    lab <- if (!is.na(clade_names[[i]]) && nzchar(clade_names[[i]])) clade_names[[i]] else derive_clade_name(zip_paths[[i]])
+    long$clade <- lab
+    long
+  })
+  pieces <- pieces[!vapply(pieces, is.null, logical(1))]
+  if (length(pieces) == 0L) {
+    return(NULL)
+  }
+  keep <- c("clade", "source_region", "recipient_region", "kind", "mean_count")
+  do.call(rbind, lapply(pieces, function(d) d[, intersect(keep, names(d)), drop = FALSE]))
+}
+
 #' Plot process rates through time across clades
 #'
 #' Draw process rates through time with one panel per biogeographic process and
@@ -338,19 +502,23 @@ xclade_long_table <- function(df, cols) {
   out
 }
 
-# Render a self-contained HTML report of the cross-clade integrated results
-# (overall and/or region-resolved), with figures embedded as data URIs so the
-# file is portable. Returns the path to the written HTML file.
-render_cross_clade_report <- function(overall_combined = NULL,
-                                      region_combined = NULL,
-                                      file = NULL) {
+# Render a self-contained HTML report of the cross-clade integrated results.
+# `x` is a named list of the integrated pieces (any may be NULL/empty):
+# rates, region_rates, synthesis, routes, budgets, event_summary, event_times,
+# exchange_long. Figures are embedded as data URIs so the file is portable.
+render_cross_clade_report <- function(x, file = NULL) {
   if (is.null(file)) {
     file <- tempfile("cross_clade_report_", fileext = ".html")
   }
-  has_overall <- !is.null(overall_combined) && nrow(overall_combined) > 0L
-  has_region <- !is.null(region_combined) && nrow(region_combined) > 0L
-  if (!has_overall && !has_region) {
-    stop("No cross-clade results to report; upload clade rate files first.", call. = FALSE)
+  x <- x %||% list()
+  has <- function(key) {
+    d <- x[[key]]
+    !is.null(d) && is.data.frame(d) && nrow(d) > 0L
+  }
+  keys <- c("synthesis", "rates", "region_rates", "exchange_long",
+            "routes", "budgets", "event_times", "event_summary")
+  if (!any(vapply(keys, has, logical(1)))) {
+    stop("No cross-clade results to report; upload clade bundles first.", call. = FALSE)
   }
 
   embed_plot <- function(plot, width, height) {
@@ -360,12 +528,19 @@ render_cross_clade_report <- function(overall_combined = NULL,
     uri <- base64enc::dataURI(file = png, mime = "image/png")
     sprintf('<img alt="figure" src="%s" style="max-width:100%%;height:auto;" />', uri)
   }
-  html_escape <- function(x) {
-    x <- as.character(x)
-    x <- gsub("&", "&amp;", x, fixed = TRUE)
-    gsub("<", "&lt;", x, fixed = TRUE)
+  figure <- function(expr, width, height) {
+    tryCatch(embed_plot(expr, width, height),
+      error = function(e) sprintf("<p class=\"note\">Figure unavailable: %s</p>", conditionMessage(e)))
+  }
+  html_escape <- function(v) {
+    v <- as.character(v)
+    v <- gsub("&", "&amp;", v, fixed = TRUE)
+    gsub("<", "&lt;", v, fixed = TRUE)
   }
   html_table <- function(df) {
+    if (is.null(df) || nrow(df) == 0L) {
+      return("")
+    }
     header <- paste0("<th>", html_escape(names(df)), "</th>", collapse = "")
     rows <- vapply(seq_len(nrow(df)), function(i) {
       paste0("<td>", html_escape(unlist(df[i, , drop = TRUE])), "</td>", collapse = "")
@@ -375,6 +550,9 @@ render_cross_clade_report <- function(overall_combined = NULL,
       paste(rows, collapse = "</tr><tr>"), "</tr></tbody></table>"
     )
   }
+  all_dispersal <- function(routes) {
+    if ("route_type" %in% names(routes)) routes[routes$route_type == "all_dispersal", , drop = FALSE] else routes
+  }
 
   parts <- c(
     "<!doctype html>", "<html lang=\"en\">", "<head>", "<meta charset=\"utf-8\">",
@@ -383,7 +561,7 @@ render_cross_clade_report <- function(overall_combined = NULL,
       "<style>body{font-family:Arial,Helvetica,sans-serif;max-width:940px;",
       "margin:24px auto;padding:0 16px;color:#1f2937;line-height:1.5}",
       "h1{font-size:22px}h2{font-size:17px;margin-top:30px;",
-      "border-bottom:1px solid #e5e7eb;padding-bottom:4px}",
+      "border-bottom:1px solid #e5e7eb;padding-bottom:4px}h3{font-size:14px}",
       ".note{color:#6b7280;font-size:13px}table{border-collapse:collapse;",
       "font-size:12px;margin-top:10px}th,td{border:1px solid #d1d5db;",
       "padding:3px 7px;text-align:left}th{background:#f3f4f6}</style>"
@@ -392,58 +570,116 @@ render_cross_clade_report <- function(overall_combined = NULL,
     "<h1>Cross-clade synthesis of biogeographic events</h1>",
     sprintf(
       paste0(
-        "<p class=\"note\">Generated by iBiogeobears on %s. Curves show mean ",
-        "events per stochastic map; bands are the 95%% interval (2.5-97.5%% ",
-        "percentiles) across maps. Clades must share comparable time units and ",
-        "region definitions; full tables are in the accompanying CSV downloads.</p>"
+        "<p class=\"note\">Generated by iBiogeobears on %s. Counts are means per ",
+        "BSM stochastic map, summed across clades. Each clade contributes a single ",
+        "(best) model; clades must share comparable time units and region ",
+        "definitions.</p>"
       ),
       format(Sys.time(), "%Y-%m-%d %H:%M")
     )
   )
 
-  if (has_overall) {
-    n <- length(unique(overall_combined$clade))
-    parts <- c(
-      parts,
-      "<h2>Overall process rates through time</h2>",
-      sprintf("<p class=\"note\">%d clades integrated.</p>", n),
-      tryCatch(
-        embed_plot(plot_process_rates_across_clades(overall_combined), 8.6, 5.2),
-        error = function(e) sprintf("<p class=\"note\">Figure unavailable: %s</p>", conditionMessage(e))
-      ),
-      "<h3>Combined rates per clade and time bin</h3>",
-      html_table(xclade_long_table(
-        overall_combined,
-        c("clade", "process_group", "process_label", "bin_midpoint", "mean_count", "ci_lower", "ci_upper")
-      ))
-    )
-    summ <- xclade_process_summary(overall_combined)
-    if (!is.null(summ)) {
-      parts <- c(parts, "<h3>Summed mean events per process (all clades pooled)</h3>", html_table(summ))
-    }
+  if (has("synthesis")) {
+    parts <- c(parts, "<h2>Biogeographic process synthesis</h2>",
+      figure(plot_biogeographic_process_synthesis(x$synthesis), 8, 4.8))
   }
-
-  if (has_region) {
-    parts <- c(
-      parts,
-      "<h2>Region-resolved process rates through time</h2>",
-      tryCatch(
-        embed_plot(plot_region_process_rates_across_clades(region_combined), 9, 6),
-        error = function(e) sprintf("<p class=\"note\">Figure unavailable: %s</p>", conditionMessage(e))
-      ),
+  if (has("rates")) {
+    parts <- c(parts, "<h2>Process rates through time (overall)</h2>",
+      figure(plot_process_rates_across_clades(x$rates), 8.6, 5.2),
+      "<h3>Combined rates per clade and time bin</h3>",
+      html_table(xclade_long_table(x$rates,
+        c("clade", "process_group", "process_label", "bin_midpoint", "mean_count", "ci_lower", "ci_upper"))),
+      "<h3>Summed mean events per process (all clades pooled)</h3>",
+      html_table(xclade_process_summary(x$rates)))
+  }
+  if (has("region_rates")) {
+    parts <- c(parts, "<h2>Process rates through time (by region)</h2>",
+      figure(plot_region_process_rates_across_clades(x$region_rates), 9, 4.8),
       "<h3>Combined rates per clade, region and time bin</h3>",
-      html_table(xclade_long_table(
-        region_combined,
-        c("clade", "region", "process_label", "bin_midpoint", "mean_count", "ci_lower", "ci_upper")
-      ))
-    )
-    summ <- xclade_region_summary(region_combined)
-    if (!is.null(summ)) {
-      parts <- c(parts, "<h3>Summed mean events per region and process (all clades pooled)</h3>", html_table(summ))
-    }
+      html_table(xclade_long_table(x$region_rates,
+        c("clade", "region", "process_label", "bin_midpoint", "mean_count", "ci_lower", "ci_upper"))),
+      "<h3>Summed mean events per region and process (all clades pooled)</h3>",
+      html_table(xclade_region_summary(x$region_rates)))
+  }
+  if (has("exchange_long")) {
+    parts <- c(parts, "<h2>Source-to-recipient exchange matrix</h2>",
+      "<p class=\"note\">Diagonal = in-situ speciation; off-diagonal = dispersal source (row) to recipient (column). Total (out) = emigration, Total (in) = immigration.</p>",
+      html_table(format_region_exchange_matrix(x$exchange_long)))
+  }
+  if (has("routes")) {
+    parts <- c(parts, "<h2>Dispersal network and routes</h2>",
+      figure(plot_bsm_dispersal_network(all_dispersal(x$routes)), 6.5, 5.5),
+      "<h3>Dispersal-route heatmap</h3>",
+      figure(plot_bsm_dispersal_routes(all_dispersal(x$routes)), 7, 5))
+  }
+  if (has("budgets")) {
+    parts <- c(parts, "<h2>Regional dispersal budget (immigration / emigration)</h2>",
+      figure(plot_region_process_budget(x$budgets), 7.5, 4.5))
+  }
+  if (has("event_times")) {
+    parts <- c(parts, "<h2>Event times and direction</h2>",
+      figure(plot_bsm_event_times(x$event_times), 8, 4.5))
+  }
+  if (has("event_summary")) {
+    parts <- c(parts, "<h2>Event statistics</h2>",
+      html_table(xclade_long_table(x$event_summary, c("event_type", "event_label", "mean_count"))))
   }
 
   parts <- c(parts, "</body>", "</html>")
   writeLines(paste(parts, collapse = "\n"), file)
+  invisible(file)
+}
+
+# Bundle all integrated cross-clade tables (and key figures) into one zip.
+write_cross_clade_full_bundle <- function(file, x) {
+  x <- x %||% list()
+  tmp <- tempfile("ibgb-xclade-full-")
+  dir.create(tmp)
+  on.exit(unlink(tmp, recursive = TRUE), add = TRUE)
+  written <- character()
+  ok_df <- function(df) !is.null(df) && is.data.frame(df) && nrow(df) > 0L
+  save_csv <- function(df, name) {
+    if (ok_df(df)) {
+      utils::write.csv(df, file.path(tmp, paste0(name, ".csv")), row.names = FALSE, na = "")
+      written <<- c(written, paste0(name, ".csv"))
+    }
+  }
+  save_fig <- function(plot_expr, name, width, height) {
+    ok <- tryCatch({
+      ggplot2::ggsave(file.path(tmp, paste0(name, ".png")), plot_expr, width = width, height = height, dpi = 300)
+      TRUE
+    }, error = function(e) FALSE)
+    if (isTRUE(ok)) written <<- c(written, paste0(name, ".png"))
+  }
+  all_dispersal <- function(routes) {
+    if ("route_type" %in% names(routes)) routes[routes$route_type == "all_dispersal", , drop = FALSE] else routes
+  }
+
+  save_csv(x$rates, "process_rates_through_time_combined")
+  save_csv(x$region_rates, "region_process_rates_through_time_combined")
+  save_csv(x$synthesis, "process_synthesis_combined")
+  save_csv(x$routes, "dispersal_routes_combined")
+  save_csv(x$budgets, "region_budgets_combined")
+  save_csv(x$event_summary, "event_summary_combined")
+  save_csv(x$event_times, "event_times_combined")
+  if (ok_df(x$exchange_long)) {
+    save_csv(x$exchange_long, "region_exchange_long")
+    save_csv(format_region_exchange_matrix(x$exchange_long), "region_exchange_matrix")
+  }
+
+  if (ok_df(x$synthesis)) save_fig(plot_biogeographic_process_synthesis(x$synthesis), "process_synthesis", 8, 4.8)
+  if (ok_df(x$rates)) save_fig(plot_process_rates_across_clades(x$rates), "process_rates_through_time", 8.6, 5.2)
+  if (ok_df(x$region_rates)) save_fig(plot_region_process_rates_across_clades(x$region_rates), "region_process_rates_through_time", 9, 4.8)
+  if (ok_df(x$routes)) {
+    save_fig(plot_bsm_dispersal_network(all_dispersal(x$routes)), "dispersal_network", 6.5, 5.5)
+    save_fig(plot_bsm_dispersal_routes(all_dispersal(x$routes)), "dispersal_routes_heatmap", 7, 5)
+  }
+  if (ok_df(x$budgets)) save_fig(plot_region_process_budget(x$budgets), "region_dispersal_budget", 7.5, 4.5)
+  if (ok_df(x$event_times)) save_fig(plot_bsm_event_times(x$event_times), "event_times", 8, 4.5)
+
+  if (length(written) == 0L) {
+    stop("No cross-clade results to bundle; upload clade bundles first.", call. = FALSE)
+  }
+  zip_relative_files(tmp, file, written)
   invisible(file)
 }
