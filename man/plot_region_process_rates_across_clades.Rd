@@ -16,7 +16,11 @@ plot_region_process_rates_across_clades(combined_region_rates, process = NULL)
 A ggplot object.
 }
 \description{
-Draw region-resolved process rates through time with one panel per process
-and clade and a coloured curve per region, from a table produced by
-\code{\link[=combine_region_process_rates_across_clades]{combine_region_process_rates_across_clades()}}.
+Draw region-resolved process rates through time with one panel per
+biogeographic process and one coloured curve per region, pooled across all
+clades, from a table produced by
+\code{\link[=combine_region_process_rates_across_clades]{combine_region_process_rates_across_clades()}}. This is the region-resolved
+counterpart of \code{\link[=plot_process_rates_across_clades]{plot_process_rates_across_clades()}}: clades are summed
+together (not shown separately), and within each process panel each region is
+a separate curve.
 }

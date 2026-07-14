@@ -184,3 +184,153 @@ empty_region_process_budgets_table <- function() {
     stringsAsFactors = FALSE
   )
 }
+
+#' Summarize a region source-to-recipient exchange matrix
+#'
+#' Build a long table of biogeographic exchange between regions: off-diagonal
+#' entries are the mean number of dispersal events from a source region to a
+#' recipient region, and diagonal entries (source == recipient) are the mean
+#' number of in-situ (sympatric) speciation events in that region. This is the
+#' data behind the source-by-recipient matrix (cf. summary tables of in-situ
+#' speciation and exchange events). Counts are means per BSM stochastic map.
+#'
+#' @param bsm_tables A list of standardized BSM tables with `bsm_dispersal_routes`
+#'   and `bsm_events` (and optionally `bsm_event_summary`).
+#' @return A data frame with `model`, `source_region`, `recipient_region`,
+#'   `kind` (`dispersal` or `in_situ`), and `mean_count`.
+#' @export
+summarize_region_exchange_matrix <- function(bsm_tables) {
+  bsm_tables <- bsm_tables %||% list()
+  routes <- bsm_tables$bsm_dispersal_routes %||% NULL
+  events <- bsm_tables$bsm_events %||% NULL
+  event_summary <- bsm_tables$bsm_event_summary %||% NULL
+  empty <- data.frame(
+    model = character(), source_region = character(), recipient_region = character(),
+    kind = character(), mean_count = numeric(), stringsAsFactors = FALSE
+  )
+
+  pieces <- list()
+  routes_cols <- c("model", "route_type", "source_region", "target_region", "mean_count")
+  if (!is.null(routes) && nrow(routes) > 0L && all(routes_cols %in% names(routes))) {
+    disp <- routes[
+      !is.na(routes$route_type) & routes$route_type == "all_dispersal" &
+        !is.na(routes$mean_count),
+      ,
+      drop = FALSE
+    ]
+    disp <- disp[as.character(disp$source_region) != as.character(disp$target_region), , drop = FALSE]
+    if (nrow(disp) > 0L) {
+      pieces$disp <- data.frame(
+        model = as.character(disp$model),
+        source_region = as.character(disp$source_region),
+        recipient_region = as.character(disp$target_region),
+        kind = "dispersal",
+        mean_count = as.numeric(disp$mean_count),
+        stringsAsFactors = FALSE
+      )
+    }
+  }
+  ins <- in_situ_counts_by_region(events, event_summary)
+  if (!is.null(ins) && nrow(ins) > 0L) {
+    pieces$ins <- data.frame(
+      model = ins$model, source_region = ins$region, recipient_region = ins$region,
+      kind = "in_situ", mean_count = ins$mean_count, stringsAsFactors = FALSE
+    )
+  }
+  pieces <- pieces[!vapply(pieces, is.null, logical(1))]
+  if (length(pieces) == 0L) {
+    return(empty)
+  }
+  out <- do.call(rbind, pieces)
+  out <- out[order(out$model, out$source_region, out$recipient_region), , drop = FALSE]
+  row.names(out) <- NULL
+  out
+}
+
+# Mean number of in-situ (sympatric) speciation events per region and model.
+in_situ_counts_by_region <- function(events, event_summary) {
+  if (is.null(events) || nrow(events) == 0L || !"event_type" %in% names(events)) {
+    return(NULL)
+  }
+  ins <- events[!is.na(events$event_type) & events$event_type == "sympatry", , drop = FALSE]
+  if (nrow(ins) == 0L) {
+    return(NULL)
+  }
+  code_to_name <- region_code_name_map(events)
+  area_code <- as.character(ins$parent_state %||% rep(NA_character_, nrow(ins)))
+  region <- unname(code_to_name[area_code])
+  region[is.na(region)] <- area_code[is.na(region)]
+  ins$region <- region
+  ins <- ins[!is.na(ins$region) & nzchar(ins$region), , drop = FALSE]
+  if (nrow(ins) == 0L) {
+    return(NULL)
+  }
+  do.call(rbind, lapply(split(ins, as.character(ins$model)), function(m) {
+    model <- as.character(m$model[[1L]])
+    n_maps <- region_n_maps(event_summary, events, model)
+    if (is.na(n_maps) || n_maps <= 0L) {
+      n_maps <- length(unique(m$replicate))
+    }
+    tab <- table(m$region) / n_maps
+    data.frame(model = model, region = names(tab), mean_count = as.numeric(tab), stringsAsFactors = FALSE)
+  }))
+}
+
+#' Format a region exchange matrix for display
+#'
+#' Pivot the long table from [summarize_region_exchange_matrix()] into a wide
+#' source (rows) by recipient (columns) matrix, summed across any models or
+#' clades present, with a diagonal of in-situ speciation, per-row emigration
+#' totals, per-column immigration totals, and percentages.
+#'
+#' @param exchange_long A data frame from [summarize_region_exchange_matrix()]
+#'   (optionally row-bound across clades).
+#' @param digits Number of decimal places for counts.
+#' @return A character data frame ready for display or CSV export.
+#' @export
+format_region_exchange_matrix <- function(exchange_long, digits = 2L) {
+  cols <- c("source_region", "recipient_region", "mean_count")
+  if (is.null(exchange_long) || nrow(exchange_long) == 0L || !all(cols %in% names(exchange_long))) {
+    return(data.frame())
+  }
+  regions <- sort(unique(c(
+    as.character(exchange_long$source_region), as.character(exchange_long$recipient_region)
+  )))
+  regions <- regions[!is.na(regions) & nzchar(regions)]
+  if (length(regions) == 0L) {
+    return(data.frame())
+  }
+
+  mat <- matrix(0, length(regions), length(regions), dimnames = list(regions, regions))
+  for (i in seq_len(nrow(exchange_long))) {
+    s <- as.character(exchange_long$source_region[[i]])
+    r <- as.character(exchange_long$recipient_region[[i]])
+    v <- suppressWarnings(as.numeric(exchange_long$mean_count[[i]]))
+    if (!is.na(v) && s %in% regions && r %in% regions) {
+      mat[s, r] <- mat[s, r] + v
+    }
+  }
+  emig <- rowSums(mat) - diag(mat)
+  imm <- colSums(mat) - diag(mat)
+  tot <- sum(emig)
+  fmt <- function(x) formatC(round(as.numeric(x), digits), format = "f", digits = digits)
+  pct <- function(x, d) if (isTRUE(d > 0)) formatC(round(100 * x / d, 1), format = "f", digits = 1) else "0.0"
+
+  M <- matrix("", nrow = length(regions) + 2L, ncol = length(regions) + 3L)
+  colnames(M) <- c("Source \\ Recipient", regions, "Total (out)", "% out")
+  for (k in seq_along(regions)) {
+    s <- regions[[k]]
+    M[k, 1L] <- s
+    M[k, 1L + seq_along(regions)] <- fmt(mat[s, regions])
+    M[k, length(regions) + 2L] <- fmt(emig[[s]])
+    M[k, length(regions) + 3L] <- pct(emig[[s]], tot)
+  }
+  ti <- length(regions) + 1L
+  M[ti, 1L] <- "Total (in)"
+  M[ti, 1L + seq_along(regions)] <- fmt(imm[regions])
+  po <- length(regions) + 2L
+  M[po, 1L] <- "% in"
+  M[po, 1L + seq_along(regions)] <- vapply(regions, function(r) pct(imm[[r]], sum(imm)), character(1))
+
+  as.data.frame(M, stringsAsFactors = FALSE, check.names = FALSE)
+}
