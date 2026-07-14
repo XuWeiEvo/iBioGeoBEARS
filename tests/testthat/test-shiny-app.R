@@ -291,7 +291,7 @@ test_that("Shiny sidebar helper builds grouped controls", {
   expect_match(html, "Workflow", fixed = TRUE)
 })
 
-test_that("Wizard data step exposes the start choice and guidance", {
+test_that("Wizard data step is a single own-data card with merged output location", {
   testthat::skip_if_not_installed("shiny")
 
   panel_html <- as.character(wizard_step_data("analysis.yml", "results/out", "example"))
@@ -300,12 +300,28 @@ test_that("Wizard data step exposes the start choice and guidance", {
   ))
 
   expect_match(panel_html, "数据", fixed = TRUE)
-  expect_match(panel_html, "workflow_start_choice", fixed = TRUE)
-  expect_match(panel_html, "create_example", fixed = TRUE)
+  # Own-data inputs, templates, upload preview, and the create action are present.
+  expect_match(panel_html, "wizard_tree", fixed = TRUE)
+  expect_match(panel_html, "wizard_geography", fixed = TRUE)
+  expect_match(panel_html, "download_geography_template", fixed = TRUE)
+  expect_match(panel_html, "wizard_upload_preview_table", fixed = TRUE)
   expect_match(panel_html, "create_analysis_project", fixed = TRUE)
-  expect_match(panel_html, "home_next_action", fixed = TRUE)
-  expect_match(panel_html, "guided_workflow_table", fixed = TRUE)
-  expect_match(panel_html, "first_steps_table", fixed = TRUE)
+  # Output location is merged into this step with an inline picker and the
+  # existing-results loader; the raw YAML handle is kept but hidden.
+  expect_match(panel_html, "output_dir", fixed = TRUE)
+  expect_match(panel_html, "choose_output_dir", fixed = TRUE)
+  expect_match(panel_html, "load_results", fixed = TRUE)
+  expect_match(panel_html, "config_path", fixed = TRUE)
+  # The output picker sits inline with the path box, and the config handle is hidden.
+  expect_match(panel_html, "ibgb-output-row", fixed = TRUE)
+  expect_match(panel_html, "display:none", fixed = TRUE)
+  # The example card, start-choice radio, YAML upload, open-output button, and
+  # the home guidance block were removed to declutter the landing page.
+  expect_false(grepl("workflow_start_choice", panel_html, fixed = TRUE))
+  expect_false(grepl("create_example", panel_html, fixed = TRUE))
+  expect_false(grepl("config_upload", panel_html, fixed = TRUE))
+  expect_false(grepl("open_output", panel_html, fixed = TRUE))
+  expect_false(grepl("guided_workflow_table", panel_html, fixed = TRUE))
   expect_match(action_html, "open_user_guide", fixed = TRUE)
 })
 
@@ -1338,31 +1354,6 @@ test_that("Shiny server uses GUI config editor overrides", {
     expect_equal(state$result$config$models$run, "DEC")
     expect_true(file.exists(state$result$config$advanced$constraints$times_file))
     expect_equal(state$result$project_paths$root, edited_output)
-  })
-})
-
-test_that("Shiny server creates an example project from the GUI", {
-  testthat::skip_if_not_installed("shiny")
-
-  example_dir <- tempfile("ibgb-shiny-created-example-")
-
-  shiny::testServer(iBGB_shiny_server, {
-    session$setInputs(example_project_dir = example_dir)
-    session$setInputs(create_example = 1)
-
-    state <- session$userData$state
-    expect_true(file.exists(file.path(example_dir, "analysis.yml")))
-    expect_match(state$message, "Example project: ready", fixed = TRUE)
-    expect_true(any(grepl("Example project: started", state$messages, fixed = TRUE)))
-
-    session$setInputs(
-      config_path = file.path(example_dir, "analysis.yml"),
-      output_dir = file.path(example_dir, "results", "example_clade")
-    )
-    session$setInputs(validate = 1)
-
-    expect_true(all(state$validation$ok))
-    expect_match(state$message, "Validation passed", fixed = TRUE)
   })
 })
 
