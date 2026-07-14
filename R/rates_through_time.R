@@ -12,9 +12,10 @@
 #' @param n_bins Number of equal-width time bins between the present and the
 #'   oldest sampled event.
 #' @return A data frame with one row per model, process, and time bin, including
-#'   `bin_start`, `bin_end`, `bin_midpoint`, `mean_count`, `sd_count`, and
-#'   `rate`. Returns an empty table with the same columns when no timed BSM
-#'   events are available.
+#'   `bin_start`, `bin_end`, `bin_midpoint`, `mean_count`, `sd_count`,
+#'   `ci_lower` and `ci_upper` (the 2.5% and 97.5% percentiles of the per-map
+#'   count across stochastic maps), and `rate`. Returns an empty table with the
+#'   same columns when no timed BSM events are available.
 #' @export
 summarize_process_rates_through_time <- function(bsm_tables, n_bins = 10L) {
   empty <- empty_process_rates_table()
@@ -91,6 +92,7 @@ process_rates_for_model <- function(model_ev, event_summary, events, n_bins) {
       }
       mean_count <- mean(per_map)
       sd_count <- if (length(per_map) > 1L) stats::sd(per_map) else 0
+      ci <- rate_count_ci(per_map)
       data.frame(
         model = model,
         process_key = processes$process_key[[i]],
@@ -102,6 +104,8 @@ process_rates_for_model <- function(model_ev, event_summary, events, n_bins) {
         bin_midpoint = (breaks[[b]] + breaks[[b + 1L]]) / 2,
         mean_count = mean_count,
         sd_count = sd_count,
+        ci_lower = ci[[1L]],
+        ci_upper = ci[[2L]],
         rate = if (bin_width > 0) mean_count / bin_width else NA_real_,
         interpretation_note = "Mean BioGeoBEARS stochastic mapping event count per map in the time bin.",
         stringsAsFactors = FALSE
@@ -230,6 +234,13 @@ summarize_region_process_rates_through_time <- function(bsm_tables, n_bins = 10L
   out[, names(empty), drop = FALSE]
 }
 
+rate_count_ci <- function(per_map) {
+  if (length(per_map) == 0L) {
+    return(c(0, 0))
+  }
+  as.numeric(stats::quantile(per_map, c(0.025, 0.975), names = FALSE, type = 7))
+}
+
 coalesce_region <- function(...) {
   cols <- list(...)
   out <- rep(NA_character_, length(cols[[1L]]))
@@ -280,6 +291,7 @@ region_process_rates_for_model <- function(model_ev, event_summary, events, n_bi
         per_map <- as.numeric(map_counts)
       }
       mean_count <- mean(per_map)
+      ci <- rate_count_ci(per_map)
       data.frame(
         model = model,
         process_key = combos$process_key[[i]],
@@ -292,6 +304,8 @@ region_process_rates_for_model <- function(model_ev, event_summary, events, n_bi
         bin_midpoint = (breaks[[b]] + breaks[[b + 1L]]) / 2,
         mean_count = mean_count,
         sd_count = if (length(per_map) > 1L) stats::sd(per_map) else 0,
+        ci_lower = ci[[1L]],
+        ci_upper = ci[[2L]],
         rate = if (bin_width > 0) mean_count / bin_width else NA_real_,
         interpretation_note = "Mean BSM event count per map in the time bin, attributed to the region gained, lost, or colonized.",
         stringsAsFactors = FALSE
@@ -360,6 +374,8 @@ empty_region_process_rates_table <- function() {
     bin_midpoint = numeric(),
     mean_count = numeric(),
     sd_count = numeric(),
+    ci_lower = numeric(),
+    ci_upper = numeric(),
     rate = numeric(),
     interpretation_note = character(),
     stringsAsFactors = FALSE
@@ -378,6 +394,8 @@ empty_process_rates_table <- function() {
     bin_midpoint = numeric(),
     mean_count = numeric(),
     sd_count = numeric(),
+    ci_lower = numeric(),
+    ci_upper = numeric(),
     rate = numeric(),
     interpretation_note = character(),
     stringsAsFactors = FALSE

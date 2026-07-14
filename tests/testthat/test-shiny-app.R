@@ -367,18 +367,89 @@ test_that("Environment check lives in a top-level section, not the help step", {
   expect_false(grepl("installation_table", help_html, fixed = TRUE))
 })
 
-test_that("Results step drops the intro and slims exports to bundle and report", {
+test_that("Results step is single-clade, slims exports, and shows a file legend", {
   testthat::skip_if_not_installed("shiny")
 
   ui <- as.character(wizard_step_results())
+  expect_match(ui, "单一类群结果", fixed = TRUE)
   expect_false(grepl("ibgb-step-intro", ui, fixed = TRUE))
   expect_match(ui, "download_bundle", fixed = TRUE)
   expect_match(ui, "download_report", fixed = TRUE)
+  # The heavy advanced-results panel is replaced by a file legend.
+  expect_match(ui, "output_file_legend_table", fixed = TRUE)
+  expect_false(grepl("figure_dashboard_table", ui, fixed = TRUE))
+  expect_false(grepl("table_preview", ui, fixed = TRUE))
   # The redundant export controls were removed from this step.
   expect_false(grepl("report_format", ui, fixed = TRUE))
   expect_false(grepl("open_report", ui, fixed = TRUE))
   expect_false(grepl("download_diagnostic_bundle", ui, fixed = TRUE))
-  expect_false(grepl("download_run_summary", ui, fixed = TRUE))
+})
+
+test_that("output_file_legend describes bundle files", {
+  legend <- output_file_legend()
+  expect_true(all(c("category", "file", "description") %in% names(legend)))
+  expect_gt(nrow(legend), 10L)
+  expect_true(any(grepl("process_rates_through_time.csv", legend$file, fixed = TRUE)))
+  expect_true(all(nzchar(legend$description)))
+})
+
+test_that("Cross-clade step is numbered, adds per-region and CI, and export buttons", {
+  testthat::skip_if_not_installed("shiny")
+
+  ui <- as.character(wizard_step_cross_clade())
+  expect_match(ui, "4 · 跨类群", fixed = TRUE)
+  expect_false(grepl("ibgb-step-intro", ui, fixed = TRUE))
+  # Overall and per-region uploads, and the CI note.
+  expect_match(ui, "cross_clade_files", fixed = TRUE)
+  expect_match(ui, "cross_clade_region_files", fixed = TRUE)
+  expect_match(ui, "cross_clade_region_plot", fixed = TRUE)
+  expect_match(ui, "95% CI", fixed = TRUE)
+  # Export buttons for both combined tables.
+  expect_match(ui, "download_cross_clade", fixed = TRUE)
+  expect_match(ui, "download_cross_clade_region", fixed = TRUE)
+})
+
+test_that("Help step becomes an about-and-citation panel", {
+  testthat::skip_if_not_installed("shiny")
+
+  ui <- as.character(wizard_step_help())
+  expect_match(ui, "关于与引用", fixed = TRUE)
+  expect_match(ui, "citation_text", fixed = TRUE)
+  expect_match(ui, "about_table", fixed = TRUE)
+  # The troubleshooting block was removed from this step.
+  expect_false(grepl("warning_summary_table", ui, fixed = TRUE))
+  expect_false(grepl("failed_models_table", ui, fixed = TRUE))
+})
+
+test_that("Shiny cross-clade server combines per-region uploads", {
+  testthat::skip_if_not_installed("shiny")
+
+  write_region_file <- function(path) {
+    df <- do.call(rbind, lapply(c("A", "B"), function(r) {
+      data.frame(
+        model = "DEC+J", process_label = "Range expansion", region = r,
+        time_bin = 1:2, bin_midpoint = c(0.5, 1.5), mean_count = c(1, 2),
+        ci_lower = c(0.8, 1.8), ci_upper = c(1.2, 2.2),
+        stringsAsFactors = FALSE
+      )
+    }))
+    utils::write.csv(df, path, row.names = FALSE)
+    path
+  }
+  fa <- write_region_file(tempfile("cladeA-", fileext = ".csv"))
+  fb <- write_region_file(tempfile("cladeB-", fileext = ".csv"))
+
+  shiny::testServer(iBGB_shiny_server, {
+    session$setInputs(cross_clade_region_files = data.frame(
+      name = c("CladeA.csv", "CladeB.csv"),
+      datapath = c(fa, fb),
+      stringsAsFactors = FALSE
+    ))
+    combined <- cross_clade_region_combined()
+    expect_true(all(c("clade", "region") %in% names(combined)))
+    expect_setequal(unique(combined$clade), c("CladeA", "CladeB"))
+    expect_setequal(unique(combined$region), c("A", "B"))
+  })
 })
 
 test_that("Preview image containers size to their content, not a fixed height", {

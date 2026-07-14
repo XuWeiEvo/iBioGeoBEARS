@@ -36,6 +36,17 @@ test_that("summarize_process_rates_through_time bins events and computes mean/sd
   # Bin geometry and rate.
   expect_equal(sympatry$bin_midpoint, c(2.25, 6.75))
   expect_equal(sympatry$rate[[2]], 1 / 4.5)
+
+  # 95% CI from the 2.5/97.5 percentiles of the per-map counts brackets the mean.
+  expect_true(all(c("ci_lower", "ci_upper") %in% names(out)))
+  expect_true(all(out$ci_lower <= out$mean_count + 1e-9))
+  expect_true(all(out$ci_upper >= out$mean_count - 1e-9))
+  # Bin 1 in-situ: per-map counts c(1, 0) -> 2.5/97.5 percentiles are 0.025 and 0.975.
+  expect_equal(sympatry$ci_lower[[1]], stats::quantile(c(1, 0), 0.025, names = FALSE))
+  expect_equal(sympatry$ci_upper[[1]], stats::quantile(c(1, 0), 0.975, names = FALSE))
+  # Bin 2 in-situ: both maps have exactly one -> CI collapses to 1.
+  expect_equal(sympatry$ci_lower[[2]], 1)
+  expect_equal(sympatry$ci_upper[[2]], 1)
 })
 
 test_that("summarize_process_rates_through_time returns an empty table without timed events", {

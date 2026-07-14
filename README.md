@@ -628,9 +628,11 @@ The main derived tables are:
   a positive value is a net sink and a negative value a net source), local
   extinction, and total dispersal. Net flux sums to zero across regions.
 - `process_rates_through_time.csv`: per-process event counts binned by time
-  before present, with the mean and standard deviation of the count per
-  stochastic map and the mean rate (events per unit time) in each bin. Counts
-  sum across bins to the per-process synthesis mean.
+  before present, with the mean, standard deviation, and 95% CI (`ci_lower`,
+  `ci_upper`; the 2.5% and 97.5% percentiles of the per-map count across
+  stochastic maps) of the count per stochastic map, plus the mean rate (events
+  per unit time) in each bin. Counts sum across bins to the per-process
+  synthesis mean.
 - `region_process_rates_through_time.csv`: the same rates through time split by
   region, attributing each event to the region it gained (dispersal), lost
   (local extinction), or colonized (founder). Region counts sum across regions
@@ -702,10 +704,18 @@ plot_process_rates_across_clades(combined)
 ```
 
 The figure shows one panel per biogeographic process with a coloured curve per
-clade. In the Shiny app, the `跨类群` tab accepts a batch (multi-file) upload of
-each clade's `process_rates_through_time.csv`; rename each file to the clade
-name (e.g. `Anolis.csv`) so the labels are clear. The clades must use comparable
-time units.
+clade and a 95% CI band (when the uploaded CSVs carry the `ci_lower`/`ci_upper`
+columns). Region-resolved rates can be compared the same way with
+`combine_region_process_rates_across_clades()` and
+`plot_region_process_rates_across_clades()`, using each clade's
+`region_process_rates_through_time.csv`.
+
+In the Shiny app, the `4 · 跨类群` tab accepts a batch (multi-file) upload of
+each clade's `process_rates_through_time.csv` (overall) and
+`region_process_rates_through_time.csv` (per region); rename each file to the
+clade name (e.g. `Anolis.csv`) so the labels are clear, and use the download
+buttons to export the combined tables. The clades must use comparable time
+units.
 
 ## Methodological Position
 

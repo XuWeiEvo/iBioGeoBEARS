@@ -13,10 +13,40 @@ write_clade_rates <- function(dir, clade, mean_counts) {
     bin_midpoint = seq_along(mean_counts) - 0.5,
     mean_count = mean_counts,
     sd_count = 0.1,
+    ci_lower = pmax(0, mean_counts - 0.2),
+    ci_upper = mean_counts + 0.2,
     rate = mean_counts,
     interpretation_note = "test",
     stringsAsFactors = FALSE
   )
+  utils::write.csv(df, path, row.names = FALSE)
+  path
+}
+
+write_clade_region_rates <- function(dir, clade, regions, mean_counts) {
+  tables <- file.path(dir, clade, "tables")
+  dir.create(tables, recursive = TRUE, showWarnings = FALSE)
+  path <- file.path(tables, "region_process_rates_through_time.csv")
+  df <- do.call(rbind, lapply(regions, function(region) {
+    data.frame(
+      model = "DEC+J",
+      process_key = "range_expansion",
+      process_label = "Range expansion",
+      process_group = "anagenetic",
+      region = region,
+      time_bin = seq_along(mean_counts),
+      bin_start = seq_along(mean_counts) - 1,
+      bin_end = seq_along(mean_counts),
+      bin_midpoint = seq_along(mean_counts) - 0.5,
+      mean_count = mean_counts,
+      sd_count = 0.1,
+      ci_lower = pmax(0, mean_counts - 0.2),
+      ci_upper = mean_counts + 0.2,
+      rate = mean_counts,
+      interpretation_note = "test",
+      stringsAsFactors = FALSE
+    )
+  }))
   utils::write.csv(df, path, row.names = FALSE)
   path
 }
@@ -52,15 +82,48 @@ test_that("duplicate clade labels are disambiguated", {
   expect_equal(length(unique(out$clade)), 2L)
 })
 
-test_that("plot_process_rates_across_clades returns a ggplot", {
+test_that("plot_process_rates_across_clades returns a ggplot and carries the CI", {
   root <- tempfile("ibgb-crossclade-plot-")
   f1 <- write_clade_rates(root, "Anolis", c(1, 2, 3))
   f2 <- write_clade_rates(root, "Phelsuma", c(3, 2, 1))
   combined <- combine_process_rates_across_clades(c(f1, f2))
 
+  # The 95% CI columns flow through the combine step.
+  expect_true(all(c("ci_lower", "ci_upper") %in% names(combined)))
   expect_s3_class(plot_process_rates_across_clades(combined), "ggplot")
   expect_error(
     plot_process_rates_across_clades(data.frame(clade = "A")),
+    "missing required columns"
+  )
+})
+
+test_that("combine_region_process_rates_across_clades tags clades and keeps regions", {
+  root <- tempfile("ibgb-crossclade-region-")
+  f1 <- write_clade_region_rates(root, "Anolis", c("A", "B"), c(1, 2, 3))
+  f2 <- write_clade_region_rates(root, "Phelsuma", c("A", "B"), c(3, 2, 1))
+
+  out <- combine_region_process_rates_across_clades(c(f1, f2))
+  expect_true(all(c("clade", "region") %in% names(out)))
+  expect_setequal(unique(out$clade), c("Anolis", "Phelsuma"))
+  expect_setequal(unique(out$region), c("A", "B"))
+  # 2 clades x 2 regions x 3 bins.
+  expect_equal(nrow(out), 12L)
+
+  expect_equal(nrow(combine_region_process_rates_across_clades(character())), 0L)
+  # A file that lacks the region column is rejected.
+  plain <- write_clade_rates(tempfile("plain-"), "NoRegion", c(1, 2))
+  expect_equal(nrow(combine_region_process_rates_across_clades(plain)), 0L)
+})
+
+test_that("plot_region_process_rates_across_clades returns a ggplot", {
+  root <- tempfile("ibgb-crossclade-region-plot-")
+  f1 <- write_clade_region_rates(root, "Anolis", c("A", "B"), c(1, 2, 3))
+  f2 <- write_clade_region_rates(root, "Phelsuma", c("A", "B"), c(3, 2, 1))
+  combined <- combine_region_process_rates_across_clades(c(f1, f2))
+
+  expect_s3_class(plot_region_process_rates_across_clades(combined), "ggplot")
+  expect_error(
+    plot_region_process_rates_across_clades(data.frame(clade = "A")),
     "missing required columns"
   )
 })

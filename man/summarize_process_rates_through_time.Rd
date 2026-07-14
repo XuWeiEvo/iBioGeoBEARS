@@ -16,9 +16,10 @@ oldest sampled event.}
 }
 \value{
 A data frame with one row per model, process, and time bin, including
-\code{bin_start}, \code{bin_end}, \code{bin_midpoint}, \code{mean_count}, \code{sd_count}, and
-\code{rate}. Returns an empty table with the same columns when no timed BSM
-events are available.
+\code{bin_start}, \code{bin_end}, \code{bin_midpoint}, \code{mean_count}, \code{sd_count},
+\code{ci_lower} and \code{ci_upper} (the 2.5\% and 97.5\% percentiles of the per-map
+count across stochastic maps), and \code{rate}. Returns an empty table with the
+same columns when no timed BSM events are available.
 }
 \description{
 Bin the sampled BioGeoBEARS stochastic mapping (BSM) events by time before
