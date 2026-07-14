@@ -198,28 +198,14 @@ summarize_region_process_rates_through_time <- function(bsm_tables, n_bins = 10L
   }
   n_bins <- max(1L, as.integer(n_bins))
 
-  taxonomy <- biogeographic_process_taxonomy()
-  ev <- events[
-    events$event_type %in% taxonomy$bsm_event_type &
-      !is.na(events$event_time_before_present),
+  ev <- attribute_region_events(events)
+  ev <- ev[
+    !is.na(ev$event_time_before_present) &
+      !is.na(ev$event_region) & nzchar(ev$event_region),
     ,
     drop = FALSE
   ]
-  if (nrow(ev) == 0L) {
-    return(empty)
-  }
-  idx <- match(ev$event_type, taxonomy$bsm_event_type)
-  ev$process_key <- taxonomy$process_key[idx]
-  ev$process_label <- taxonomy$process_label[idx]
-  ev$process_group <- taxonomy$process_group[idx]
-
-  ev$event_region <- coalesce_region(
-    ev$target_region %||% rep(NA_character_, nrow(ev)),
-    ev$extirpation_region %||% rep(NA_character_, nrow(ev)),
-    ev$source_region %||% rep(NA_character_, nrow(ev))
-  )
-  ev <- ev[!is.na(ev$event_region) & nzchar(ev$event_region), , drop = FALSE]
-  if (nrow(ev) == 0L) {
+  if (is.null(ev) || nrow(ev) == 0L) {
     return(empty)
   }
 
@@ -250,6 +236,72 @@ coalesce_region <- function(...) {
     out[take] <- col[take]
   }
   out
+}
+
+# Attribute BSM events to regions for the per-region rates. Range-expansion
+# dispersal (`d`) counts as immigration for its target region and emigration for
+# its source region; in-situ (sympatric) speciation (`sympatry`/`y`) counts for
+# the single ancestral area. These are the three region-level event categories.
+attribute_region_events <- function(events) {
+  build <- function(sub, region, process_key, process_label, process_group) {
+    region <- as.character(region)
+    keep <- !is.na(region) & nzchar(region)
+    if (!any(keep)) {
+      return(NULL)
+    }
+    data.frame(
+      model = as.character(sub$model)[keep],
+      replicate = sub$replicate[keep],
+      process_key = process_key,
+      process_label = process_label,
+      process_group = process_group,
+      event_region = region[keep],
+      event_time_before_present = sub$event_time_before_present[keep],
+      stringsAsFactors = FALSE
+    )
+  }
+
+  pieces <- list()
+  disp <- events[!is.na(events$event_type) & events$event_type == "d", , drop = FALSE]
+  if (nrow(disp) > 0L) {
+    pieces$immigration <- build(
+      disp, disp$target_region %||% rep(NA_character_, nrow(disp)),
+      "immigration", "Immigration", "anagenetic"
+    )
+    pieces$emigration <- build(
+      disp, disp$source_region %||% rep(NA_character_, nrow(disp)),
+      "emigration", "Emigration", "anagenetic"
+    )
+  }
+  insitu <- events[!is.na(events$event_type) & events$event_type == "sympatry", , drop = FALSE]
+  if (nrow(insitu) > 0L) {
+    code_to_name <- region_code_name_map(events)
+    area_code <- as.character(insitu$parent_state %||% rep(NA_character_, nrow(insitu)))
+    region <- unname(code_to_name[area_code])
+    region[is.na(region)] <- area_code[is.na(region)]
+    pieces$in_situ <- build(insitu, region, "in_situ_speciation", "In-situ speciation", "cladogenetic")
+  }
+  pieces <- pieces[!vapply(pieces, is.null, logical(1))]
+  if (length(pieces) == 0L) {
+    return(NULL)
+  }
+  do.call(rbind, pieces)
+}
+
+# Map single-area region codes (e.g. "B") to region names (e.g. "Region B")
+# using the source/target region pairs recorded on anagenetic dispersal events.
+region_code_name_map <- function(events) {
+  pair <- function(code_col, name_col) {
+    if (!all(c(code_col, name_col) %in% names(events))) {
+      return(character())
+    }
+    code <- as.character(events[[code_col]])
+    name <- as.character(events[[name_col]])
+    ok <- !is.na(code) & nzchar(code) & !is.na(name) & nzchar(name)
+    stats::setNames(name[ok], code[ok])
+  }
+  m <- c(pair("source_region_code", "source_region"), pair("target_region_code", "target_region"))
+  m[!duplicated(names(m))]
 }
 
 region_process_rates_for_model <- function(model_ev, event_summary, events, n_bins) {

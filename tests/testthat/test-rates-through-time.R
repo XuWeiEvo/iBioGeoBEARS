@@ -71,39 +71,46 @@ test_that("plot_process_rates_through_time returns a ggplot", {
 make_region_rates_bsm_tables <- function() {
   events <- data.frame(
     model = "DEC",
-    replicate = c(1L, 2L, 1L),
-    event_type = c("d", "d", "e"),
-    event_time_before_present = c(2, 7, 5),
-    target_region = c("A", "B", NA),
-    extirpation_region = c(NA, NA, "A"),
-    source_region = c(NA, NA, NA),
+    replicate = c(1L, 2L, 1L, 2L),
+    event_type = c("d", "d", "sympatry", "sympatry"),
+    event_time_before_present = c(2, 7, 3, 6),
+    source_region_code = c("A", "B", NA, NA),
+    target_region_code = c("B", "A", NA, NA),
+    source_region = c("Region A", "Region B", NA, NA),
+    target_region = c("Region B", "Region A", NA, NA),
+    parent_state = c(NA, NA, "A", "B"),
+    child_state = c("AB", "AB", "A,A", "B,B"),
     stringsAsFactors = FALSE
   )
   event_summary <- data.frame(
-    model = "DEC", event_type = "total_events", mean_count = 1.5, replicate_count = 2L,
+    model = "DEC", event_type = "total_events", mean_count = 2, replicate_count = 2L,
     stringsAsFactors = FALSE
   )
   list(bsm_events = events, bsm_event_summary = event_summary)
 }
 
-test_that("summarize_region_process_rates_through_time attributes events to regions", {
+test_that("summarize_region_process_rates_through_time attributes in-situ, immigration and emigration", {
   out <- summarize_region_process_rates_through_time(make_region_rates_bsm_tables(), n_bins = 2L)
 
-  # 3 process-region combos x 2 bins.
-  expect_equal(nrow(out), 6L)
-  expect_setequal(unique(out$region), c("A", "B"))
+  expect_setequal(unique(out$process_label), c("Immigration", "Emigration", "In-situ speciation"))
+  expect_setequal(unique(out$region), c("Region A", "Region B"))
+  # 3 categories x 2 regions x 2 bins.
+  expect_equal(nrow(out), 12L)
 
-  rexp_a <- out[out$process_key == "range_expansion" & out$region == "A", , drop = FALSE]
-  rexp_a <- rexp_a[order(rexp_a$time_bin), , drop = FALSE]
-  expect_equal(rexp_a$mean_count[[1]], 0.5) # dispersal into A in the recent bin
-  expect_equal(rexp_a$mean_count[[2]], 0)
+  # Dispersal A -> B in the recent bin: immigration into B, emigration out of A.
+  imm_b <- out[out$process_key == "immigration" & out$region == "Region B", , drop = FALSE]
+  imm_b <- imm_b[order(imm_b$time_bin), , drop = FALSE]
+  expect_equal(imm_b$mean_count[[1]], 0.5)
+  expect_equal(imm_b$mean_count[[2]], 0)
 
-  rexp_b <- out[out$process_key == "range_expansion" & out$region == "B", , drop = FALSE]
-  expect_equal(rexp_b$mean_count[rexp_b$time_bin == 2], 0.5)
+  emi_a <- out[out$process_key == "emigration" & out$region == "Region A", , drop = FALSE]
+  emi_a <- emi_a[order(emi_a$time_bin), , drop = FALSE]
+  expect_equal(emi_a$mean_count[[1]], 0.5)
 
-  # Local extinction is attributed to the extirpation region.
-  ext_a <- out[out$process_key == "local_extinction" & out$region == "A", , drop = FALSE]
-  expect_equal(ext_a$mean_count[ext_a$time_bin == 2], 0.5)
+  # In-situ speciation attributed to its single ancestral area (code -> name).
+  ins_a <- out[out$process_key == "in_situ_speciation" & out$region == "Region A", , drop = FALSE]
+  ins_a <- ins_a[order(ins_a$time_bin), , drop = FALSE]
+  expect_equal(ins_a$mean_count[[1]], 0.5)
 })
 
 test_that("summarize_region_process_rates_through_time returns an empty table without region events", {
@@ -116,7 +123,7 @@ test_that("plot_region_process_rates_through_time returns a ggplot and filters b
   rates <- summarize_region_process_rates_through_time(make_region_rates_bsm_tables(), n_bins = 2L)
   expect_s3_class(plot_region_process_rates_through_time(rates), "ggplot")
   expect_s3_class(
-    plot_region_process_rates_through_time(rates, process = "range_expansion"),
+    plot_region_process_rates_through_time(rates, process = "immigration"),
     "ggplot"
   )
   expect_error(
