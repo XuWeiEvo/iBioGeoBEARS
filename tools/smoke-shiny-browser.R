@@ -11,6 +11,9 @@ if (!requireNamespace("shinytest2", quietly = TRUE)) {
 Sys.setenv(SHINYTEST2_APP_DRIVER_TEST_ON_CRAN = "1")
 pkgload::load_all(repo, quiet = TRUE)
 
+# A minimal app that loads the bundled example project. The data step's hidden
+# config handle defaults to this config, so validation and the (dry) run work
+# without simulating file uploads.
 app_dir <- tempfile("ibgb-shiny-browser-app-")
 dir.create(app_dir, recursive = TRUE)
 repo_literal <- encodeString(repo, quote = "'")
@@ -18,17 +21,8 @@ writeLines(
   c(
     paste0("pkgload::load_all(", repo_literal, ", quiet = TRUE)"),
     "example <- create_example_project(file.path(tempdir(), 'ibgb-shiny-browser-example'))",
-    "existing <- create_project(file.path(tempdir(), 'ibgb-shiny-browser-existing-results'))",
-    "utils::write.csv(data.frame(check = 'tree_file', ok = TRUE), file.path(existing$tables, 'input_validation.csv'), row.names = FALSE)",
-    "utils::write.csv(data.frame(model = 'DEC', status = 'completed', warning_count = 0L), file.path(existing$tables, 'model_run_status.csv'), row.names = FALSE)",
-    "utils::write.csv(data.frame(model = 'DEC', AICc = 10, delta_aicc = 0), file.path(existing$tables, 'model_comparison.csv'), row.names = FALSE)",
-    "utils::write.csv(data.frame(section = 'Sensitivity', display_label = 'Best model includes +J', answer = 'not triggered'), file.path(existing$tables, 'model_sensitivity.csv'), row.names = FALSE)",
-    "writeLines('<html></html>', file.path(existing$reports, 'summary_report.html'))",
-    "grDevices::png(file.path(existing$figures, 'model_comparison.png'), width = 400, height = 300)",
-    "plot.new(); text(0.5, 0.5, 'model comparison')",
-    "grDevices::dev.off()",
-    "utils::write.csv(data.frame(figure = 'model_comparison', format = 'png', path = file.path(existing$figures, 'model_comparison.png'), status = 'created'), file.path(existing$figures, 'figure_manifest.csv'), row.names = FALSE)",
-    "create_iBGB_shiny_app(config = example$config, output_dir = existing$root)"
+    "out <- file.path(tempdir(), 'ibgb-shiny-browser-out')",
+    "create_iBGB_shiny_app(config = example$config, output_dir = out)"
   ),
   file.path(app_dir, "app.R")
 )
@@ -42,114 +36,74 @@ app <- shinytest2::AppDriver$new(
   width = 1400
 )
 on.exit(app$stop(), add = TRUE)
+app$wait_for_idle(timeout = 30000)
 
-body_text <- app$get_text("body")
-required_initial_text <- c(
-  "Project", "Run options", "Workflow", "Report and export",
-  "Config editor", "Use GUI config overrides", "Advanced constraints", "Times file",
-  "Run Summary",
-  "Model Comparison", "+J Sensitivity", "Warnings",
-  "Fit summary", "+J sensitivity summary", "Warning summary",
-  "Node States", "Node Sensitivity", "Figure Dashboard",
-  "Load existing results", "Download run summary", "Key files",
-  "Refresh key files", "Create bundle if missing", "Create diagnostic bundle",
-  "Download diagnostic bundle", "About/Citation"
-)
-missing_initial <- required_initial_text[!vapply(required_initial_text, grepl, logical(1), x = body_text, fixed = TRUE)]
-if (length(missing_initial) > 0L) {
-  stop("Initial Shiny UI is missing expected text: ", paste(missing_initial, collapse = ", "), call. = FALSE)
+assert <- function(ok, message) {
+  if (!isTRUE(ok)) {
+    stop(message, call. = FALSE)
+  }
 }
 
-app$click("load_results")
-app$wait_for_idle(timeout = 60000)
-loaded_text <- app$get_text("body")
-if (!grepl("Load existing results: ready", loaded_text, fixed = TRUE)) {
-  stop("Load existing results action did not report success.", call. = FALSE)
-}
-if (!grepl("Best statistical model", loaded_text, fixed = TRUE)) {
-  stop("Run summary did not render the best-model card after loading results.", call. = FALSE)
-}
-if (!grepl("Model comparison CSV", loaded_text, fixed = TRUE)) {
-  stop("Run summary did not render the key-files table after loading results.", call. = FALSE)
+exists_id <- function(id) {
+  isTRUE(app$get_js(sprintf("document.getElementById('%s') !== null", id)))
 }
 
-app$click(selector = "a[data-value='Figure Dashboard']")
-app$wait_for_idle(timeout = 60000)
-dashboard_text <- app$get_text("body")
-if (!grepl("Shown below", dashboard_text, fixed = TRUE) ||
-    !grepl("Expected PNG was not found", dashboard_text, fixed = TRUE)) {
-  stop("Figure dashboard did not render figure preview status and missing reasons.", call. = FALSE)
+nth_tab <- function(n) sprintf("#wizard_nav li:nth-child(%d) a", n)
+
+body_has <- function(text) grepl(text, app$get_text("body"), fixed = TRUE)
+
+# 1. Five-step wizard: data / analysis / single-clade results / cross-clade / about.
+nav_html <- app$get_html("#wizard_nav")
+n_tabs <- length(gregexpr("data-value=", nav_html)[[1L]])
+assert(n_tabs == 5L, paste0("Expected 5 wizard tabs, found ", n_tabs, "."))
+
+# 2. Data step + top-level environment section are present on load.
+for (id in c(
+  "wizard_tree", "wizard_geography", "wizard_regions", "wizard_max_range_size",
+  "wizard_models", "output_dir", "config_path", "validate",
+  "refresh_setup", "install_biogeobears", "installation_table",
+  "wizard_constraint_times_file", "download_tree_template"
+)) {
+  assert(exists_id(id), paste("Missing element on load:", id))
 }
 
-app$click(selector = "a[data-value='Tables']")
-app$wait_for_idle(timeout = 60000)
-tables_text <- app$get_text("body")
-if (!grepl("Table status", tables_text, fixed = TRUE) ||
-    !grepl("Model comparison", tables_text, fixed = TRUE) ||
-    !grepl("Expected CSV was not found", tables_text, fixed = TRUE)) {
-  stop("Tables tab did not render key table status and missing reasons.", call. = FALSE)
-}
-
-app$click(selector = "a[data-value='About/Citation']")
-app$wait_for_idle(timeout = 60000)
-about_text <- app$get_text("body")
-if (!grepl("GPL (>= 2)", about_text, fixed = TRUE) ||
-    !grepl("citation(\"BioGeoBEARS\")", about_text, fixed = TRUE) ||
-    !grepl("Report environment", about_text, fixed = TRUE) ||
-    !grepl("source", about_text, fixed = TRUE)) {
-  stop("About/Citation tab did not render license and BioGeoBEARS citation guidance.", call. = FALSE)
-}
-
+# 3. Validate the bundled example inputs.
 app$click("validate")
-app$wait_for_idle()
-validation_text <- app$get_text("body")
-if (!grepl("Validation passed", validation_text, fixed = TRUE)) {
-  stop("Validation action did not report success.", call. = FALSE)
-}
+app$wait_for_idle(timeout = 60000)
+assert(body_has("Validation passed"), "Validation action did not report success.")
 
+# 4. Analysis step: a bare dry-run toggle plus the BSM fold; run in dry-run mode.
+app$click(selector = nth_tab(2))
+app$wait_for_idle(timeout = 30000)
+assert(exists_id("dry_run"), "Analysis step is missing the dry-run toggle.")
+assert(exists_id("run_stochastic_mapping"), "Analysis step is missing the BSM toggle.")
+assert(exists_id("stochastic_mapping_replicates"), "Analysis step is missing the BSM replicate input.")
 app$click("run")
-app$wait_for_idle(timeout = 60000)
-run_text <- app$get_text("body")
-if (!grepl("Dry run completed", run_text, fixed = TRUE)) {
-  stop("Dry-run workflow action did not report success.", call. = FALSE)
+app$wait_for_idle(timeout = 120000)
+assert(body_has("Dry run completed"), "Dry-run workflow action did not report success.")
+
+# 5. Single-clade results step: two downloads and the output-file legend.
+app$click(selector = nth_tab(3))
+app$wait_for_idle(timeout = 30000)
+for (id in c("download_bundle", "download_report", "output_file_legend_table")) {
+  assert(exists_id(id), paste("Missing results-step element:", id))
 }
 
-app$click("render_report")
-app$wait_for_idle(timeout = 60000)
-report_text <- app$get_text("body")
-if (!grepl("Report ready:", report_text, fixed = TRUE)) {
-  stop("Report action did not report a rendered report path.", call. = FALSE)
+# 6. Cross-clade step: overall and per-region uploads plus their CSV exports.
+app$click(selector = nth_tab(4))
+app$wait_for_idle(timeout = 30000)
+for (id in c(
+  "cross_clade_files", "cross_clade_region_files",
+  "download_cross_clade", "download_cross_clade_region"
+)) {
+  assert(exists_id(id), paste("Missing cross-clade element:", id))
 }
 
-app$click("bundle")
-app$wait_for_idle(timeout = 60000)
-bundle_text <- app$get_text("body")
-if (!grepl("Bundle ready:", bundle_text, fixed = TRUE)) {
-  stop("Bundle action did not report a bundle path.", call. = FALSE)
-}
-
-app$click("diagnostic_bundle")
-app$wait_for_idle(timeout = 60000)
-diagnostic_text <- app$get_text("body")
-if (!grepl("Diagnostic bundle ready:", diagnostic_text, fixed = TRUE)) {
-  stop("Diagnostic bundle action did not report a diagnostics bundle path.", call. = FALSE)
-}
-
-app$click(selector = "a[data-value='Messages']")
-app$wait_for_idle(timeout = 60000)
-messages_text <- app$get_text("body")
-required_messages <- c(
-  "Validation: model plan ready",
-  "Workflow: model status ready",
-  "Workflow: failed models - none",
-  "Workflow: outputs refreshed",
-  "Report: render started",
-  "Bundle: creating archive",
-  "Diagnostics: creating archive"
-)
-missing_messages <- required_messages[!vapply(required_messages, grepl, logical(1), x = messages_text, fixed = TRUE)]
-if (length(missing_messages) > 0L) {
-  stop("Messages tab is missing staged progress messages: ", paste(missing_messages, collapse = ", "), call. = FALSE)
+# 7. About step: software status, report environment, and BioGeoBEARS citation.
+app$click(selector = nth_tab(5))
+app$wait_for_idle(timeout = 30000)
+for (id in c("about_table", "report_environment_table", "citation_text")) {
+  assert(exists_id(id), paste("Missing about-step element:", id))
 }
 
 cat("Shiny browser smoke test passed\n")
