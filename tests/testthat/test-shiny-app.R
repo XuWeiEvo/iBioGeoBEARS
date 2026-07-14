@@ -417,6 +417,11 @@ test_that("Cross-clade step is numbered, adds per-region and CI, and export butt
   # Export buttons for both combined tables.
   expect_match(ui, "download_cross_clade", fixed = TRUE)
   expect_match(ui, "download_cross_clade_region", fixed = TRUE)
+  # Single-clade event / BSM panels now live under the cross-clade tab.
+  expect_match(ui, "当前类群的事件结果", fixed = TRUE)
+  expect_match(ui, "primary_figure_process_synthesis", fixed = TRUE)
+  expect_match(ui, "primary_bsm_event_summary_table", fixed = TRUE)
+  expect_match(ui, "primary_figure_bsm_dispersal_network", fixed = TRUE)
 })
 
 test_that("Help step becomes an about-and-citation panel", {
@@ -517,13 +522,23 @@ test_that("wizard constraint uploads flow into the config", {
   expect_null(cfg$advanced$constraints$dists_file)
 })
 
-test_that("Shiny simplified primary results body helpers are available", {
+test_that("Single-clade results body keeps only single-clade-meaningful views", {
   testthat::skip_if_not_installed("shiny")
 
   ui_html <- as.character(shiny_primary_results_body())
 
   expect_match(ui_html, "祖先分布重建图", fixed = TRUE)
   expect_match(ui_html, "模型比较表", fixed = TRUE)
+  # Event / BSM panels have moved to the cross-clade tab.
+  expect_false(grepl("primary_bsm_event_summary_table", ui_html, fixed = TRUE))
+  expect_false(grepl("primary_figure_bsm_dispersal_network", ui_html, fixed = TRUE))
+})
+
+test_that("Single-clade event / BSM panels render in the clade-event body", {
+  testthat::skip_if_not_installed("shiny")
+
+  ui_html <- as.character(shiny_clade_event_results_body())
+
   expect_match(ui_html, "事件统计", fixed = TRUE)
   expect_match(ui_html, "primary_bsm_event_summary_table", fixed = TRUE)
   expect_match(ui_html, "primary_bsm_event_times_table", fixed = TRUE)

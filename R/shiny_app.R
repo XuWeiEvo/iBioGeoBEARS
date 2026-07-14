@@ -74,7 +74,16 @@ shiny_primary_results_body <- function() {
       shiny::tags$h4("2. \u6a21\u578b\u6bd4\u8f83\u8868"),
       shiny::tableOutput("primary_model_comparison_table"),
       shiny::div(class = "ibgb-preview", shiny::imageOutput("primary_figure_model_comparison"))
-    ),
+    )
+  )
+}
+
+# Single-clade event / BSM outputs. A single clade's event statistics are only
+# scientifically meaningful once integrated across clades, so in the GUI these
+# panels live under the cross-clade tab rather than the single-clade results tab.
+# The underlying CSV result files are still written for every single-clade run.
+shiny_clade_event_results_body <- function() {
+  shiny::tagList(
     shiny::tags$div(
       class = "ibgb-primary-result",
       shiny::tags$h4("3. \u751f\u7269\u5730\u7406\u8fc7\u7a0b\u7efc\u5408"),
@@ -3782,6 +3791,12 @@ wizard_step_cross_clade <- function() {
         "process_rates_through_time.csv \u548c region_process_rates_through_time.csv \u53ea\u6709\u5728\u201c2 \u00b7 \u5206\u6790\u201d\u91cc\u52fe\u9009\u201c\u8fd0\u884c BSM \u968f\u673a\u6620\u5c04\u201d\u5e76\u771f\u5b9e\u8fd0\u884c\u540e\u624d\u4f1a\u5199\u5165\u5404\u9879\u76ee\u7684 tables/ \u76ee\u5f55\u3002\u82e5\u4f60\u7684 tables/ \u91cc\u6ca1\u6709\u8fd9\u4e24\u4e2a\u6587\u4ef6\uff0c\u8bf4\u660e\u90a3\u6b21\u5206\u6790\u6ca1\u6709\u8dd1 BSM\uff0c\u8bf7\u91cd\u8dd1\u5e76\u52fe\u9009 BSM\u3002"
       )
     ),
+    shiny::tags$div(class = "ibgb-key-files-title", "\u5f53\u524d\u7c7b\u7fa4\u7684\u4e8b\u4ef6\u7ed3\u679c"),
+    shiny::tags$div(
+      class = "ibgb-home-note",
+      "\u4ee5\u4e0b\u662f\u5f53\u524d\u8fd0\u884c\u7684\u5355\u4e2a\u7c7b\u7fa4\u7684\u4e8b\u4ef6\u7edf\u8ba1\u3002\u5355\u4e2a\u7c7b\u7fa4\u5355\u72ec\u770b\u610f\u4e49\u6709\u9650\uff0c\u4e3b\u8981\u7528\u4e8e\u4e0b\u65b9\u7684\u8de8\u7c7b\u7fa4\u6574\u5408\uff1b\u5bf9\u5e94\u7684\u7ed3\u679c CSV \u4ecd\u4f1a\u5199\u5165\u8be5\u5206\u6790\u7684 tables/ \u76ee\u5f55\u3002"
+    ),
+    shiny_clade_event_results_body(),
     shiny::tags$div(
       class = "ibgb-choice-card",
       shiny::tags$div(class = "ibgb-control-title", "\u603b\u4f53\u8fc7\u7a0b\u901f\u7387\uff08\u8de8\u7c7b\u7fa4\uff09"),
