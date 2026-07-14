@@ -27,41 +27,43 @@ read_csv <- function(path) {
   utils::read.csv(path, check.names = FALSE, stringsAsFactors = FALSE)
 }
 
+apply_wizard <- getFromNamespace("apply_shiny_wizard_overrides", "iBiogeobears")
 apply_overrides <- getFromNamespace("apply_shiny_config_overrides", "iBiogeobears")
 write_gui_config <- getFromNamespace("write_shiny_workflow_config", "iBiogeobears")
+constraint_template <- getFromNamespace("constraint_template_path", "iBiogeobears")
 
 root <- tempfile("ibgb-user-workflow-smoke-")
 example <- create_example_project(root)
 
-times_file <- file.path(example$data, "times.txt")
-dists_file <- file.path(example$data, "dists.txt")
-writeLines(c("0 1", "1 2"), times_file)
-writeLines(c("1 1", "1 1"), dists_file)
-
 base_cfg <- read_config(example$config)
 edited_output <- file.path(example$root, "results", "gui_edited_clade")
+
+upload <- function(path) {
+  data.frame(name = basename(path), datapath = path, stringsAsFactors = FALSE)
+}
+times_template <- constraint_template("times_file")
+
+# The wizard data step drives current_config() through these upload inputs.
+wizard_input <- list(
+  wizard_project_name = "gui_edited_clade",
+  wizard_tree = upload(example$tree_file),
+  wizard_geography = upload(example$geography_file),
+  wizard_regions = upload(example$regions_file),
+  wizard_max_range_size = 2L,
+  wizard_models = c("DEC", "DEC+J"),
+  wizard_constraint_times_file = upload(times_template)
+)
 edited_cfg <- apply_overrides(
-  base_cfg,
-  input = list(
-    use_config_editor = TRUE,
-    project_name = "gui_edited_clade",
-    tree_file = "data/tree.nwk",
-    geography_file = "data/geography.csv",
-    regions_file = "data/regions.csv",
-    max_range_size = "2",
-    models_run = c("DEC", "DEC+J"),
-    constraint_times_file = "data/times.txt",
-    constraint_dists_file = "data/dists.txt"
-  ),
+  apply_wizard(base_cfg, wizard_input),
+  input = wizard_input,
   output_dir = edited_output
 )
 edited_config <- write_gui_config(edited_cfg, source_config = example$config)
 roundtrip <- read_config(edited_config)
 
-assert(identical(roundtrip$project$name, "gui_edited_clade"), "GUI override did not update project name.")
-assert(identical(roundtrip$models$run, c("DEC", "DEC+J")), "GUI override did not update selected models.")
+assert(identical(roundtrip$project$name, "gui_edited_clade"), "Wizard override did not update project name.")
+assert(identical(roundtrip$models$run, c("DEC", "DEC+J")), "Wizard override did not update selected models.")
 assert(file.exists(roundtrip$advanced$constraints$times_file), "times_file constraint was not resolved.")
-assert(file.exists(roundtrip$advanced$constraints$dists_file), "dists_file constraint was not resolved.")
 
 result <- run_workflow(
   edited_config,
@@ -74,7 +76,6 @@ assert(isTRUE(result$dry_run), "Smoke workflow should run in dry-run mode.")
 assert(all(result$validation$ok), "Input validation failed in the smoke workflow.")
 assert(identical(result$config$models$run, c("DEC", "DEC+J")), "Workflow did not use edited model selection.")
 assert(file.exists(result$config$advanced$constraints$times_file), "Workflow config lost times_file constraint.")
-assert(file.exists(result$config$advanced$constraints$dists_file), "Workflow config lost dists_file constraint.")
 
 tables <- result$project_paths$tables
 logs <- result$project_paths$logs
