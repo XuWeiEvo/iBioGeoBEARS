@@ -381,10 +381,11 @@ test_that("Results step is single-clade, slims exports, and shows a file legend"
   ui <- as.character(wizard_step_results())
   expect_match(ui, "单一类群结果", fixed = TRUE)
   expect_false(grepl("ibgb-step-intro", ui, fixed = TRUE))
-  # Reports are generated on demand here (not auto-rendered during the run).
-  expect_match(ui, "render_report", fixed = TRUE)
+  # Only the result bundle is downloaded here; the report moved to the
+  # cross-clade tab (it targets the integrated multi-clade results).
   expect_match(ui, "download_bundle", fixed = TRUE)
-  expect_match(ui, "download_report", fixed = TRUE)
+  expect_false(grepl("render_report", ui, fixed = TRUE))
+  expect_false(grepl("download_report", ui, fixed = TRUE))
   # The heavy advanced-results panel is replaced by a file legend.
   expect_match(ui, "output_file_legend_table", fixed = TRUE)
   expect_false(grepl("figure_dashboard_table", ui, fixed = TRUE))
@@ -409,19 +410,21 @@ test_that("Cross-clade step is numbered, adds per-region and CI, and export butt
   ui <- as.character(wizard_step_cross_clade())
   expect_match(ui, "4 · 跨类群", fixed = TRUE)
   expect_false(grepl("ibgb-step-intro", ui, fixed = TRUE))
-  # Overall and per-region uploads, and the CI note.
+  # Batch uploads (overall + per-region) come first.
   expect_match(ui, "cross_clade_files", fixed = TRUE)
   expect_match(ui, "cross_clade_region_files", fixed = TRUE)
+  # Integrated result previews and the CI note.
+  expect_match(ui, "cross_clade_plot", fixed = TRUE)
   expect_match(ui, "cross_clade_region_plot", fixed = TRUE)
   expect_match(ui, "95% CI", fixed = TRUE)
   # Export buttons for both combined tables.
   expect_match(ui, "download_cross_clade", fixed = TRUE)
   expect_match(ui, "download_cross_clade_region", fixed = TRUE)
-  # Single-clade event / BSM panels now live under the cross-clade tab.
-  expect_match(ui, "当前类群的事件结果", fixed = TRUE)
-  expect_match(ui, "primary_figure_process_synthesis", fixed = TRUE)
-  expect_match(ui, "primary_bsm_event_summary_table", fixed = TRUE)
-  expect_match(ui, "primary_figure_bsm_dispersal_network", fixed = TRUE)
+  # The cross-clade report lives on this tab (moved off the single-clade tab).
+  expect_match(ui, "render_xclade_report", fixed = TRUE)
+  expect_match(ui, "download_xclade_report", fixed = TRUE)
+  # Single-clade event panels are NOT copied here.
+  expect_false(grepl("primary_figure_process_synthesis", ui, fixed = TRUE))
 })
 
 test_that("Help step becomes an about-and-citation panel", {
@@ -532,21 +535,6 @@ test_that("Single-clade results body keeps only single-clade-meaningful views", 
   # Event / BSM panels have moved to the cross-clade tab.
   expect_false(grepl("primary_bsm_event_summary_table", ui_html, fixed = TRUE))
   expect_false(grepl("primary_figure_bsm_dispersal_network", ui_html, fixed = TRUE))
-})
-
-test_that("Single-clade event / BSM panels render in the clade-event body", {
-  testthat::skip_if_not_installed("shiny")
-
-  ui_html <- as.character(shiny_clade_event_results_body())
-
-  expect_match(ui_html, "事件统计", fixed = TRUE)
-  expect_match(ui_html, "primary_bsm_event_summary_table", fixed = TRUE)
-  expect_match(ui_html, "primary_bsm_event_times_table", fixed = TRUE)
-  expect_match(ui_html, "primary_event_summary_table", fixed = TRUE)
-  expect_match(ui_html, "primary_best_fit_events_table", fixed = TRUE)
-  # Both dispersal views are previewed: the arrow network and the heatmap.
-  expect_match(ui_html, "primary_figure_bsm_dispersal_network", fixed = TRUE)
-  expect_match(ui_html, "primary_figure_bsm_dispersal_routes", fixed = TRUE)
 })
 
 test_that("Wizard shell renders all steps including elevated cross-clade", {

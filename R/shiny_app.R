@@ -78,43 +78,6 @@ shiny_primary_results_body <- function() {
   )
 }
 
-# Single-clade event / BSM outputs. A single clade's event statistics are only
-# scientifically meaningful once integrated across clades, so in the GUI these
-# panels live under the cross-clade tab rather than the single-clade results tab.
-# The underlying CSV result files are still written for every single-clade run.
-shiny_clade_event_results_body <- function() {
-  shiny::tagList(
-    shiny::tags$div(
-      class = "ibgb-primary-result",
-      shiny::tags$h4("3. \u751f\u7269\u5730\u7406\u8fc7\u7a0b\u7efc\u5408"),
-      shiny::tags$p("\u628a BSM \u968f\u673a\u6620\u5c04\u7ed3\u679c\u7ffb\u8bd1\u6210\u53ef\u89e3\u91ca\u7684\u751f\u7269\u5730\u7406\u8fc7\u7a0b\uff1a\u5206\u652f\u5f62\u6210\u4e8b\u4ef6\uff08\u539f\u5730/\u540c\u57df\u7269\u79cd\u5f62\u6210\u3001subset sympatry\u3001vicariance\u3001founder-event \u8df3\u8dc3\u7269\u79cd\u5f62\u6210\uff09\u548c\u652f\u7cfb\u5185\u5206\u5e03\u533a\u6f14\u5316\uff08range expansion\u3001\u5c40\u90e8\u706d\u7edd\u3001range switching\uff09\u3002\u4ec5\u5728\u8fd0\u884c BSM \u540e\u663e\u793a\u3002"),
-      shiny::div(class = "ibgb-preview", shiny::imageOutput("primary_figure_process_synthesis")),
-      shiny::tableOutput("primary_process_summary_table")
-    ),
-    shiny::tags$div(
-      class = "ibgb-primary-result",
-      shiny::tags$h4("4. \u4e8b\u4ef6\u7edf\u8ba1\u660e\u7ec6"),
-      shiny::tags$p("\u5982\u679c\u8fd0\u884c\u4e86 BSM \u968f\u673a\u6620\u5c04\uff0c\u8fd9\u91cc\u4f18\u5148\u663e\u793a BSM \u7ed3\u679c\uff1b\u5426\u5219\u663e\u793a\u57fa\u4e8e\u6700\u9ad8\u6982\u7387\u7956\u5148\u72b6\u6001\u7684\u786e\u5b9a\u6027\u4e8b\u4ef6\u7edf\u8ba1\u4f5c\u4e3a\u66ff\u4ee3\u3002"),
-      shiny::tableOutput("primary_bsm_event_summary_table"),
-      shiny::div(class = "ibgb-preview", shiny::imageOutput("primary_figure_bsm_event_summary")),
-      shiny::tags$h4("BSM \u4e8b\u4ef6\u65f6\u95f4\u4e0e\u65b9\u5411"),
-      shiny::tableOutput("primary_bsm_event_times_table"),
-      shiny::tags$h4("BSM \u533a\u57df\u95f4\u6269\u6563\u7f51\u7edc"),
-      shiny::tags$p("\u6709\u5411\u7bad\u5934\u4ece\u6e90\u533a\u6307\u5411\u76ee\u6807\u533a\uff0c\u7bad\u5934\u7c97\u7ec6\u53cd\u6620\u5e73\u5747\u6269\u6563\u6b21\u6570\uff08mean count\uff09\u3002"),
-      shiny::div(class = "ibgb-preview", shiny::imageOutput("primary_figure_bsm_dispersal_network")),
-      shiny::tags$h4("BSM \u6269\u6563\u8def\u7ebf\u70ed\u56fe"),
-      shiny::tags$p("\u540c\u4e00\u4efd\u6269\u6563\u6570\u636e\u7684\u70ed\u56fe\u89c6\u89d2\uff1a\u884c=\u6e90\u533a\u3001\u5217=\u76ee\u6807\u533a\uff0c\u989c\u8272\u6df1\u6d45\u53cd\u6620\u5e73\u5747\u6269\u6563\u6b21\u6570\u3002"),
-      shiny::div(class = "ibgb-preview", shiny::imageOutput("primary_figure_bsm_dispersal_routes")),
-      shiny::tags$h4("\u786e\u5b9a\u6027\u66ff\u4ee3\u4e8b\u4ef6\u7edf\u8ba1"),
-      shiny::tableOutput("primary_event_summary_table"),
-      shiny::tags$h4("\u6700\u4f18\u6a21\u578b\u4e8b\u4ef6\u65f6\u95f4\u548c\u65b9\u5411"),
-      shiny::tags$p("\u65f6\u95f4\u4e3a\u5206\u652f\u4e2d\u70b9\u8fd1\u4f3c\u503c\uff0c\u5355\u4f4d\u4e0e\u8f93\u5165\u6811\u5206\u652f\u957f\u5ea6\u4e00\u81f4\uff1b\u65b9\u5411\u6765\u81ea\u6700\u9ad8\u6982\u7387\u7956\u5148\u72b6\u6001\u7684\u53d8\u5316\u3002"),
-      shiny::tableOutput("primary_best_fit_events_table"),
-      shiny::div(class = "ibgb-preview", shiny::imageOutput("primary_figure_event_summary"))
-    )
-  )
-}
-
 shiny_constraint_fields <- function() {
   data.frame(
     field = c(
@@ -187,6 +150,7 @@ iBGB_shiny_server <- function(input, output, session) {
         model_table = NULL,
         manifest = NULL,
         report = NULL,
+        xclade_report = NULL,
         bundle = NULL,
         diagnostic_bundle = NULL,
         installation = check_installation(),
@@ -702,6 +666,41 @@ iBGB_shiny_server <- function(input, output, session) {
             stem = "cross_clade_region_process_rates",
             width = 9.0, height = 6.0
           )
+        }
+      )
+
+      output$xclade_report_status <- shiny::renderText({
+        if (is.null(state$xclade_report) || !file.exists(state$xclade_report)) {
+          "\u5c1a\u672a\u751f\u6210\u62a5\u544a\u3002\u4e0a\u4f20\u591a\u4e2a\u7c7b\u7fa4\u7684\u7ed3\u679c\u540e\u70b9\u201c\u751f\u6210\u62a5\u544a\u201d\u3002"
+        } else {
+          state$xclade_report
+        }
+      })
+
+      shiny::observeEvent(input$render_xclade_report, {
+        run_app_action(state, {
+          overall <- cross_clade_combined()
+          region <- cross_clade_region_combined()
+          has_overall <- !is.null(overall) && nrow(overall) > 0L
+          has_region <- !is.null(region) && nrow(region) > 0L
+          if (!has_overall && !has_region) {
+            stop("Upload clade result files before generating the cross-clade report.", call. = FALSE)
+          }
+          shiny::withProgress(message = "Rendering cross-clade report", value = 0, {
+            state$xclade_report <- render_cross_clade_report(overall, region)
+            append_app_message(state, paste("Cross-clade report ready:", state$xclade_report))
+            shiny::incProgress(1)
+          })
+        })
+      })
+
+      output$download_xclade_report <- shiny::downloadHandler(
+        filename = function() "cross_clade_report.html",
+        content = function(file) {
+          if (is.null(state$xclade_report) || !file.exists(state$xclade_report)) {
+            stop("Generate the cross-clade report first.", call. = FALSE)
+          }
+          copy_download_file(state$xclade_report, file)
         }
       )
 
@@ -3740,13 +3739,11 @@ wizard_step_results <- function() {
       "\u5bfc\u51fa",
       shiny::tags$div(
         class = "ibgb-downloads",
-        shiny::downloadButton("download_bundle", "\u4e0b\u8f7d\u7ed3\u679c\u538b\u7f29\u5305\uff08\u5168\u90e8\u7ed3\u679c\u6587\u4ef6\uff09"),
-        shiny::actionButton("render_report", "\u751f\u6210\u62a5\u544a"),
-        shiny::downloadButton("download_report", "\u4e0b\u8f7d\u62a5\u544a")
+        shiny::downloadButton("download_bundle", "\u4e0b\u8f7d\u7ed3\u679c\u538b\u7f29\u5305\uff08\u5168\u90e8\u7ed3\u679c\u6587\u4ef6\uff09")
       ),
       shiny::tags$div(
         class = "ibgb-home-note",
-        "\u8fd0\u884c\u5b8c\u5148\u5728\u4e0a\u9762\u770b\u7ed3\u679c\u3002\u9700\u8981\u56fe\u6587\u62a5\u544a\u65f6\u70b9\u201c\u751f\u6210\u62a5\u544a\u201d\uff1a\u88c5\u4e86 Quarto \u51fa HTML\uff0c\u6ca1\u88c5\u5219\u751f\u6210 .qmd \u6e90\u6587\u4ef6\uff0c\u90fd\u53ef\u7528\u201c\u4e0b\u8f7d\u62a5\u544a\u201d\u4e0b\u8f7d\u3002"
+        "\u4e0b\u8f7d\u538b\u7f29\u5305\u83b7\u53d6\u8be5\u7c7b\u7fa4\u7684\u5168\u90e8\u7ed3\u679c\u6587\u4ef6\uff08\u8868\u683c\u3001\u56fe\u3001\u65e5\u5fd7\uff09\u3002\u4e8b\u4ef6\u7edf\u8ba1\u4e0e\u56fe\u6587\u62a5\u544a\u90fd\u5728\u201c4 \u00b7 \u8de8\u7c7b\u7fa4\u201d\u91cc\uff0c\u9488\u5bf9\u591a\u7c7b\u7fa4\u6574\u5408\u7ed3\u679c\u751f\u6210\u3002"
       )
     ),
     shiny_collapsible_section(
@@ -3785,55 +3782,69 @@ wizard_step_cross_clade <- function() {
     "4 \u00b7 \u8de8\u7c7b\u7fa4",
     shiny::tags$div(
       class = "ibgb-next-action",
-      shiny::tags$div(class = "ibgb-next-action-title", "\u9700\u8981\u5148\u8dd1 BSM"),
+      shiny::tags$div(class = "ibgb-next-action-title", "\u628a\u591a\u4e2a\u7c7b\u7fa4\u6574\u5408\u5230\u4e00\u8d77"),
       shiny::tags$div(
         class = "ibgb-next-action-detail",
-        "process_rates_through_time.csv \u548c region_process_rates_through_time.csv \u53ea\u6709\u5728\u201c2 \u00b7 \u5206\u6790\u201d\u91cc\u52fe\u9009\u201c\u8fd0\u884c BSM \u968f\u673a\u6620\u5c04\u201d\u5e76\u771f\u5b9e\u8fd0\u884c\u540e\u624d\u4f1a\u5199\u5165\u5404\u9879\u76ee\u7684 tables/ \u76ee\u5f55\u3002\u82e5\u4f60\u7684 tables/ \u91cc\u6ca1\u6709\u8fd9\u4e24\u4e2a\u6587\u4ef6\uff0c\u8bf4\u660e\u90a3\u6b21\u5206\u6790\u6ca1\u6709\u8dd1 BSM\uff0c\u8bf7\u91cd\u8dd1\u5e76\u52fe\u9009 BSM\u3002"
+        "\u5148\u7ed9\u6bcf\u4e2a\u7c7b\u7fa4\u5728\u201c2 \u00b7 \u5206\u6790\u201d\u91cc\u52fe\u9009\u201c\u8fd0\u884c BSM \u968f\u673a\u6620\u5c04\u201d\u5e76\u771f\u5b9e\u8fd0\u884c\uff0c\u5f97\u5230\u5404\u81ea tables/ \u76ee\u5f55\u4e0b\u7684 process_rates_through_time.csv \u548c region_process_rates_through_time.csv\u3002\u7136\u540e\u5728\u4e0b\u9762\u6279\u91cf\u4e0a\u4f20\u591a\u4e2a\u7c7b\u7fa4\u7684\u8fd9\u4e24\u7c7b\u6587\u4ef6\uff0c\u672c\u9875\u4f1a\u751f\u6210\u8de8\u7c7b\u7fa4\u6574\u5408\u540e\u7684\u603b\u4f53\u7ed3\u679c\u3001\u5206\u533a\u57df\u7ed3\u679c\u548c\u6574\u5408\u62a5\u544a\u3002\u5355\u4e2a\u7c7b\u7fa4\u7684\u4e8b\u4ef6\u7edf\u8ba1\u610f\u4e49\u6709\u9650\uff0c\u56e0\u6b64\u4e0d\u5728\u6b64\u5355\u72ec\u5c55\u793a\u3002"
       )
     ),
-    shiny::tags$div(class = "ibgb-key-files-title", "\u5f53\u524d\u7c7b\u7fa4\u7684\u4e8b\u4ef6\u7ed3\u679c"),
-    shiny::tags$div(
-      class = "ibgb-home-note",
-      "\u4ee5\u4e0b\u662f\u5f53\u524d\u8fd0\u884c\u7684\u5355\u4e2a\u7c7b\u7fa4\u7684\u4e8b\u4ef6\u7edf\u8ba1\u3002\u5355\u4e2a\u7c7b\u7fa4\u5355\u72ec\u770b\u610f\u4e49\u6709\u9650\uff0c\u4e3b\u8981\u7528\u4e8e\u4e0b\u65b9\u7684\u8de8\u7c7b\u7fa4\u6574\u5408\uff1b\u5bf9\u5e94\u7684\u7ed3\u679c CSV \u4ecd\u4f1a\u5199\u5165\u8be5\u5206\u6790\u7684 tables/ \u76ee\u5f55\u3002"
-    ),
-    shiny_clade_event_results_body(),
     shiny::tags$div(
       class = "ibgb-choice-card",
-      shiny::tags$div(class = "ibgb-control-title", "\u603b\u4f53\u8fc7\u7a0b\u901f\u7387\uff08\u8de8\u7c7b\u7fa4\uff09"),
+      shiny::tags$div(class = "ibgb-control-title", "1 \u00b7 \u6279\u91cf\u4e0a\u4f20\u591a\u4e2a\u7c7b\u7fa4\u7684\u7ed3\u679c\u6587\u4ef6"),
       shiny::tags$div(
         class = "ibgb-home-note",
-        "\u4e0a\u4f20\u6bcf\u4e2a\u7c7b\u7fa4\u7684 process_rates_through_time.csv\uff08\u5728\u5404\u5206\u6790\u9879\u76ee\u7684 tables/ \u76ee\u5f55\u4e0b\uff09\u3002\u5efa\u8bae\u5148\u628a\u6bcf\u4e2a\u6587\u4ef6\u91cd\u547d\u540d\u4e3a\u7c7b\u7fa4\u540d\uff08\u5982 CladeA.csv\uff09\uff0c\u7cfb\u7edf\u4f1a\u7528\u6587\u4ef6\u540d\u4f5c\u4e3a\u7c7b\u7fa4\u6807\u7b7e\u3002\u53ef\u4e00\u6b21\u591a\u9009\u6279\u91cf\u4e0a\u4f20\u3002\u5404\u7c7b\u7fa4\u9700\u4f7f\u7528\u53ef\u6bd4\u8f83\u7684\u65f6\u95f4\u5355\u4f4d\u3002"
+        "\u5efa\u8bae\u5148\u628a\u6bcf\u4e2a\u6587\u4ef6\u91cd\u547d\u540d\u4e3a\u7c7b\u7fa4\u540d\uff08\u5982 CladeA.csv\uff09\uff0c\u7cfb\u7edf\u4f1a\u7528\u6587\u4ef6\u540d\u4f5c\u4e3a\u7c7b\u7fa4\u6807\u7b7e\u3002\u53ef\u4e00\u6b21\u591a\u9009\u6279\u91cf\u4e0a\u4f20\u3002\u5404\u7c7b\u7fa4\u9700\u4f7f\u7528\u53ef\u6bd4\u8f83\u7684\u65f6\u95f4\u5355\u4f4d\u548c\u4e00\u81f4\u7684\u5730\u533a\u5b9a\u4e49\u3002"
       ),
       shiny::fileInput(
         "cross_clade_files",
-        "\u4e0a\u4f20\u5404\u7c7b\u7fa4\u7684 process_rates_through_time.csv\uff08\u53ef\u591a\u9009\uff09",
+        "\u603b\u4f53\u7ed3\u679c\uff1a\u5404\u7c7b\u7fa4\u7684 process_rates_through_time.csv\uff08\u53ef\u591a\u9009\uff09",
         multiple = TRUE,
         accept = ".csv"
       ),
       shiny::uiOutput("cross_clade_status"),
-      shiny::div(class = "ibgb-preview", shiny::imageOutput("cross_clade_plot", height = "520px")),
-      shiny::tags$div(class = "ibgb-key-files-title", "\u5408\u5e76\u6570\u636e\u9884\u89c8\uff08\u66f2\u7ebf\u4e3a\u5747\u503c\uff0c\u8272\u5e26\u4e3a 95% CI\uff09"),
-      shiny::tableOutput("cross_clade_table"),
-      shiny::downloadButton("download_cross_clade", "\u4e0b\u8f7d\u6574\u5408\u7ed3\u679c\uff08\u8868\u683c CSV + \u56fe PNG/PDF\uff09")
-    ),
-    shiny::tags$div(
-      class = "ibgb-choice-card",
-      shiny::tags$div(class = "ibgb-control-title", "\u5206\u533a\u57df\u8fc7\u7a0b\u901f\u7387\uff08\u8de8\u7c7b\u7fa4\uff09"),
-      shiny::tags$div(
-        class = "ibgb-home-note",
-        "\u4e0a\u4f20\u6bcf\u4e2a\u7c7b\u7fa4\u7684 region_process_rates_through_time.csv\uff0c\u6bd4\u8f83\u5404\u5730\u533a\u5728\u4e0d\u540c\u7c7b\u7fa4\u91cc\u8fc7\u7a0b\u901f\u7387\u968f\u65f6\u95f4\u7684\u53d8\u5316\u3002"
-      ),
       shiny::fileInput(
         "cross_clade_region_files",
-        "\u4e0a\u4f20\u5404\u7c7b\u7fa4\u7684 region_process_rates_through_time.csv\uff08\u53ef\u591a\u9009\uff09",
+        "\u5206\u533a\u57df\u7ed3\u679c\uff1a\u5404\u7c7b\u7fa4\u7684 region_process_rates_through_time.csv\uff08\u53ef\u591a\u9009\uff09",
         multiple = TRUE,
         accept = ".csv"
       ),
-      shiny::uiOutput("cross_clade_region_status"),
+      shiny::uiOutput("cross_clade_region_status")
+    ),
+    shiny::tags$div(
+      class = "ibgb-choice-card",
+      shiny::tags$div(class = "ibgb-control-title", "2 \u00b7 \u6574\u5408\u7ed3\u679c \u00b7 \u603b\u4f53\u8fc7\u7a0b\u901f\u7387\uff08\u8de8\u7c7b\u7fa4\uff09"),
+      shiny::tags$div(
+        class = "ibgb-home-note",
+        "\u6bcf\u4e2a\u751f\u7269\u5730\u7406\u8fc7\u7a0b\u4e00\u4e2a\u9762\u677f\uff0c\u6bcf\u4e2a\u7c7b\u7fa4\u4e00\u6761\u66f2\u7ebf\uff1b\u66f2\u7ebf\u4e3a\u5747\u503c\uff0c\u8272\u5e26\u4e3a 95% CI\uff08\u968f\u673a\u6620\u5c04\u7684 2.5\u201397.5% \u5206\u4f4d\uff09\u3002"
+      ),
+      shiny::div(class = "ibgb-preview", shiny::imageOutput("cross_clade_plot", height = "520px")),
+      shiny::tableOutput("cross_clade_table"),
+      shiny::downloadButton("download_cross_clade", "\u4e0b\u8f7d\u603b\u4f53\u6574\u5408\u7ed3\u679c\uff08\u8868\u683c CSV + \u56fe PNG/PDF\uff09")
+    ),
+    shiny::tags$div(
+      class = "ibgb-choice-card",
+      shiny::tags$div(class = "ibgb-control-title", "3 \u00b7 \u6574\u5408\u7ed3\u679c \u00b7 \u5206\u533a\u57df\u8fc7\u7a0b\u901f\u7387\uff08\u8de8\u7c7b\u7fa4\uff09"),
+      shiny::tags$div(
+        class = "ibgb-home-note",
+        "\u884c=\u8fc7\u7a0b\u3001\u5217=\u7c7b\u7fa4\uff0c\u6bcf\u4e2a\u5730\u533a\u4e00\u6761\u66f2\u7ebf\uff0c\u6bd4\u8f83\u5404\u5730\u533a\u5728\u4e0d\u540c\u7c7b\u7fa4\u91cc\u8fc7\u7a0b\u901f\u7387\u968f\u65f6\u95f4\u7684\u53d8\u5316\u3002"
+      ),
       shiny::div(class = "ibgb-preview", shiny::imageOutput("cross_clade_region_plot", height = "560px")),
-      shiny::tags$div(class = "ibgb-key-files-title", "\u5206\u533a\u57df\u5408\u5e76\u6570\u636e\u9884\u89c8"),
       shiny::tableOutput("cross_clade_region_table"),
       shiny::downloadButton("download_cross_clade_region", "\u4e0b\u8f7d\u5206\u533a\u57df\u6574\u5408\u7ed3\u679c\uff08\u8868\u683c CSV + \u56fe PNG/PDF\uff09")
+    ),
+    shiny::tags$div(
+      class = "ibgb-choice-card",
+      shiny::tags$div(class = "ibgb-control-title", "4 \u00b7 \u591a\u7c7b\u7fa4\u6574\u5408\u62a5\u544a"),
+      shiny::tags$div(
+        class = "ibgb-home-note",
+        "\u628a\u4e0a\u9762\u7684\u603b\u4f53\u548c\u5206\u533a\u57df\u6574\u5408\u7ed3\u679c\u6c47\u603b\u6210\u4e00\u4efd\u53ef\u5206\u4eab\u7684 HTML \u62a5\u544a\uff08\u542b\u56fe\u548c\u6c47\u603b\u8868\uff09\u3002\u5148\u70b9\u201c\u751f\u6210\u62a5\u544a\u201d\uff0c\u518d\u70b9\u201c\u4e0b\u8f7d\u62a5\u544a\u201d\u3002"
+      ),
+      shiny::tags$div(
+        class = "ibgb-downloads",
+        shiny::actionButton("render_xclade_report", "\u751f\u6210\u62a5\u544a"),
+        shiny::downloadButton("download_xclade_report", "\u4e0b\u8f7d\u62a5\u544a")
+      ),
+      shiny::verbatimTextOutput("xclade_report_status")
     )
   )
 }

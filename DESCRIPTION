@@ -28,7 +28,8 @@ Imports:
     igraph,
     ggraph,
     ape,
-    zip
+    zip,
+    base64enc
 Suggests:
     devtools,
     testthat (>= 3.0.0),

@@ -146,3 +146,25 @@ test_that("write_cross_clade_bundle zips the combined table with its figure", {
   expect_true("cross_clade_process_rates.csv" %in% entries)
   expect_true("cross_clade_process_rates.png" %in% entries)
 })
+
+test_that("render_cross_clade_report writes a self-contained HTML with figures", {
+  root <- tempfile("ibgb-xclade-report-")
+  f1 <- write_clade_rates(root, "Anolis", c(1, 2, 3))
+  f2 <- write_clade_rates(root, "Phelsuma", c(3, 2, 1))
+  overall <- combine_process_rates_across_clades(c(f1, f2))
+  r1 <- write_clade_region_rates(root, "Anolis", c("A", "B"), c(1, 2, 3))
+  r2 <- write_clade_region_rates(root, "Phelsuma", c("A", "B"), c(3, 2, 1))
+  region <- combine_region_process_rates_across_clades(c(r1, r2))
+
+  html <- render_cross_clade_report(overall, region)
+  expect_true(file.exists(html))
+  txt <- paste(readLines(html, warn = FALSE), collapse = "\n")
+  expect_match(txt, "Cross-clade synthesis", fixed = TRUE)
+  expect_match(txt, "Overall process rates through time", fixed = TRUE)
+  expect_match(txt, "Region-resolved", fixed = TRUE)
+  expect_match(txt, "data:image/png;base64", fixed = TRUE)
+
+  # A compact summary table is embedded, and an empty report errors clearly.
+  expect_match(txt, "Summed mean events", fixed = TRUE)
+  expect_error(render_cross_clade_report(NULL, NULL), "No cross-clade results")
+})
