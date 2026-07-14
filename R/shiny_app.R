@@ -616,13 +616,18 @@ iBGB_shiny_server <- function(input, output, session) {
       }, striped = TRUE, bordered = TRUE, na = "")
 
       output$download_cross_clade <- shiny::downloadHandler(
-        filename = function() "cross_clade_process_rates.csv",
+        filename = function() "cross_clade_process_rates.zip",
         content = function(file) {
           combined <- cross_clade_combined()
           if (is.null(combined) || nrow(combined) == 0L) {
             stop("Upload clade rate files before downloading the combined result.", call. = FALSE)
           }
-          utils::write.csv(combined, file, row.names = FALSE, na = "")
+          write_cross_clade_bundle(
+            file, combined,
+            plot_process_rates_across_clades(combined),
+            stem = "cross_clade_process_rates",
+            width = 8.6, height = 5.2
+          )
         }
       )
 
@@ -676,13 +681,18 @@ iBGB_shiny_server <- function(input, output, session) {
       }, striped = TRUE, bordered = TRUE, na = "")
 
       output$download_cross_clade_region <- shiny::downloadHandler(
-        filename = function() "cross_clade_region_process_rates.csv",
+        filename = function() "cross_clade_region_process_rates.zip",
         content = function(file) {
           combined <- cross_clade_region_combined()
           if (is.null(combined) || nrow(combined) == 0L) {
             stop("Upload clade region-rate files before downloading the combined result.", call. = FALSE)
           }
-          utils::write.csv(combined, file, row.names = FALSE, na = "")
+          write_cross_clade_bundle(
+            file, combined,
+            plot_region_process_rates_across_clades(combined),
+            stem = "cross_clade_region_process_rates",
+            width = 9.0, height = 6.0
+          )
         }
       )
 
@@ -3741,6 +3751,26 @@ wizard_step_results <- function() {
   )
 }
 
+# Bundle a cross-clade combined table together with its integrated figure
+# (publication PNG + PDF) into a single downloadable zip archive.
+write_cross_clade_bundle <- function(file, combined, plot, stem, width, height) {
+  tmp <- tempfile("ibgb-xclade-")
+  dir.create(tmp)
+  on.exit(unlink(tmp, recursive = TRUE), add = TRUE)
+  csv <- file.path(tmp, paste0(stem, ".csv"))
+  png <- file.path(tmp, paste0(stem, ".png"))
+  pdf <- file.path(tmp, paste0(stem, ".pdf"))
+  utils::write.csv(combined, csv, row.names = FALSE, na = "")
+  ggplot2::ggsave(png, plot, width = width, height = height, dpi = 300)
+  tryCatch(
+    ggplot2::ggsave(pdf, plot, width = width, height = height),
+    error = function(e) unlink(pdf)
+  )
+  files <- basename(Filter(file.exists, c(csv, png, pdf)))
+  zip_relative_files(tmp, file, files)
+  invisible(file)
+}
+
 wizard_step_cross_clade <- function() {
   shiny::tabPanel(
     "4 \u00b7 \u8de8\u7c7b\u7fa4",
@@ -3769,7 +3799,7 @@ wizard_step_cross_clade <- function() {
       shiny::div(class = "ibgb-preview", shiny::imageOutput("cross_clade_plot", height = "520px")),
       shiny::tags$div(class = "ibgb-key-files-title", "\u5408\u5e76\u6570\u636e\u9884\u89c8\uff08\u66f2\u7ebf\u4e3a\u5747\u503c\uff0c\u8272\u5e26\u4e3a 95% CI\uff09"),
       shiny::tableOutput("cross_clade_table"),
-      shiny::downloadButton("download_cross_clade", "\u4e0b\u8f7d\u6574\u5408\u7ed3\u679c CSV")
+      shiny::downloadButton("download_cross_clade", "\u4e0b\u8f7d\u6574\u5408\u7ed3\u679c\uff08\u8868\u683c CSV + \u56fe PNG/PDF\uff09")
     ),
     shiny::tags$div(
       class = "ibgb-choice-card",
@@ -3788,7 +3818,7 @@ wizard_step_cross_clade <- function() {
       shiny::div(class = "ibgb-preview", shiny::imageOutput("cross_clade_region_plot", height = "560px")),
       shiny::tags$div(class = "ibgb-key-files-title", "\u5206\u533a\u57df\u5408\u5e76\u6570\u636e\u9884\u89c8"),
       shiny::tableOutput("cross_clade_region_table"),
-      shiny::downloadButton("download_cross_clade_region", "\u4e0b\u8f7d\u5206\u533a\u57df\u6574\u5408\u7ed3\u679c CSV")
+      shiny::downloadButton("download_cross_clade_region", "\u4e0b\u8f7d\u5206\u533a\u57df\u6574\u5408\u7ed3\u679c\uff08\u8868\u683c CSV + \u56fe PNG/PDF\uff09")
     )
   )
 }

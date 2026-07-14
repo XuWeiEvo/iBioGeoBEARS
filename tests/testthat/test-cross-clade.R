@@ -127,3 +127,22 @@ test_that("plot_region_process_rates_across_clades returns a ggplot", {
     "missing required columns"
   )
 })
+
+test_that("write_cross_clade_bundle zips the combined table with its figure", {
+  root <- tempfile("ibgb-crossclade-bundle-")
+  f1 <- write_clade_rates(root, "Anolis", c(1, 2, 3))
+  f2 <- write_clade_rates(root, "Phelsuma", c(3, 2, 1))
+  combined <- combine_process_rates_across_clades(c(f1, f2))
+  plot <- plot_process_rates_across_clades(combined)
+
+  zipfile <- tempfile(fileext = ".zip")
+  write_cross_clade_bundle(
+    zipfile, combined, plot,
+    stem = "cross_clade_process_rates", width = 8, height = 5
+  )
+
+  expect_true(file.exists(zipfile))
+  entries <- utils::unzip(zipfile, list = TRUE)$Name
+  expect_true("cross_clade_process_rates.csv" %in% entries)
+  expect_true("cross_clade_process_rates.png" %in% entries)
+})
