@@ -3561,10 +3561,7 @@ wizard_env_section <- function() {
   shiny_collapsible_section(
     "\u73af\u5883\u4e0e\u5b89\u88c5\uff08\u7b2c\u4e00\u6b21\u4f7f\u7528\u53ef\u5c55\u5f00\u68c0\u67e5 BioGeoBEARS\uff09",
     shiny_action_grid(
-      shiny::actionButton("refresh_setup", "\u5237\u65b0\u73af\u5883\u68c0\u67e5"),
-      shiny::actionButton("show_install_plan", "\u67e5\u770b BioGeoBEARS \u5b89\u88c5\u8ba1\u5212"),
-      shiny::actionButton("install_biogeobears", "\u5b89\u88c5 BioGeoBEARS"),
-      shiny::actionButton("open_user_guide", "\u6253\u5f00\u4e2d\u6587\u6559\u7a0b")
+      shiny::actionButton("refresh_setup", "\u5237\u65b0\u73af\u5883\u68c0\u67e5")
     ),
     shiny::tags$div(class = "ibgb-key-files-title", "\u5b89\u88c5\u72b6\u6001"),
     shiny::tableOutput("installation_table"),

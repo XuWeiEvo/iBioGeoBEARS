@@ -61,7 +61,7 @@ assert(n_tabs == 5L, paste0("Expected 5 wizard tabs, found ", n_tabs, "."))
 for (id in c(
   "wizard_tree", "wizard_geography", "wizard_regions", "wizard_max_range_size",
   "wizard_models", "output_dir", "config_path", "validate",
-  "refresh_setup", "install_biogeobears", "installation_table",
+  "refresh_setup", "installation_table", "biogeobears_install_plan_table",
   "wizard_constraint_times_file", "download_tree_template"
 )) {
   assert(exists_id(id), paste("Missing element on load:", id))

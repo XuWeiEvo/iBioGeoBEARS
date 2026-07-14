@@ -119,6 +119,42 @@ Model selection is not a "lowest AICc wins" tool: the report and app separate
 statistical fit from biological interpretation, especially when a `+J` model is
 best or near-best.
 
+## Reports (HTML / PDF)
+
+After a real run the app auto-generates the summary report, and you can also
+call `render_report(result, format = "html")` (or `"pdf"`, or `"source"`).
+Report rendering needs extra tools; if they are missing, `render_report()`
+still writes the `.qmd` source and returns its path, so **a missing renderer
+does not block the run or lose results** — you just get the source instead of a
+rendered HTML/PDF.
+
+**HTML reports** need the Quarto command-line tool plus the `quarto` R package:
+
+```r
+install.packages("quarto")
+```
+
+and the Quarto CLI from <https://quarto.org/docs/get-started/> (install it, then
+restart R so it is found on the `PATH`). Many machines that render R Markdown
+already have it.
+
+**PDF reports** additionally need a LaTeX engine. The simplest is TinyTeX:
+
+```r
+install.packages("tinytex")
+tinytex::install_tinytex()
+```
+
+Check what is available (and the exact next step for anything missing) with:
+
+```r
+check_report_environment(c("source", "html", "pdf"))
+```
+
+The same status appears in the app's top **“环境与安装”** panel. If you only
+need the numbers and figures, the source report plus the downloadable result
+bundle are enough — HTML/PDF are for a formatted, shareable write-up.
+
 ## Citation and license
 
 Released under GPL (>= 2). BioGeoBEARS is by Nicholas J. Matzke — cite it

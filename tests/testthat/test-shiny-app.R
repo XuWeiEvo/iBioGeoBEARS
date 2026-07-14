@@ -363,10 +363,13 @@ test_that("Environment check lives in a top-level section, not the help step", {
   testthat::skip_if_not_installed("shiny")
 
   env_html <- as.character(wizard_env_section())
-  expect_match(env_html, "install_biogeobears", fixed = TRUE)
+  # Only the refresh button is kept; the info tables remain below it.
   expect_match(env_html, "refresh_setup", fixed = TRUE)
   expect_match(env_html, "installation_table", fixed = TRUE)
   expect_match(env_html, "biogeobears_install_plan_table", fixed = TRUE)
+  expect_false(grepl("install_biogeobears", env_html, fixed = TRUE))
+  expect_false(grepl("show_install_plan", env_html, fixed = TRUE))
+  expect_false(grepl("open_user_guide", env_html, fixed = TRUE))
 
   help_html <- as.character(wizard_step_help())
   expect_false(grepl("installation_table", help_html, fixed = TRUE))
