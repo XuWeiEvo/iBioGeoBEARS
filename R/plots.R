@@ -322,9 +322,13 @@ plot_root_state_probabilities <- function(root_state_probabilities, top_n = 8L) 
 #'   state.
 #' @param label_internal_nodes Deprecated; kept for backward compatibility and
 #'   ignored (internal nodes are shown as pies).
+#' @param node_radius Numeric radius of the node pies (and fallback points) in
+#'   tip-spacing units. Larger values make the pie wedges easier to see, which
+#'   helps when most nodes are reconstructed with high confidence (near-solid
+#'   pies) and only a few carry visible uncertainty. Defaults to `0.28`.
 #' @return A ggplot object.
 #' @export
-plot_node_state_summary <- function(tree_nodes, node_state_summary, ancestral_state_probabilities = NULL, model = NULL, location = "branch_top_at_node", label_tips = TRUE, label_internal_nodes = TRUE) {
+plot_node_state_summary <- function(tree_nodes, node_state_summary, ancestral_state_probabilities = NULL, model = NULL, location = "branch_top_at_node", label_tips = TRUE, label_internal_nodes = TRUE, node_radius = 0.28) {
   node_required <- c("node_index", "node_type", "node_label", "parent_node_index", "edge_length")
   summary_required <- c("model", "location", "node_index", "best_state", "best_probability")
   missing_nodes <- setdiff(node_required, names(tree_nodes))
@@ -380,7 +384,10 @@ plot_node_state_summary <- function(tree_nodes, node_state_summary, ancestral_st
     data.frame(x = ed$parent_xp, y = ed$parent_y, xend = ed$parent_xp, yend = ed$y, stringsAsFactors = FALSE)
   )
 
-  radius <- 0.16
+  radius <- suppressWarnings(as.numeric(node_radius))
+  if (length(radius) != 1L || !is.finite(radius) || radius <= 0) {
+    radius <- 0.28
+  }
   pie_df <- node_state_pie_wedges(ancestral_state_probabilities, layout, model, location, radius)
 
   tip_rows <- layout[layout$node_type == "tip", , drop = FALSE]
@@ -407,7 +414,7 @@ plot_node_state_summary <- function(tree_nodes, node_state_summary, ancestral_st
       ggplot2::geom_point(
         data = layout,
         ggplot2::aes(x = xp, y = y, fill = best_state_label),
-        shape = 21, size = 5, colour = ibgb_palette()$ink, stroke = 0.4
+        shape = 21, size = max(2, 18 * radius), colour = ibgb_palette()$ink, stroke = 0.4
       )
   }
 

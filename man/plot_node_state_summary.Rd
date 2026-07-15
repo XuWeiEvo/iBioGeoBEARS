@@ -11,7 +11,8 @@ plot_node_state_summary(
   model = NULL,
   location = "branch_top_at_node",
   label_tips = TRUE,
-  label_internal_nodes = TRUE
+  label_internal_nodes = TRUE,
+  node_radius = 0.28
 )
 }
 \arguments{
@@ -36,6 +37,11 @@ state.}
 
 \item{label_internal_nodes}{Deprecated; kept for backward compatibility and
 ignored (internal nodes are shown as pies).}
+
+\item{node_radius}{Numeric radius of the node pies (and fallback points) in
+tip-spacing units. Larger values make the pie wedges easier to see, which
+helps when most nodes are reconstructed with high confidence (near-solid
+pies) and only a few carry visible uncertainty. Defaults to \code{0.28}.}
 }
 \value{
 A ggplot object.
