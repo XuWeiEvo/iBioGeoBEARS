@@ -400,6 +400,29 @@ plot_node_state_summary <- function(tree_nodes, node_state_summary, ancestral_st
   tip_rows <- layout[layout$node_type == "tip", , drop = FALSE]
   tip_rows$tip_display <- paste0(tip_rows$node_label, "  [", tip_rows$best_state_label, "]")
 
+  # Rank the ranges actually drawn by prominence and cap the legend. With many
+  # areas the number of possible ranges explodes (e.g. 11 areas, max range 3 =
+  # 231 states); listing every one produces a giant legend that crowds out the
+  # tree. Keep every wedge coloured but show only the most frequent ranges in
+  # the legend so the tree stays visible.
+  if (!is.null(pie_df) && nrow(pie_df) > 0L) {
+    mass <- stats::aggregate(list(w = pie_df$end - pie_df$start), by = list(state = pie_df$state), FUN = sum)
+    fill_levels <- mass$state[order(-mass$w)]
+  } else {
+    counts <- sort(table(layout$best_state_label[layout$node_type != "tip"]), decreasing = TRUE)
+    fill_levels <- names(counts)
+  }
+  fill_levels <- fill_levels[!is.na(fill_levels)]
+  max_legend <- 16L
+  legend_truncated <- length(fill_levels) > max_legend
+  legend_breaks <- if (legend_truncated) fill_levels[seq_len(max_legend)] else ggplot2::waiver()
+  legend_subtitle <- if (legend_truncated) {
+    sprintf("%d ranges reconstructed; legend shows the %d most frequent — tip ranges are labelled at the tips.",
+            length(fill_levels), max_legend)
+  } else {
+    NULL
+  }
+
   plot <- ggplot2::ggplot() +
     ggplot2::geom_segment(
       data = edge_segments,
@@ -439,7 +462,8 @@ plot_node_state_summary <- function(tree_nodes, node_state_summary, ancestral_st
   true_breaks <- true_breaks[true_breaks >= 0 & true_breaks <= x_max + 1e-9]
 
   final_plot <- plot +
-    scale_fill_ibgb() +
+    scale_fill_ibgb(breaks = legend_breaks) +
+    ggplot2::guides(fill = ggplot2::guide_legend(nrow = 2L)) +
     ggplot2::scale_x_continuous(
       breaks = true_breaks * x_scale,
       labels = true_breaks,
@@ -448,6 +472,7 @@ plot_node_state_summary <- function(tree_nodes, node_state_summary, ancestral_st
     ggplot2::coord_fixed(clip = "off") +
     ggplot2::labs(
       title = paste("Ancestral ranges:", model),
+      subtitle = legend_subtitle,
       x = "Distance from root",
       y = NULL,
       fill = "Range"
