@@ -351,10 +351,6 @@ plot_node_state_summary <- function(tree_nodes, node_state_summary, ancestral_st
     location <- available_locations[1L]
   }
 
-  # Rescale distance-from-root (x) so it spans a range comparable to the tip
-  # axis (y). With coord_fixed() this keeps the node pies circular while the
-  # axis still reports true distances. The tree shape is preserved (uniform
-  # scale) and the y positions are the usual tip order.
   layout <- layout_tree_nodes(tree_nodes)
   n_tips <- sum(tree_nodes$node_type == "tip", na.rm = TRUE)
   y_span <- max(1, n_tips - 1L)
@@ -362,7 +358,18 @@ plot_node_state_summary <- function(tree_nodes, node_state_summary, ancestral_st
   if (!is.finite(x_max) || x_max <= 0) {
     x_max <- 1
   }
-  x_scale <- y_span / x_max
+
+  # Figure height grows with tip count so node pies keep a legible, roughly
+  # constant absolute size instead of shrinking as species accumulate. The
+  # distance-from-root axis (x) is rescaled to the figure aspect so that
+  # coord_fixed() fills the canvas (keeping the pies circular and correctly
+  # sized) rather than squeezing the whole tree into a square. The axis still
+  # reports true distances via relabelled breaks below.
+  fig_width <- 9.5
+  fig_height <- min(30, max(6.2, n_tips * 0.4))
+  attr_dims <- list(width = fig_width, height = fig_height)
+  aspect <- fig_width / fig_height
+  x_scale <- (y_span * aspect) / x_max
   layout$xp <- layout$x * x_scale
   layout$parent_xp <- layout$parent_x * x_scale
 
@@ -431,12 +438,12 @@ plot_node_state_summary <- function(tree_nodes, node_state_summary, ancestral_st
   true_breaks <- pretty(c(0, x_max))
   true_breaks <- true_breaks[true_breaks >= 0 & true_breaks <= x_max + 1e-9]
 
-  plot +
+  final_plot <- plot +
     scale_fill_ibgb() +
     ggplot2::scale_x_continuous(
       breaks = true_breaks * x_scale,
       labels = true_breaks,
-      expand = ggplot2::expansion(mult = c(0.03, 0.28))
+      expand = ggplot2::expansion(mult = c(0.03, 0.38))
     ) +
     ggplot2::coord_fixed(clip = "off") +
     ggplot2::labs(
@@ -453,6 +460,10 @@ plot_node_state_summary <- function(tree_nodes, node_state_summary, ancestral_st
       axis.ticks.y = ggplot2::element_blank(),
       plot.margin = ggplot2::margin(8, 60, 8, 8)
     )
+  # Preferred save dimensions (height scales with tip count); honoured by
+  # save_plot_outputs() so the pies stay legible for large trees.
+  attr(final_plot, "ibgb_dims") <- attr_dims
+  final_plot
 }
 
 node_state_pie_wedges <- function(ancestral_state_probabilities, layout, model, location, radius) {
@@ -656,7 +667,7 @@ generate_figures <- function(model_comparison, standardized_tables, project_path
 
 save_plot_outputs <- function(plot, name, figures_dir, formats) {
   formats <- unique(as.character(formats %||% "png"))
-  dimensions <- plot_output_dimensions(name)
+  dimensions <- attr(plot, "ibgb_dims") %||% plot_output_dimensions(name)
   do.call(rbind, lapply(formats, function(format) {
     path <- file.path(figures_dir, paste0(name, ".", format))
     status <- "created"
