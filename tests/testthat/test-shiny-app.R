@@ -379,7 +379,7 @@ test_that("Results step is single-clade, slims exports, and shows a file legend"
   testthat::skip_if_not_installed("shiny")
 
   ui <- as.character(wizard_step_results())
-  expect_match(ui, "单一类群结果", fixed = TRUE)
+  expect_match(ui, "单类群分析", fixed = TRUE)
   expect_false(grepl("ibgb-step-intro", ui, fixed = TRUE))
   # Only the result bundle is downloaded here; the report moved to the
   # cross-clade tab (it targets the integrated multi-clade results).
@@ -408,21 +408,22 @@ test_that("Cross-clade step takes bundle uploads and shows integrated panels", {
   testthat::skip_if_not_installed("shiny")
 
   ui <- as.character(wizard_step_cross_clade())
-  expect_match(ui, "4 · 跨类群", fixed = TRUE)
+  expect_match(ui, "多类群整合", fixed = TRUE)
   # One result-bundle zip per clade drives everything.
   expect_match(ui, "cross_clade_bundles", fixed = TRUE)
   # Integrated panels: synthesis, rates (overall + region), exchange matrix,
-  # network, heatmap, budget, event stats.
+  # network, budget, event stats.
   expect_match(ui, "cc_synth_plot", fixed = TRUE)
   expect_match(ui, "cross_clade_plot", fixed = TRUE)
   expect_match(ui, "cross_clade_region_plot", fixed = TRUE)
   expect_match(ui, "cc_exchange_table", fixed = TRUE)
   expect_match(ui, "cc_network_plot", fixed = TRUE)
-  expect_match(ui, "cc_heatmap_plot", fixed = TRUE)
   expect_match(ui, "cc_budget_plot", fixed = TRUE)
   expect_match(ui, "cc_esum_table", fixed = TRUE)
-  # The redundant BSM event-times ECDF panel was removed from the cross-clade tab.
+  # The redundant BSM event-times ECDF and dispersal-route heatmap panels were
+  # removed from the cross-clade tab.
   expect_false(grepl("cc_etimes_plot", ui, fixed = TRUE))
+  expect_false(grepl("cc_heatmap_plot", ui, fixed = TRUE))
   # Export + report.
   expect_match(ui, "download_cross_clade", fixed = TRUE)
   expect_match(ui, "render_xclade_report", fixed = TRUE)
@@ -439,9 +440,34 @@ test_that("Help step becomes an about-and-citation panel", {
   expect_match(ui, "关于与引用", fixed = TRUE)
   expect_match(ui, "citation_text", fixed = TRUE)
   expect_match(ui, "about_table", fixed = TRUE)
-  # The troubleshooting block was removed from this step.
+  # The troubleshooting block and report-environment table were removed.
   expect_false(grepl("warning_summary_table", ui, fixed = TRUE))
   expect_false(grepl("failed_models_table", ui, fixed = TRUE))
+  expect_false(grepl("report_environment_table", ui, fixed = TRUE))
+})
+
+test_that("Data step exposes CPU cores and a state-space note", {
+  testthat::skip_if_not_installed("shiny")
+
+  ui <- as.character(wizard_step_data(default_config = list(), default_output = "out", example_project_dir = NULL))
+  expect_match(ui, "wizard_num_cores", fixed = TRUE)
+  expect_match(ui, "state_space_note", fixed = TRUE)
+  expect_true(shiny_default_num_cores() >= 1L)
+})
+
+test_that("CPU cores flow into the BioGeoBEARS run object override", {
+  cfg <- apply_shiny_wizard_overrides(
+    list(project = list(), inputs = list(), models = list(), analysis = list(), advanced = list(constraints = list())),
+    list(wizard_max_range_size = 4L, wizard_models = c("DEC", "DEC+J"), wizard_num_cores = 6L)
+  )
+  expect_equal(cfg$advanced$BioGeoBEARS_run_object$num_cores_to_use, 6L)
+
+  # Omitting the cores input leaves the override unset.
+  cfg2 <- apply_shiny_wizard_overrides(
+    list(project = list(), inputs = list(), models = list(), analysis = list(), advanced = list(constraints = list())),
+    list(wizard_max_range_size = 3L)
+  )
+  expect_null(cfg2$advanced$BioGeoBEARS_run_object$num_cores_to_use)
 })
 
 test_that("Shiny cross-clade server combines uploaded result bundles", {

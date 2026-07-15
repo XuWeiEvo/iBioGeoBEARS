@@ -424,6 +424,34 @@ iBGB_shiny_server <- function(input, output, session) {
         shiny_range_size_table(current_input_summary())
       }, striped = TRUE, bordered = TRUE, na = "")
 
+      output$state_space_note <- shiny::renderUI({
+        summ <- current_input_summary()
+        n_areas <- suppressWarnings(as.integer(tryCatch(summ$geography$n_areas, error = function(e) NA)))
+        mr <- suppressWarnings(as.integer(input$wizard_max_range_size %||% NA_integer_))
+        if (is.na(n_areas) || n_areas < 1L || is.na(mr) || mr < 1L) {
+          return(NULL)
+        }
+        mr <- min(mr, n_areas)
+        n_states <- sum(choose(n_areas, 0:mr))
+        msg <- sprintf(
+          "%d \u4e2a\u533a\u57df \u00d7 max_range=%d \u2192 \u7ea6 %s \u4e2a\u72b6\u6001\u3002",
+          n_areas, mr, format(n_states, big.mark = ",")
+        )
+        if (n_states > 500) {
+          shiny::tags$div(class = "ibgb-status error", paste0(
+            msg, " \u72b6\u6001\u7a7a\u95f4\u5f88\u5927\uff0c\u6a21\u578b\u62df\u5408\u4f1a\u660e\u663e\u53d8\u6162",
+            "\uff08\u6bcf\u6b21\u4f3c\u7136\u8ba1\u7b97 \u221d \u72b6\u6001\u6570\u00b2\uff09\u3002\u5efa\u8bae\u63d0\u9ad8 CPU \u6838\u6570\u3001\u51cf\u5c11\u6a21\u578b\u6570\u91cf\uff0c",
+            "\u6216\u5728\u6570\u636e\u5141\u8bb8\u65f6\u964d\u4f4e max_range\u3002"
+          ))
+        } else if (n_states > 150) {
+          shiny::tags$div(class = "ibgb-status info", paste0(
+            msg, " \u72b6\u6001\u7a7a\u95f4\u504f\u5927\uff0c\u591a\u6a21\u578b\u6216\u5355\u6838\u65f6\u4f1a\u8f83\u6162\uff1b\u53ef\u63d0\u9ad8 CPU \u6838\u6570\u3002"
+          ))
+        } else {
+          shiny::tags$div(class = "ibgb-home-note", msg)
+        }
+      })
+
       output$installation_table <- shiny::renderTable({
         shiny_installation_table(state$installation)
       }, striped = TRUE, bordered = TRUE, na = "")
@@ -597,7 +625,6 @@ iBGB_shiny_server <- function(input, output, session) {
       output$cross_clade_plot <- cc_image(cc_rates, plot_process_rates_across_clades, 8.6, 5.2)
       output$cross_clade_region_plot <- cc_image(cc_rrates, plot_region_process_rates_across_clades, 9, 4.8)
       output$cc_network_plot <- cc_image(cc_routes, function(d) plot_bsm_dispersal_network(cc_all_dispersal(d)), 6.5, 5.5)
-      output$cc_heatmap_plot <- cc_image(cc_routes, function(d) plot_bsm_dispersal_routes(cc_all_dispersal(d)), 7, 5)
       output$cc_budget_plot <- cc_image(cc_budgets, plot_region_process_budget, 7.5, 4.5)
 
       output$cc_exchange_table <- shiny::renderTable({
@@ -3346,6 +3373,12 @@ apply_shiny_wizard_overrides <- function(config, input) {
   if (length(models) > 0L) {
     cfg$models$run <- as.character(models)
   }
+  num_cores <- suppressWarnings(as.integer(input$wizard_num_cores %||% NA_integer_))
+  if (!is.na(num_cores) && num_cores >= 1L) {
+    cfg$advanced <- cfg$advanced %||% list()
+    cfg$advanced$BioGeoBEARS_run_object <- cfg$advanced$BioGeoBEARS_run_object %||% list()
+    cfg$advanced$BioGeoBEARS_run_object$num_cores_to_use <- num_cores
+  }
   constraint_fields <- shiny_constraint_fields()$field
   uploaded_constraints <- list()
   for (field in constraint_fields) {
@@ -3558,6 +3591,14 @@ iBGB_app_ui <- function(default_config, default_output, example_project_dir) {
   )
 }
 
+shiny_default_num_cores <- function() {
+  n <- suppressWarnings(as.integer(parallel::detectCores()))
+  if (is.na(n) || n < 1L) {
+    return(1L)
+  }
+  max(1L, floor(n / 2))
+}
+
 wizard_step_data <- function(default_config, default_output, example_project_dir) {
   shiny::tabPanel(
     "1 \u00b7 \u6570\u636e",
@@ -3597,11 +3638,21 @@ wizard_step_data <- function(default_config, default_output, example_project_dir
         shiny_wizard_constraint_inputs()
       ),
       shiny::numericInput("wizard_max_range_size", "\u6700\u5927\u5206\u5e03\u533a\u6570\u91cf", value = 3L, min = 1L, step = 1L),
+      shiny::uiOutput("state_space_note"),
       shiny::checkboxGroupInput(
         "wizard_models",
         "\u8981\u8fd0\u884c\u7684\u6a21\u578b",
         choices = valid_models(),
         selected = valid_models()
+      ),
+      shiny::numericInput(
+        "wizard_num_cores",
+        "CPU \u6838\u6570\uff08\u5e76\u884c\u52a0\u901f\u6a21\u578b\u62df\u5408\uff09",
+        value = shiny_default_num_cores(), min = 1L, step = 1L
+      ),
+      shiny::tags$div(
+        class = "ibgb-home-note",
+        "\u591a\u6838\u53ea\u52a0\u901f\u6a21\u578b\u62df\u5408\uff1b\u6838\u6570\u4e0d\u8981\u8d85\u8fc7\u672c\u673a CPU \u6838\u6570\u3002\u5927\u72b6\u6001\u7a7a\u95f4\uff08\u533a\u57df\u591a\u3001max_range \u5927\uff09\u65f6\u63d0\u9ad8\u6838\u6570\u6536\u76ca\u660e\u663e\u3002"
       ),
       shiny::tags$div(class = "ibgb-key-files-title", "\u7ed3\u679c\u4fdd\u5b58\u4f4d\u7f6e"),
       shiny::tags$div(
@@ -3682,7 +3733,7 @@ wizard_step_analysis <- function() {
 
 wizard_step_results <- function() {
   shiny::tabPanel(
-    "3 \u00b7 \u5355\u4e00\u7c7b\u7fa4\u7ed3\u679c",
+    "3. \u5355\u7c7b\u7fa4\u5206\u6790",
     shiny_primary_results_body(),
     shiny_control_section(
       "\u5bfc\u51fa",
@@ -3730,7 +3781,7 @@ wizard_step_cross_clade <- function() {
   preview <- function(id, height = "460px") shiny::div(class = "ibgb-preview", shiny::imageOutput(id, height = height))
   card <- function(title, ...) shiny::tags$div(class = "ibgb-choice-card", shiny::tags$div(class = "ibgb-control-title", title), ...)
   shiny::tabPanel(
-    "4 \u00b7 \u8de8\u7c7b\u7fa4",
+    "4. \u591a\u7c7b\u7fa4\u6574\u5408",
     shiny::tags$div(
       class = "ibgb-next-action",
       shiny::tags$div(class = "ibgb-next-action-title", "\u628a\u591a\u4e2a\u7c7b\u7fa4\u6574\u5408\u5230\u4e00\u8d77"),
@@ -3749,9 +3800,8 @@ wizard_step_cross_clade <- function() {
     card("4 \u00b7 \u8fc7\u7a0b\u901f\u7387\u968f\u65f6\u95f4 \u00b7 \u5206\u533a\u57df\uff08in-situ / \u8fc1\u5165 / \u8fc1\u51fa\uff09", preview("cross_clade_region_plot", "460px")),
     card("5 \u00b7 \u6e90\u2192\u53d7\u4f53\u4ea4\u6362\u77e9\u9635\uff08\u5bf9\u89d2=in-situ\uff0c\u975e\u5bf9\u89d2=\u6269\u6563\uff09", shiny::tableOutput("cc_exchange_table")),
     card("6 \u00b7 \u533a\u57df\u95f4\u6269\u6563\u7f51\u7edc", preview("cc_network_plot", "520px")),
-    card("7 \u00b7 \u6269\u6563\u8def\u7ebf\u70ed\u56fe", preview("cc_heatmap_plot", "460px")),
-    card("8 \u00b7 \u5404\u533a\u8fc1\u5165 / \u8fc1\u51fa\uff08immigration / emigration\uff09", preview("cc_budget_plot", "440px")),
-    card("9 \u00b7 \u4e8b\u4ef6\u7edf\u8ba1\u660e\u7ec6", shiny::tableOutput("cc_esum_table")),
+    card("7 \u00b7 \u5404\u533a\u8fc1\u5165 / \u8fc1\u51fa\uff08immigration / emigration\uff09", preview("cc_budget_plot", "440px")),
+    card("8 \u00b7 \u4e8b\u4ef6\u7edf\u8ba1\u660e\u7ec6", shiny::tableOutput("cc_esum_table")),
     shiny::tags$div(
       class = "ibgb-choice-card",
       shiny::tags$div(class = "ibgb-control-title", "\u5bfc\u51fa\u4e0e\u62a5\u544a"),
@@ -3775,8 +3825,6 @@ wizard_step_help <- function() {
     "\u5173\u4e8e\u4e0e\u5f15\u7528",
     shiny::tags$div(class = "ibgb-key-files-title", "\u8f6f\u4ef6\u72b6\u6001"),
     shiny::tableOutput("about_table"),
-    shiny::tags$div(class = "ibgb-key-files-title", "\u62a5\u544a\u73af\u5883"),
-    shiny::tableOutput("report_environment_table"),
     shiny::tags$div(class = "ibgb-key-files-title", "BioGeoBEARS \u5f15\u7528"),
     shiny::verbatimTextOutput("citation_text")
   )

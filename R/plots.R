@@ -417,7 +417,7 @@ plot_node_state_summary <- function(tree_nodes, node_state_summary, ancestral_st
   legend_truncated <- length(fill_levels) > max_legend
   legend_breaks <- if (legend_truncated) fill_levels[seq_len(max_legend)] else ggplot2::waiver()
   legend_subtitle <- if (legend_truncated) {
-    sprintf("%d ranges reconstructed; legend shows the %d most frequent — tip ranges are labelled at the tips.",
+    sprintf("%d ranges reconstructed; legend shows the %d most frequent \u2014 tip ranges are labelled at the tips.",
             length(fill_levels), max_legend)
   } else {
     NULL
@@ -458,22 +458,25 @@ plot_node_state_summary <- function(tree_nodes, node_state_summary, ancestral_st
       )
   }
 
-  true_breaks <- pretty(c(0, x_max))
-  true_breaks <- true_breaks[true_breaks >= 0 & true_breaks <= x_max + 1e-9]
+  # Label the axis as time before present: the tips (right) are the present
+  # (age 0) and the root (left) is the oldest. Breaks are chosen in age units
+  # and mapped back to plot positions (distance-from-root = x_max - age).
+  age_breaks <- pretty(c(0, x_max))
+  age_breaks <- age_breaks[age_breaks >= 0 & age_breaks <= x_max + 1e-9]
 
   final_plot <- plot +
     scale_fill_ibgb(breaks = legend_breaks) +
     ggplot2::guides(fill = ggplot2::guide_legend(nrow = 2L)) +
     ggplot2::scale_x_continuous(
-      breaks = true_breaks * x_scale,
-      labels = true_breaks,
+      breaks = (x_max - age_breaks) * x_scale,
+      labels = age_breaks,
       expand = ggplot2::expansion(mult = c(0.03, 0.38))
     ) +
     ggplot2::coord_fixed(clip = "off") +
     ggplot2::labs(
       title = paste("Ancestral ranges:", model),
       subtitle = legend_subtitle,
-      x = "Distance from root",
+      x = "Time before present",
       y = NULL,
       fill = "Range"
     ) +
@@ -483,6 +486,8 @@ plot_node_state_summary <- function(tree_nodes, node_state_summary, ancestral_st
       panel.grid.minor = ggplot2::element_blank(),
       axis.text.y = ggplot2::element_blank(),
       axis.ticks.y = ggplot2::element_blank(),
+      axis.line.x = ggplot2::element_line(colour = ibgb_palette()$ink, linewidth = 0.5),
+      axis.ticks.x = ggplot2::element_line(colour = ibgb_palette()$ink, linewidth = 0.4),
       plot.margin = ggplot2::margin(8, 60, 8, 8)
     )
   # Preferred save dimensions (height scales with tip count); honoured by

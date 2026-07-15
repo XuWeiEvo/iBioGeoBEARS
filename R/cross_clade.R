@@ -607,10 +607,8 @@ render_cross_clade_report <- function(x, file = NULL) {
       html_table(format_region_exchange_matrix(x$exchange_long)))
   }
   if (has("routes")) {
-    parts <- c(parts, "<h2>Dispersal network and routes</h2>",
-      figure(plot_bsm_dispersal_network(all_dispersal(x$routes)), 6.5, 5.5),
-      "<h3>Dispersal-route heatmap</h3>",
-      figure(plot_bsm_dispersal_routes(all_dispersal(x$routes)), 7, 5))
+    parts <- c(parts, "<h2>Dispersal network</h2>",
+      figure(plot_bsm_dispersal_network(all_dispersal(x$routes)), 6.5, 5.5))
   }
   if (has("budgets")) {
     parts <- c(parts, "<h2>Regional dispersal budget (immigration / emigration)</h2>",
@@ -668,7 +666,6 @@ write_cross_clade_full_bundle <- function(file, x) {
   if (ok_df(x$region_rates)) save_fig(plot_region_process_rates_across_clades(x$region_rates), "region_process_rates_through_time", 9, 4.8)
   if (ok_df(x$routes)) {
     save_fig(plot_bsm_dispersal_network(all_dispersal(x$routes)), "dispersal_network", 6.5, 5.5)
-    save_fig(plot_bsm_dispersal_routes(all_dispersal(x$routes)), "dispersal_routes_heatmap", 7, 5)
   }
   if (ok_df(x$budgets)) save_fig(plot_region_process_budget(x$budgets), "region_dispersal_budget", 7.5, 4.5)
 
