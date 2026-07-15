@@ -400,25 +400,42 @@ plot_node_state_summary <- function(tree_nodes, node_state_summary, ancestral_st
   tip_rows <- layout[layout$node_type == "tip", , drop = FALSE]
   tip_rows$tip_display <- paste0(tip_rows$node_label, "  [", tip_rows$best_state_label, "]")
 
-  # Rank the ranges actually drawn by prominence and cap the legend. With many
-  # areas the number of possible ranges explodes (e.g. 11 areas, max range 3 =
-  # 231 states); listing every one produces a giant legend that crowds out the
-  # tree. Keep every wedge coloured but show only the most frequent ranges in
-  # the legend so the tree stays visible.
-  if (!is.null(pie_df) && nrow(pie_df) > 0L) {
-    mass <- stats::aggregate(list(w = pie_df$end - pie_df$start), by = list(state = pie_df$state), FUN = sum)
-    fill_levels <- mass$state[order(-mass$w)]
+  # Choose which ranges appear in the legend. With many areas the number of
+  # possible ranges explodes (e.g. 11 areas, max range 3 = 231 states); listing
+  # every one buries the tree. Keep a range if it reaches a meaningful share of
+  # at least one node's reconstruction (>= legend_threshold there), so a locally
+  # dominant range is kept even when it occurs at a single node (e.g. 100% at
+  # one node), while ranges that are only ever minor slivers are dropped. Every
+  # wedge is still coloured; this only trims the legend.
+  legend_threshold <- 0.2
+  max_legend <- 24L
+  ap_cols <- c("model", "location", "state", "probability")
+  if (!is.null(pie_df) && nrow(pie_df) > 0L && !is.null(ancestral_state_probabilities) &&
+      all(ap_cols %in% names(ancestral_state_probabilities))) {
+    apl <- ancestral_state_probabilities
+    apl <- apl[apl$model == model & apl$location == location &
+                 !is.na(apl$probability) & apl$probability > 0, , drop = FALSE]
+    total_ranges <- length(unique(apl$state))
+    maxp <- stats::aggregate(list(p = apl$probability), by = list(state = apl$state), FUN = max)
+    maxp <- maxp[order(-maxp$p), , drop = FALSE]
+    fill_levels <- maxp$state[maxp$p >= legend_threshold]
+    if (length(fill_levels) == 0L) {
+      fill_levels <- utils::head(maxp$state, 1L)
+    }
   } else {
     counts <- sort(table(layout$best_state_label[layout$node_type != "tip"]), decreasing = TRUE)
     fill_levels <- names(counts)
+    total_ranges <- length(fill_levels)
   }
   fill_levels <- fill_levels[!is.na(fill_levels)]
-  max_legend <- 16L
-  legend_truncated <- length(fill_levels) > max_legend
-  legend_breaks <- if (legend_truncated) fill_levels[seq_len(max_legend)] else ggplot2::waiver()
+  if (length(fill_levels) > max_legend) {
+    fill_levels <- fill_levels[seq_len(max_legend)]
+  }
+  legend_truncated <- length(fill_levels) < total_ranges
+  legend_breaks <- if (legend_truncated) fill_levels else ggplot2::waiver()
   legend_subtitle <- if (legend_truncated) {
-    sprintf("%d ranges reconstructed; legend shows the %d most frequent \u2014 tip ranges are labelled at the tips.",
-            length(fill_levels), max_legend)
+    sprintf("%d ranges reconstructed; legend shows the %d reaching >=%d%% at some node - tip ranges are labelled at the tips.",
+            total_ranges, length(fill_levels), round(legend_threshold * 100))
   } else {
     NULL
   }
