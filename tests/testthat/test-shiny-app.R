@@ -348,9 +348,10 @@ test_that("Analysis step is the run action, a bare dry-run toggle, and the BSM f
   expect_match(analysis_html, "BSM 随机映射", fixed = TRUE)
   expect_match(analysis_html, "run_stochastic_mapping", fixed = TRUE)
   expect_match(analysis_html, "stochastic_mapping_replicates", fixed = TRUE)
-  # BSM model selector offers a "DEC only" option for large datasets.
   expect_match(analysis_html, "stochastic_mapping_model", fixed = TRUE)
-  expect_match(analysis_html, "value=\"DEC\"", fixed = TRUE)
+  # The BSM selector offers only the best/all choices; pinning a bare model name
+  # stays a config-level option (it controls BSM, not which models are fitted).
+  expect_false(grepl("value=\"DEC\"", analysis_html, fixed = TRUE))
   # The run-options fold and its extra toggles, plus the report button, config
   # editor, env-install fold, and constraint inputs, were removed from this step.
   expect_false(grepl("运行选项", analysis_html, fixed = TRUE))
@@ -362,7 +363,7 @@ test_that("Analysis step is the run action, a bare dry-run toggle, and the BSM f
   expect_false(grepl("install_biogeobears", analysis_html, fixed = TRUE))
 })
 
-test_that("BSM can be pinned to the DEC model regardless of the best model", {
+test_that("a bare model name in the config pins BSM to that model (config-level)", {
   comparison <- data.frame(model = c("DEC", "DEC+J"), AICc = c(12, 10), stringsAsFactors = FALSE)
   model_results <- list(
     DEC = list(status = "completed", result = list(ok = TRUE)),
