@@ -188,8 +188,45 @@ prepare_biogeobears_inputs <- function(config, project_paths) {
     n_taxa = nrow(geography$matrix),
     areas = colnames(geography$matrix),
     max_range_size = as.integer(config$inputs$max_range_size),
-    region_metadata = read_region_metadata(regions_file)
+    region_metadata = read_region_metadata(regions_file),
+    constraint_files = copy_constraint_files(config, input_dir)
   )
+}
+
+#' Preserve advanced constraint files inside the project
+#'
+#' Copies every configured constraint file into the project's `inputs/`
+#' directory, exactly as the tree and geography are preserved, and returns the
+#' copied paths. Without this the run points at wherever the user's file happened
+#' to live -- for Shiny uploads, a temporary directory that disappears after the
+#' session -- so the saved project (and its result bundle) could not reproduce a
+#' constrained analysis. Copies are named after the config field so that uploads
+#' sharing a basename (Shiny hands every upload a name like `0.txt`) cannot
+#' collide.
+#'
+#' @param config Workflow configuration.
+#' @param input_dir The project's `inputs/` directory.
+#' @return A named list of preserved constraint paths, or `NULL` when no
+#'   constraint files are configured.
+#' @noRd
+copy_constraint_files <- function(config, input_dir) {
+  constraints <- (config$advanced %||% list())$constraints %||% list()
+  if (!is.list(constraints) || length(constraints) == 0L) {
+    return(NULL)
+  }
+  base_dir <- dirname(config$.config_file %||% ".")
+  preserved <- list()
+  for (field in names(constraints)) {
+    path <- resolve_config_path(constraints[[field]], base_dir)
+    if (is.null(path) || !nzchar(path) || !file.exists(path)) {
+      next
+    }
+    ext <- tools::file_ext(path)
+    dest <- file.path(input_dir, if (nzchar(ext)) paste0(field, ".", ext) else field)
+    copied <- tryCatch(file.copy(path, dest, overwrite = TRUE), error = function(e) FALSE)
+    preserved[[field]] <- if (isTRUE(copied)) as_path(dest) else as_path(path)
+  }
+  if (length(preserved) == 0L) NULL else preserved
 }
 
 read_region_metadata <- function(path) {
@@ -361,7 +398,10 @@ build_biogeobears_run_object <- function(config, prepared_inputs, raw_dir) {
   run_object$calc_ancprobs <- TRUE
   run_object$wd <- raw_dir
 
-  run_object <- apply_biogeobears_advanced_settings(run_object, config, raw_dir)
+  run_object <- apply_biogeobears_advanced_settings(
+    run_object, config, raw_dir,
+    constraint_files = prepared_inputs$constraint_files
+  )
   get_biogeobears_function("readfiles_BioGeoBEARS_run")(run_object)
 }
 
@@ -439,13 +479,17 @@ configure_jump_parameter <- function(run_object, family) {
   run_object
 }
 
-apply_biogeobears_advanced_settings <- function(run_object, config, raw_dir) {
+apply_biogeobears_advanced_settings <- function(run_object, config, raw_dir, constraint_files = NULL) {
   advanced <- config$advanced %||% list()
   base_dir <- dirname(config$.config_file %||% ".")
 
   run_object <- apply_named_run_overrides(run_object, advanced$BioGeoBEARS_run_object)
   run_object <- apply_named_run_overrides(run_object, advanced$optimizer_settings)
-  run_object <- apply_constraint_files(run_object, advanced$constraints, base_dir)
+  # Prefer the copies preserved in the project's inputs/ so the run reads the
+  # files the project keeps, not a caller-supplied path that may be temporary.
+  run_object <- apply_constraint_files(
+    run_object, constraint_files %||% advanced$constraints, base_dir
+  )
 
   if (is_config_path_set(run_object$distsfn)) {
     run_object <- set_bgb_param(run_object, "x", "type", "free")
