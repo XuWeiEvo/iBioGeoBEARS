@@ -51,10 +51,10 @@ shiny_action_grid <- function(...) {
 shiny_home_guidance_body <- function() {
   shiny::tagList(
     shiny::uiOutput("home_next_action"),
-    shiny::tags$div(class = "ibgb-key-files-title", "\u5f15\u5bfc\u6d41\u7a0b"),
+    shiny::tags$div(class = "ibgb-key-files-title", "Guided workflow"),
     shiny::tableOutput("guided_workflow_table"),
     shiny_collapsible_section(
-      "\u8be6\u7ec6\u72b6\u6001",
+      "Details",
       shiny::tableOutput("first_steps_table")
     )
   )
@@ -65,13 +65,13 @@ shiny_primary_results_body <- function() {
     shiny::uiOutput("run_summary_cards"),
     shiny::tags$div(
       class = "ibgb-primary-result",
-      shiny::tags$h4("1. \u7956\u5148\u5206\u5e03\u91cd\u5efa\u56fe"),
-      shiny::tags$p("\u5148\u770b\u6700\u4f73\u7edf\u8ba1\u6a21\u578b\u4e0b\u7684\u7956\u5148\u5206\u5e03\u91cd\u5efa\u56fe\uff0c\u518d\u7ed3\u5408\u6a21\u578b\u6bd4\u8f83\u548c +J \u63d0\u793a\u89e3\u91ca\u3002"),
+      shiny::tags$h4("1. Ancestral range reconstruction"),
+      shiny::tags$p("Start from the reconstruction under the best-fitting model, then read it alongside the model comparison and the +J caution."),
       shiny::div(class = "ibgb-preview", shiny::imageOutput("primary_figure_node_best"))
     ),
     shiny::tags$div(
       class = "ibgb-primary-result",
-      shiny::tags$h4("2. \u6a21\u578b\u6bd4\u8f83\u8868"),
+      shiny::tags$h4("2. Model comparison"),
       shiny::tableOutput("primary_model_comparison_table"),
       shiny::div(class = "ibgb-preview", shiny::imageOutput("primary_figure_model_comparison"))
     )
@@ -89,12 +89,12 @@ shiny_constraint_fields <- function() {
       "area_of_areas_file"
     ),
     label = c(
-      "\u65f6\u95f4\u5206\u5c42\u6587\u4ef6",
-      "\u8ddd\u79bb\u6587\u4ef6",
-      "\u6269\u6563\u4e58\u6570\u6587\u4ef6",
-      "\u5141\u8bb8\u5206\u5e03\u533a\u6587\u4ef6",
-      "\u533a\u57df\u76f8\u90bb\u6587\u4ef6",
-      "\u533a\u57df\u9762\u79ef\u6587\u4ef6"
+      "Time-strata file",
+      "Distances file",
+      "Dispersal-multipliers file",
+      "Areas-allowed file",
+      "Areas-adjacency file",
+      "Area-of-areas file"
     ),
     template = c(
       "times.txt",
@@ -118,7 +118,7 @@ shiny_wizard_constraint_inputs <- function() {
         label = fields$label[[i]],
         accept = c(".txt", ".tsv", ".csv")
       ),
-      shiny::downloadButton(paste0("download_constraint_", fields$field[[i]]), "\u6a21\u677f")
+      shiny::downloadButton(paste0("download_constraint_", fields$field[[i]]), "Template")
     )
   }))
 }
@@ -155,8 +155,8 @@ iBGB_shiny_server <- function(input, output, session) {
         diagnostic_bundle = NULL,
         installation = check_installation(),
         install_plan = biogeobears_install_plan(),
-        message = "\u914d\u7f6e\u5c31\u7eea\u3002\u8fd0\u884c\u524d\u8bf7\u5148\u68c0\u67e5\u8f93\u5165\u3002",
-        messages = "\u914d\u7f6e\u5c31\u7eea\u3002\u8fd0\u884c\u524d\u8bf7\u5148\u68c0\u67e5\u8f93\u5165\u3002",
+        message = "Configuration ready. Check the inputs before running.",
+        messages = "Configuration ready. Check the inputs before running.",
         status_type = "info"
       )
   session$userData$state <- state
@@ -434,18 +434,18 @@ iBGB_shiny_server <- function(input, output, session) {
         mr <- min(mr, n_areas)
         n_states <- sum(choose(n_areas, 0:mr))
         msg <- sprintf(
-          "%d \u4e2a\u533a\u57df \u00d7 max_range=%d \u2192 \u7ea6 %s \u4e2a\u72b6\u6001\u3002",
+          "%d areas \u00d7 max_range=%d \u2192 about %s states.",
           n_areas, mr, format(n_states, big.mark = ",")
         )
         if (n_states > 500) {
           shiny::tags$div(class = "ibgb-status error", paste0(
-            msg, " \u72b6\u6001\u7a7a\u95f4\u5f88\u5927\uff0c\u6a21\u578b\u62df\u5408\u4f1a\u660e\u663e\u53d8\u6162",
-            "\uff08\u6bcf\u6b21\u4f3c\u7136\u8ba1\u7b97 \u221d \u72b6\u6001\u6570\u00b2\uff09\u3002\u5efa\u8bae\u63d0\u9ad8 CPU \u6838\u6570\u3001\u51cf\u5c11\u6a21\u578b\u6570\u91cf\uff0c",
-            "\u6216\u5728\u6570\u636e\u5141\u8bb8\u65f6\u964d\u4f4e max_range\u3002"
+            msg, " The state space is large, so model fitting will be markedly slower",
+            " (each likelihood evaluation scales with the square of the state count). Consider raising the CPU-core count, fitting fewer models,",
+            " or lowering max_range where the data allow."
           ))
         } else if (n_states > 150) {
           shiny::tags$div(class = "ibgb-status info", paste0(
-            msg, " \u72b6\u6001\u7a7a\u95f4\u504f\u5927\uff0c\u591a\u6a21\u578b\u6216\u5355\u6838\u65f6\u4f1a\u8f83\u6162\uff1b\u53ef\u63d0\u9ad8 CPU \u6838\u6570\u3002"
+            msg, " The state space is on the large side; fitting several models on one core will be slow. Raising the CPU-core count helps."
           ))
         } else {
           shiny::tags$div(class = "ibgb-home-note", msg)
@@ -602,18 +602,18 @@ iBGB_shiny_server <- function(input, output, session) {
       output$cross_clade_status <- shiny::renderUI({
         b <- clade_bundles()
         if (is.null(b)) {
-          return(shiny::tags$div(class = "ibgb-home-note", "\u5c1a\u672a\u4e0a\u4f20\u7ed3\u679c\u538b\u7f29\u5305\u3002\u6bcf\u4e2a\u7c7b\u7fa4\u4e0a\u4f20\u5b83\u5728\u201c3 \u00b7 \u5355\u4e00\u7c7b\u7fa4\u7ed3\u679c\u201d\u91cc\u4e0b\u8f7d\u7684\u7ed3\u679c\u538b\u7f29\u5305\uff08.zip\uff09\u3002"))
+          return(shiny::tags$div(class = "ibgb-home-note", "No result bundles uploaded yet. For each clade, upload the result bundle (.zip) downloaded from \"3. Single clade\"."))
         }
-        shiny::tags$div(class = "ibgb-status info", paste0("\u5df2\u6574\u5408 ", length(b$paths), " \u4e2a\u7c7b\u7fa4\u3002"))
+        shiny::tags$div(class = "ibgb-status info", paste0("Integrated ", length(b$paths), " clades."))
       })
 
       cc_image <- function(react, plot_fun, width, height) {
         shiny::renderImage({
           d <- react()
           shiny::req(d)
-          shiny::validate(shiny::need(nrow(d) > 0, "\u65e0\u53ef\u7ed8\u5236\u7684\u6570\u636e\u3002"))
+          shiny::validate(shiny::need(nrow(d) > 0, "No data to plot."))
           plot <- tryCatch(plot_fun(d), error = function(e) NULL)
-          shiny::validate(shiny::need(!is.null(plot), "\u56fe\u65e0\u6cd5\u751f\u6210\u3002"))
+          shiny::validate(shiny::need(!is.null(plot), "The figure could not be produced."))
           path <- tempfile(fileext = ".png")
           ggplot2::ggsave(path, plot, width = width, height = height, dpi = 150)
           list(src = path, contentType = "image/png", width = "100%")
@@ -653,7 +653,7 @@ iBGB_shiny_server <- function(input, output, session) {
 
       output$xclade_report_status <- shiny::renderText({
         if (is.null(state$xclade_report) || !file.exists(state$xclade_report)) {
-          "\u5c1a\u672a\u751f\u6210\u62a5\u544a\u3002\u4e0a\u4f20\u591a\u4e2a\u7c7b\u7fa4\u7684\u7ed3\u679c\u538b\u7f29\u5305\u540e\u70b9\u201c\u751f\u6210\u62a5\u544a\u201d\u3002"
+          "No report yet. Upload the clades' result bundles, then click \"Build report\"."
         } else {
           state$xclade_report
         }
@@ -971,35 +971,35 @@ shiny_data_overview_table <- function(summary) {
   }
   tr <- summary$tree
   if (!is.null(tr)) {
-    add("\u7cfb\u7edf\u6811 tip \u6570", tr$n_tips)
+    add("Tree tips", tr$n_tips)
     if (isTRUE(tr$has_branch_lengths) && !is.na(tr$root_age)) {
-      add("\u6811\u6839\u5e74\u9f84\uff08\u6811\u9ad8\uff09", formatC(tr$root_age, format = "fg", digits = 3))
+      add("Root age (tree height)", formatC(tr$root_age, format = "fg", digits = 3))
     }
     if (!is.na(tr$is_ultrametric)) {
-      add("\u8d85\u5ea6\u91cf\u6811", if (isTRUE(tr$is_ultrametric)) "\u662f" else "\u5426")
+      add("Ultrametric", if (isTRUE(tr$is_ultrametric)) "Yes" else "No")
     }
   }
   g <- summary$geography
   if (!is.null(g)) {
-    add("\u5730\u533a\u6570", g$n_areas)
-    add("\u7269\u79cd\u6570", g$n_species)
+    add("Areas", g$n_areas)
+    add("Species", g$n_species)
     if (!is.na(g$max_range_size_setting)) {
-      add("\u6700\u5927\u5206\u5e03\u533a\u6570\u91cf\uff08\u8bbe\u5b9a\uff09", g$max_range_size_setting)
+      add("Maximum range size (setting)", g$max_range_size_setting)
     }
-    add("\u89c2\u6d4b\u5230\u7684\u6700\u5927\u5206\u5e03\u533a\u6570", g$max_range_size_observed)
-    add("\u5e73\u5747\u5206\u5e03\u533a\u6570", formatC(g$mean_range_size, format = "fg", digits = 3))
-    add("\u5e7f\u5e03\u79cd\uff08\u5206\u5e03\u533a >1\uff09", g$widespread_species)
+    add("Maximum range size (observed)", g$max_range_size_observed)
+    add("Mean range size", formatC(g$mean_range_size, format = "fg", digits = 3))
+    add("Widespread species (range > 1)", g$widespread_species)
   }
   tm <- summary$taxon_match
   if (!is.null(tm)) {
     add(
-      "\u6811\u4e0e\u5206\u5e03\u540d\u79f0\u5339\u914d",
+      "Tree and geography names match",
       if (isTRUE(tm$all_match)) {
-        "\u662f"
+        "Yes"
       } else {
         paste0(
-          "\u5426\uff08\u5206\u5e03\u7f3a ", length(tm$missing_from_geography),
-          "\uff0c\u6811\u7f3a ", length(tm$missing_from_tree), "\uff09"
+          "No (missing from geography: ", length(tm$missing_from_geography),
+          "; missing from tree: ", length(tm$missing_from_tree), ")"
         )
       }
     )
@@ -1008,7 +1008,7 @@ shiny_data_overview_table <- function(summary) {
     return(data.frame())
   }
   out <- data.frame(item = items, value = values, stringsAsFactors = FALSE)
-  names(out) <- c("\u9879\u76ee", "\u6570\u503c")
+  names(out) <- c("Item", "Value")
   out
 }
 
@@ -1028,7 +1028,7 @@ shiny_region_occupancy_table <- function(summary) {
     proportion = paste0(formatC(100 * occ$proportion, format = "f", digits = 1), "%"),
     stringsAsFactors = FALSE
   )
-  names(out) <- c("\u5730\u533a", "\u540d\u79f0", "\u7269\u79cd\u6570", "\u7279\u6709\u79cd", "\u5360\u6bd4")
+  names(out) <- c("Area", "Name", "Species", "Endemics", "Share")
   out
 }
 
@@ -1046,7 +1046,7 @@ shiny_range_size_table <- function(summary) {
     proportion = paste0(formatC(100 * dist$proportion, format = "f", digits = 1), "%"),
     stringsAsFactors = FALSE
   )
-  names(out) <- c("\u5206\u5e03\u533a\u6570", "\u7269\u79cd\u6570", "\u5360\u6bd4")
+  names(out) <- c("Range size", "Species", "Share")
   out
 }
 
@@ -1398,14 +1398,14 @@ shiny_summary_table <- function(state) {
 shiny_upload_preview_table <- function(input) {
   rows <- list(
     shiny_upload_preview_tree(input$wizard_tree %||% NULL),
-    shiny_upload_preview_csv(input$wizard_geography %||% NULL, "\u5206\u5e03\u77e9\u9635 CSV", expected = "\u7b2c\u4e00\u5217\u4e3a\u7269\u79cd\u540d\uff0c\u5176\u4f59\u5217\u4e3a\u5730\u7406\u533a\u57df\uff0c\u53d6\u503c\u901a\u5e38\u4e3a 0/1\u3002"),
-    shiny_upload_preview_csv(input$wizard_regions %||% NULL, "\u533a\u57df\u4fe1\u606f CSV", expected = "\u81f3\u5c11\u5305\u542b\u533a\u57df\u7f16\u53f7\u6216\u533a\u57df\u540d\u79f0\uff0c\u7528\u6765\u89e3\u91ca\u5206\u5e03\u77e9\u9635\u5217\u540d\u3002")
+    shiny_upload_preview_csv(input$wizard_geography %||% NULL, "Geography matrix CSV", expected = "First column is the species name; the remaining columns are areas, usually coded 0/1."),
+    shiny_upload_preview_csv(input$wizard_regions %||% NULL, "Regions CSV", expected = "Must contain at least an area code or area name, used to label the geography columns.")
   )
   do.call(rbind, rows)
 }
 
 shiny_upload_preview_missing <- function(label, next_step) {
-  shiny_upload_preview_row(label, "\u7b49\u5f85\u4e0a\u4f20", "", next_step)
+  shiny_upload_preview_row(label, "Awaiting upload", "", next_step)
 }
 
 shiny_upload_preview_row <- function(label, status, summary, next_step) {
@@ -1418,29 +1418,29 @@ shiny_upload_preview_row <- function(label, status, summary, next_step) {
       check.names = FALSE,
       stringsAsFactors = FALSE
     ),
-    c("\u6587\u4ef6", "\u72b6\u6001", "\u6458\u8981", "\u4e0b\u4e00\u6b65")
+    c("File", "Status", "Summary", "Next step")
   )
 }
 
 shiny_upload_preview_tree <- function(upload) {
   path <- shiny_uploaded_datapath(upload)
   if (is.null(path)) {
-    return(shiny_upload_preview_missing("\u7cfb\u7edf\u6811\u6587\u4ef6", "\u4e0a\u4f20 Newick \u683c\u5f0f\u7684\u6811\u6587\u4ef6\u3002"))
+    return(shiny_upload_preview_missing("Tree file", "Upload a tree in Newick format."))
   }
   text <- tryCatch(
     paste(readLines(path, n = 5L, warn = FALSE), collapse = " "),
     error = function(e) NA_character_
   )
   if (is.na(text) || !nzchar(text)) {
-    return(shiny_upload_preview_row("\u7cfb\u7edf\u6811\u6587\u4ef6", "\u9700\u8981\u68c0\u67e5", "\u6587\u4ef6\u4e3a\u7a7a\u6216\u65e0\u6cd5\u8bfb\u53d6\u3002", "\u91cd\u65b0\u4e0a\u4f20 Newick \u6811\u6587\u4ef6\u3002"))
+    return(shiny_upload_preview_row("Tree file", "Needs attention", "The file is empty or unreadable.", "Upload the Newick tree file again."))
   }
   looks_newick <- grepl("\\(", text) && grepl(";", text)
-  status <- if (looks_newick) "\u53ef\u8bfb\u53d6" else "\u9700\u8981\u68c0\u67e5"
-  next_step <- if (looks_newick) "\u7ee7\u7eed\u4e0a\u4f20\u5206\u5e03\u77e9\u9635\u548c\u533a\u57df\u4fe1\u606f\u3002" else "\u68c0\u67e5\u6811\u6587\u4ef6\u662f\u5426\u4e3a Newick \u683c\u5f0f\uff0c\u4e14\u4ee5\u5206\u53f7\u7ed3\u5c3e\u3002"
+  status <- if (looks_newick) "Readable" else "Needs attention"
+  next_step <- if (looks_newick) "Next, upload the geography matrix and the regions CSV." else "Check that the tree is Newick format and ends with a semicolon."
   shiny_upload_preview_row(
-    "\u7cfb\u7edf\u6811\u6587\u4ef6",
+    "Tree file",
     status,
-    paste0("\u524d\u51e0\u884c\u5171 ", nchar(text), " \u4e2a\u5b57\u7b26\u3002"),
+    paste0("First lines: ", nchar(text), " characters."),
     next_step
   )
 }
@@ -1448,27 +1448,27 @@ shiny_upload_preview_tree <- function(upload) {
 shiny_upload_preview_csv <- function(upload, label, expected) {
   path <- shiny_uploaded_datapath(upload)
   if (is.null(path)) {
-    return(shiny_upload_preview_missing(label, paste0("\u4e0a\u4f20 ", label, "\u3002")))
+    return(shiny_upload_preview_missing(label, paste0("Upload ", label, ".")))
   }
   table <- tryCatch(
     utils::read.csv(path, nrows = 5L, check.names = FALSE, stringsAsFactors = FALSE),
     error = function(e) e
   )
   if (inherits(table, "error")) {
-    return(shiny_upload_preview_row(label, "\u9700\u8981\u68c0\u67e5", conditionMessage(table), expected))
+    return(shiny_upload_preview_row(label, "Needs attention", conditionMessage(table), expected))
   }
   if (ncol(table) == 0L) {
-    return(shiny_upload_preview_row(label, "\u9700\u8981\u68c0\u67e5", "CSV \u6ca1\u6709\u53ef\u8bfb\u53d6\u7684\u5217\u3002", expected))
+    return(shiny_upload_preview_row(label, "Needs attention", "The CSV has no readable columns.", expected))
   }
   summary <- paste0(
-    "\u53ef\u8bfb\u53d6\uff1b\u9884\u89c8\u5230 ",
+    "Readable; preview shows ",
     nrow(table),
-    " \u884c\u3001",
+    " rows and ",
     ncol(table),
-    " \u5217\uff1a",
+    " columns: ",
     paste(utils::head(names(table), 6L), collapse = ", ")
   )
-  shiny_upload_preview_row(label, "\u53ef\u8bfb\u53d6", summary, "\u70b9\u51fb\u201c\u521b\u5efa\u81ea\u5df1\u7684\u5206\u6790\u9879\u76ee\u201d\u540e\u4f1a\u8fdb\u884c\u5b8c\u6574\u9a8c\u8bc1\u3002")
+  shiny_upload_preview_row(label, "Readable", summary, "Full validation runs once you create your analysis project.")
 }
 
 shiny_uploaded_datapath <- function(upload) {
@@ -1518,115 +1518,115 @@ shiny_guided_workflow_table <- function(
 
   data_next <- switch(
     start_choice,
-    example = if (data_ready) "\u70b9\u51fb\u201c\u68c0\u67e5\u8f93\u5165\u201d\u3002" else "\u70b9\u51fb\u201c\u521b\u5efa\u793a\u4f8b\u9879\u76ee\u201d\u3002",
-    own = if (data_ready) "\u70b9\u51fb\u201c\u68c0\u67e5\u8f93\u5165\u201d\u3002" else "\u4e0a\u4f20\u7cfb\u7edf\u6811\u3001\u5206\u5e03\u77e9\u9635\u548c\u533a\u57df\u4fe1\u606f\uff0c\u7136\u540e\u70b9\u51fb\u201c\u521b\u5efa\u81ea\u5df1\u7684\u5206\u6790\u9879\u76ee\u201d\u3002",
-    existing = if (data_ready) "\u6253\u5f00\u201c\u7ed3\u679c\u201d\u3002" else "\u5728\u201c\u9ad8\u7ea7\uff1a\u5df2\u6709\u9879\u76ee\u548c YAML\u201d\u91cc\u586b\u5199\u7ed3\u679c\u76ee\u5f55\uff0c\u7136\u540e\u70b9\u51fb\u201c\u52a0\u8f7d\u5df2\u6709\u7ed3\u679c\u201d\u3002",
-    "\u5148\u9009\u62e9\u5f00\u59cb\u65b9\u5f0f\u3002"
+    example = if (data_ready) "Click \"Check inputs\"." else "Click \"Create example project\".",
+    own = if (data_ready) "Click \"Check inputs\"." else "Upload the tree, geography matrix and regions CSV, then create your analysis project.",
+    existing = if (data_ready) "Open \"Results\"." else "Enter the results directory under \"Advanced: existing project and YAML\", then load the existing results.",
+    "Choose how to start."
   )
   data_detail <- switch(
     start_choice,
-    example = if (config_ready) as_path(config_path) else "\u8fd8\u6ca1\u6709\u521b\u5efa\u793a\u4f8b\u9879\u76ee\u3002",
-    own = if (data_ready) as_path(config_path) else "\u4f7f\u7528\u201c\u4f7f\u7528\u81ea\u5df1\u7684\u6570\u636e\u201d\u91cc\u7684\u4e0a\u4f20\u63a7\u4ef6\u3002",
-    existing = if (has_result) output_dir else "\u9700\u8981\u5148\u6307\u5b9a\u5df2\u6709\u7ed3\u679c\u76ee\u5f55\u3002",
+    example = if (config_ready) as_path(config_path) else "The example project has not been created yet.",
+    own = if (data_ready) as_path(config_path) else "Use the upload controls under \"Use your own data\".",
+    existing = if (has_result) output_dir else "An existing results directory is required first.",
     ""
   )
 
   validation_status <- if (!data_ready) {
-    "\u7b49\u5f85"
+    "Waiting"
   } else if (validation$failed) {
-    "\u9700\u8981\u5904\u7406"
+    "Needs attention"
   } else if (validation$passed) {
-    "\u5df2\u5c31\u7eea"
+    "Ready"
   } else {
-    "\u9700\u8981\u64cd\u4f5c"
+    "Action needed"
   }
   validation_next <- if (!data_ready) {
-    "\u5148\u9009\u62e9\u6216\u521b\u5efa\u4e00\u4e2a\u9879\u76ee\u3002"
+    "Select or create a project first."
   } else if (validation$failed) {
-    "\u6253\u5f00\u201c\u9ad8\u7ea7\u7ed3\u679c > Validation\u201d\uff0c\u6309\u63d0\u793a\u4fee\u590d\u5931\u8d25\u9879\u3002"
+    "Open \"Advanced results > Validation\" and fix the failed checks."
   } else if (validation$passed) {
-    "\u8fd0\u884c\u4e00\u6b21 dry run\u3002"
+    "Run a dry run."
   } else {
-    "\u70b9\u51fb\u201c\u68c0\u67e5\u8f93\u5165\u201d\u3002"
+    "Click \"Check inputs\"."
   }
 
   dry_status <- if (dry_run_ready || real_run_ready) {
-    "\u5df2\u5c31\u7eea"
+    "Ready"
   } else if (validation$failed || !validation$passed) {
-    "\u7b49\u5f85"
+    "Waiting"
   } else {
-    "\u9700\u8981\u64cd\u4f5c"
+    "Action needed"
   }
   dry_next <- if (dry_run_ready) {
-    if (bgb_ready) "\u53d6\u6d88\u52fe\u9009 Dry run\uff0c\u51c6\u5907\u771f\u5b9e\u8fd0\u884c\u3002" else "\u5b89\u88c5 BioGeoBEARS \u540e\u518d\u771f\u5b9e\u8fd0\u884c\u3002"
+    if (bgb_ready) "Uncheck Dry run to prepare a real run." else "Install BioGeoBEARS before running for real."
   } else if (real_run_ready) {
-    "\u6253\u5f00\u201c\u7ed3\u679c\u201d\u3002"
+    "Open \"Results\"."
   } else if (validation$failed) {
-    "\u5148\u4fee\u590d\u8f93\u5165\u68c0\u67e5\u9519\u8bef\u3002"
+    "Fix the input-check errors first."
   } else if (validation$passed) {
-    "\u4fdd\u6301 Dry run \u52fe\u9009\uff0c\u7136\u540e\u70b9\u51fb\u201c\u8fd0\u884c\u6d41\u7a0b\u201d\u3002"
+    "Leave Dry run checked, then run the workflow."
   } else {
-    "\u5148\u70b9\u51fb\u201c\u68c0\u67e5\u8f93\u5165\u201d\u3002"
+    "Click \"Check inputs\" first."
   }
 
   real_status <- if (real_run_ready) {
-    "\u5df2\u5c31\u7eea"
+    "Ready"
   } else if (dry_run_ready && bgb_ready) {
-    "\u9700\u8981\u64cd\u4f5c"
+    "Action needed"
   } else {
-    "\u7b49\u5f85"
+    "Waiting"
   }
   real_next <- if (real_run_ready) {
-    "\u67e5\u770b\u201c\u7ed3\u679c\u201d\u3002"
+    "Open \"Results\"."
   } else if (dry_run_ready && bgb_ready) {
-    "\u53d6\u6d88\u52fe\u9009 Dry run\uff0c\u7136\u540e\u70b9\u51fb\u201c\u8fd0\u884c\u6d41\u7a0b\u201d\u3002"
+    "Uncheck Dry run, then run the workflow."
   } else if (dry_run_ready && !bgb_ready) {
     if (isTRUE(dry_run) && !isTRUE(require_biogeobears)) {
-      "\u5b89\u88c5 BioGeoBEARS \u540e\u624d\u80fd\u771f\u5b9e\u8fd0\u884c\u3002"
+      "BioGeoBEARS must be installed to run for real."
     } else {
-      "\u5b89\u88c5 BioGeoBEARS\uff0c\u7136\u540e\u91cd\u65b0\u8fd0\u884c\u3002"
+      "Install BioGeoBEARS, then run again."
     }
   } else {
-    "\u5148\u5b8c\u6210 dry run\u3002"
+    "Complete a dry run first."
   }
 
   result_status <- if (primary_results_ready) {
-    "\u5df2\u5c31\u7eea"
+    "Ready"
   } else if (real_run_ready) {
-    "\u9700\u8981\u5904\u7406"
+    "Needs attention"
   } else {
-    "\u7b49\u5f85"
+    "Waiting"
   }
   result_next <- if (primary_results_ready) {
-    "\u6253\u5f00\u201c\u7ed3\u679c\u201d\uff0c\u67e5\u770b\u7956\u5148\u5206\u5e03\u91cd\u5efa\u56fe\u3001\u6a21\u578b\u6bd4\u8f83\u8868\u548c\u4e8b\u4ef6\u7edf\u8ba1\u3002"
+    "Open \"Results\" for the ancestral-range reconstruction, model comparison and event statistics."
   } else if (real_run_ready) {
-    "\u70b9\u51fb\u201c\u5237\u65b0\u5173\u952e\u6587\u4ef6\u201d\uff0c\u6216\u6253\u5f00\u201c\u6392\u9519\u201d\u67e5\u770b\u539f\u56e0\u3002"
+    "Click \"Refresh key files\", or open \"Troubleshooting\" for the cause."
   } else {
-    "\u5148\u771f\u5b9e\u8fd0\u884c\uff0c\u6216\u52a0\u8f7d\u5df2\u6709\u771f\u5b9e\u8fd0\u884c\u7ed3\u679c\u3002"
+    "Run for real first, or load results from a previous real run."
   }
 
   export_status <- if (export_ready) {
-    if (result_bundle_ready && diagnostic_bundle_ready) "\u5df2\u5c31\u7eea" else "\u90e8\u5206\u5b8c\u6210"
+    if (result_bundle_ready && diagnostic_bundle_ready) "Ready" else "Partly complete"
   } else if (primary_results_ready) {
-    "\u9700\u8981\u64cd\u4f5c"
+    "Action needed"
   } else {
-    "\u7b49\u5f85"
+    "Waiting"
   }
   export_next <- if (result_bundle_ready && diagnostic_bundle_ready) {
-    "\u4e0b\u8f7d\u7ed3\u679c\u538b\u7f29\u5305\u6216\u8bca\u65ad\u538b\u7f29\u5305\u3002"
+    "Download the result bundle or the diagnostic bundle."
   } else if (result_bundle_ready) {
-    "\u5982\u679c\u9700\u8981\u522b\u4eba\u5e2e\u5fd9\u6392\u9519\uff0c\u518d\u751f\u6210\u8bca\u65ad\u538b\u7f29\u5305\u3002"
+    "Build the diagnostic bundle only if you need someone else to help troubleshoot."
   } else if (primary_results_ready) {
-    "\u70b9\u51fb\u201c\u751f\u6210\u7ed3\u679c\u538b\u7f29\u5305\u201d\u3002"
+    "Click \"Build result bundle\"."
   } else {
-    "\u5148\u67e5\u770b\u7ed3\u679c\u3002"
+    "Review the results first."
   }
 
   stats::setNames(
     data.frame(
-      step = c("\u6570\u636e\u6765\u6e90", "\u8f93\u5165\u68c0\u67e5", "Dry run", "\u771f\u5b9e\u8fd0\u884c", "\u67e5\u770b\u7ed3\u679c", "\u5bfc\u51fa\u5206\u4eab"),
+      step = c("Data source", "Input check", "Dry run", "Real run", "Review results", "Export and share"),
       status = c(
-        if (data_ready) "\u5df2\u5c31\u7eea" else "\u9700\u8981\u64cd\u4f5c",
+        if (data_ready) "Ready" else "Action needed",
         validation_status,
         dry_status,
         real_status,
@@ -1646,13 +1646,13 @@ shiny_guided_workflow_table <- function(
         validation$detail,
         if (has_result) workflow_model_status_label(state$model_table) else "",
         shiny_installation_component_detail(state$installation, "BioGeoBEARS"),
-        if (comparison_ready) "\u6a21\u578b\u6bd4\u8f83\u8868\u5df2\u751f\u6210\u3002" else "\u8fd8\u6ca1\u6709\u6a21\u578b\u6bd4\u8f83\u8868\u3002",
+        if (comparison_ready) "Model comparison is available." else "No model comparison yet.",
         shiny_export_detail(result_bundle_ready, diagnostic_bundle_ready, state)
       ),
       check.names = FALSE,
       stringsAsFactors = FALSE
     ),
-    c("\u6b65\u9aa4", "\u72b6\u6001", "\u4e0b\u4e00\u6b65", "\u8bf4\u660e")
+    c("Step", "Status", "Next step", "Detail")
   )
 }
 
@@ -1676,7 +1676,7 @@ shiny_validation_progress <- function(validation) {
       available = FALSE,
       passed = FALSE,
       failed = FALSE,
-      detail = "\u5c1a\u672a\u68c0\u67e5\u3002"
+      detail = "Not checked yet."
     ))
   }
   failed <- sum(!is.na(validation$ok) & !validation$ok)
@@ -1685,7 +1685,7 @@ shiny_validation_progress <- function(validation) {
     available = TRUE,
     passed = failed == 0L,
     failed = failed > 0L,
-    detail = paste0(passed, " \u9879\u901a\u8fc7\uff0c", failed, " \u9879\u5931\u8d25")
+    detail = paste0(passed, " passed, ", failed, " failed")
   )
 }
 
@@ -1693,14 +1693,14 @@ shiny_home_next_action <- function(workflow) {
   if (is.null(workflow) || nrow(workflow) == 0L) {
     return(shiny::tags$div(class = "ibgb-next-action", "Choose a data source."))
   }
-  status <- workflow[["\u72b6\u6001"]] %||% workflow[["Status"]]
-  actionable <- workflow[status %in% c("\u9700\u8981\u64cd\u4f5c", "\u9700\u8981\u5904\u7406", "\u7b49\u5f85", "\u90e8\u5206\u5b8c\u6210", "Action needed", "Needs attention", "Waiting", "Partial"), , drop = FALSE]
+  status <- workflow[["Status"]] %||% workflow[["Status"]]
+  actionable <- workflow[status %in% c("Action needed", "Needs attention", "Waiting", "Partly complete", "Action needed", "Needs attention", "Waiting", "Partial"), , drop = FALSE]
   next_row <- if (nrow(actionable) > 0L) actionable[1L, , drop = FALSE] else workflow[nrow(workflow), , drop = FALSE]
-  next_step <- (next_row[["\u6b65\u9aa4"]] %||% next_row[["Step"]])[[1L]]
-  next_text <- (next_row[["\u4e0b\u4e00\u6b65"]] %||% next_row[["Next action"]])[[1L]]
+  next_step <- (next_row[["Step"]] %||% next_row[["Step"]])[[1L]]
+  next_text <- (next_row[["Next step"]] %||% next_row[["Next action"]])[[1L]]
   shiny::tags$div(
     class = "ibgb-next-action",
-    shiny::tags$div(class = "ibgb-next-action-title", "\u4e0b\u4e00\u6b65"),
+    shiny::tags$div(class = "ibgb-next-action-title", "Next step"),
     shiny::tags$div(class = "ibgb-next-action-step", next_step),
     shiny::tags$div(class = "ibgb-next-action-detail", next_text)
   )
@@ -2099,36 +2099,36 @@ output_file_legend <- function() {
   }
   do.call(rbind, list(
     rows(
-      "\u8868\u683c tables/",
-      "model_comparison.csv" = "\u5404\u6a21\u578b\u7684 logLik\u3001\u53c2\u6570\u6570\u3001AIC/AICc\u3001\u0394AICc \u548c Akaike \u6743\u91cd\u6bd4\u8f83\u3002",
-      "input_validation.csv" = "\u8f93\u5165\u6570\u636e\uff08\u6811\u3001\u5206\u5e03\u77e9\u9635\u3001\u533a\u57df\u3001\u6a21\u578b\u8bbe\u7f6e\uff09\u7684\u4e00\u81f4\u6027\u6821\u9a8c\u7ed3\u679c\u3002",
-      "biogeographic_process_summary.csv" = "\u5404\u751f\u7269\u5730\u7406\u8fc7\u7a0b\uff08\u539f\u5730/\u540c\u57df\u3001subset\u3001vicariance\u3001founder \u8df3\u8dc3\u3001range expansion\u3001\u5c40\u90e8\u706d\u7edd\u3001range switching\uff09\u7684\u5e73\u5747\u4e8b\u4ef6\u6570\u3002",
-      "region_process_budgets.csv" = "\u6bcf\u4e2a\u5730\u533a\u7684\u6269\u6563\u6536\u652f\uff1a\u8fc1\u5165\u3001\u8fc1\u51fa\u3001\u51c0\u901a\u91cf\u3001\u5c40\u90e8\u706d\u7edd\u3002",
-      "process_rates_through_time.csv" = "\u5404\u8fc7\u7a0b\u901f\u7387\u968f\u65f6\u95f4\uff08\u5206\u7bb1\uff09\u7684\u5747\u503c\u3001\u6807\u51c6\u5dee\u548c 95% CI\u3002\u8de8\u7c7b\u7fa4\u6574\u5408\u7528\u7684\u5c31\u662f\u8fd9\u4e2a\u6587\u4ef6\u3002",
-      "region_process_rates_through_time.csv" = "\u5206\u5730\u533a\u7684\u8fc7\u7a0b\u901f\u7387\u968f\u65f6\u95f4\u3002\u8de8\u7c7b\u7fa4\u5206\u533a\u57df\u6574\u5408\u7528\u7684\u5c31\u662f\u8fd9\u4e2a\u6587\u4ef6\u3002",
-      "bsm_qc.csv" = "BSM \u53ef\u9760\u6027\u68c0\u67e5\uff1a\u5404\u5185\u90e8\u4e00\u81f4\u6027\u4e0d\u53d8\u91cf\u7684 Pass/Warning/Fail\u3002",
-      "bsm_event_summary.csv" = "BSM \u5404\u4e8b\u4ef6\u7c7b\u522b\u7684\u5e73\u5747/\u5408\u8ba1\u6b21\u6570\u3002",
-      "bsm_dispersal_routes.csv" = "BSM \u5404 source-target \u6269\u6563\u8def\u7ebf\u7684\u5e73\u5747\u6b21\u6570\u3002",
-      "bsm_event_times.csv" = "BSM \u6bcf\u4e2a\u4e8b\u4ef6\u7684\u65f6\u95f4\u548c\u7c7b\u578b\uff08\u9010\u6b21\u8bb0\u5f55\uff09\u3002"
+      "Tables (tables/)",
+      "model_comparison.csv" = "Per-model logLik, parameter count, AIC/AICc, \u0394AICc and Akaike weights.",
+      "input_validation.csv" = "Consistency checks on the inputs (tree, geography, regions, model settings).",
+      "biogeographic_process_summary.csv" = "Mean event counts for each biogeographic process (in-situ/sympatric, subset, vicariance, founder jump, range expansion, local extinction, range switching).",
+      "region_process_budgets.csv" = "Per-area dispersal budget: immigration, emigration, net flux and local extinction.",
+      "process_rates_through_time.csv" = "Binned process rates through time with mean, SD and 95% CI. This is the file the cross-clade synthesis uses.",
+      "region_process_rates_through_time.csv" = "Region-resolved process rates through time. This is the file the region-resolved cross-clade synthesis uses.",
+      "bsm_qc.csv" = "BSM reliability check: pass/warning/fail for each internal-consistency invariant.",
+      "bsm_event_summary.csv" = "Mean and total counts per BSM event class.",
+      "bsm_dispersal_routes.csv" = "Mean counts for each BSM source-to-target dispersal route.",
+      "bsm_event_times.csv" = "Time and type of every BSM event, one row per event."
     ),
     rows(
-      "\u56fe\u7247 figures/",
-      "node_state_summary_best_model" = "\u6700\u4f18\u6a21\u578b\u4e0b\u5404\u8282\u70b9\u7684\u7956\u5148\u5206\u5e03\u91cd\u5efa\uff08\u4e3b\u56fe\uff09\u3002",
-      "biogeographic_process_synthesis" = "\u751f\u7269\u5730\u7406\u8fc7\u7a0b\u7efc\u5408\u56fe\uff08\u53d1\u8868\u6838\u5fc3\u56fe\uff09\u3002",
-      "model_comparison" = "\u6a21\u578b\u6bd4\u8f83\u56fe\u3002",
-      "region_process_budget" = "\u5404\u5730\u533a\u6269\u6563\u6536\u652f\u7684\u5206\u6b67\u6761\u5f62\u56fe\u3002",
-      "process_rates_through_time" = "\u8fc7\u7a0b\u901f\u7387\u968f\u65f6\u95f4\u56fe\u3002",
-      "region_process_rates_through_time" = "\u5206\u5730\u533a\u8fc7\u7a0b\u901f\u7387\u968f\u65f6\u95f4\u56fe\u3002",
-      "bsm_dispersal_network" = "BSM \u533a\u57df\u95f4\u6269\u6563\u6709\u5411\u7bad\u5934\u7f51\u7edc\uff08\u7bad\u5934\u7c97\u7ec6=\u5e73\u5747\u6b21\u6570\uff09\u3002",
-      "bsm_dispersal_routes" = "BSM \u6269\u6563\u8def\u7ebf\u70ed\u56fe\u3002",
-      "bsm_event_summary / bsm_event_times / event_summary" = "BSM \u4e0e\u786e\u5b9a\u6027\u4e8b\u4ef6\u7684\u6458\u8981\u548c\u65f6\u95f4\u56fe\u3002"
+      "Figures (figures/)",
+      "node_state_summary_best_model" = "Ancestral ranges at every node under the best model (the headline figure).",
+      "biogeographic_process_synthesis" = "Biogeographic process synthesis (the key publication figure).",
+      "model_comparison" = "Model comparison figure.",
+      "region_process_budget" = "Diverging bar chart of each area's dispersal budget.",
+      "process_rates_through_time" = "Process rates through time.",
+      "region_process_rates_through_time" = "Region-resolved process rates through time.",
+      "bsm_dispersal_network" = "Directed network of BSM dispersal between areas (arrow width = mean count).",
+      "bsm_dispersal_routes" = "Heatmap of BSM dispersal routes.",
+      "bsm_event_summary / bsm_event_times / event_summary" = "Summary and timing of BSM and deterministic events."
     ),
     rows(
-      "\u62a5\u544a\u4e0e\u5176\u5b83",
-      "reports/summary_report.*" = "\u6c47\u603b\u62a5\u544a\uff08html/pdf/qmd\uff09\uff0c\u628a\u4e0a\u9762\u7684\u7ed3\u679c\u4e32\u6210\u56fe\u6587\u62a5\u544a\u3002",
-      "workflow_manifest.csv" = "\u672c\u6b21\u8fd0\u884c\u4ea7\u51fa\u7684\u6240\u6709\u6587\u4ef6\u6e05\u5355\u3002",
-      "config_used.yml" = "\u672c\u6b21\u8fd0\u884c\u5b9e\u9645\u4f7f\u7528\u7684\u914d\u7f6e\uff0c\u7528\u4e8e\u590d\u73b0\u3002",
-      "logs/" = "\u8fd0\u884c\u65e5\u5fd7\uff0c\u6392\u9519\u7528\u3002"
+      "Report and other",
+      "reports/summary_report.*" = "Summary report (html/pdf/qmd) tying the results above into one narrative.",
+      "workflow_manifest.csv" = "Manifest of every file this run produced.",
+      "config_used.yml" = "The configuration this run actually used, for reproduction.",
+      "logs/" = "Run logs, for troubleshooting."
     )
   ))
 }
@@ -3057,13 +3057,13 @@ shiny_dashboard_figures <- function() {
       "event_summary"
     ),
     display_label = c(
-      "\u6a21\u578b\u6bd4\u8f83",
-      "\u6839\u72b6\u6001\u6982\u7387",
-      "\u6700\u4f18\u6a21\u578b\u8282\u70b9\u72b6\u6001",
-      "\u6700\u4f18\u975e +J \u8282\u70b9\u72b6\u6001",
-      "\u6700\u4f18 +J \u8282\u70b9\u72b6\u6001",
-      "\u8282\u70b9\u72b6\u6001\u654f\u611f\u6027",
-      "\u4e8b\u4ef6\u7edf\u8ba1"
+      "Model comparison",
+      "Root-state probabilities",
+      "Node states, best model",
+      "Node states, best non-+J model",
+      "Node states, best +J model",
+      "Node-state sensitivity",
+      "Event statistics"
     ),
     stringsAsFactors = FALSE
   )
@@ -3640,13 +3640,13 @@ iBGB_head_styles <- function() {
 
 wizard_env_section <- function() {
   shiny_collapsible_section(
-    "\u73af\u5883\u4e0e\u5b89\u88c5\uff08\u7b2c\u4e00\u6b21\u4f7f\u7528\u53ef\u5c55\u5f00\u68c0\u67e5 BioGeoBEARS\uff09",
+    "Environment and installation (expand on first use to check BioGeoBEARS)",
     shiny_action_grid(
-      shiny::actionButton("refresh_setup", "\u5237\u65b0\u73af\u5883\u68c0\u67e5")
+      shiny::actionButton("refresh_setup", "Re-check environment")
     ),
-    shiny::tags$div(class = "ibgb-key-files-title", "\u5b89\u88c5\u72b6\u6001"),
+    shiny::tags$div(class = "ibgb-key-files-title", "Installation status"),
     shiny::tableOutput("installation_table"),
-    shiny::tags$div(class = "ibgb-key-files-title", "BioGeoBEARS \u5b89\u88c5\u8ba1\u5212"),
+    shiny::tags$div(class = "ibgb-key-files-title", "BioGeoBEARS installation plan"),
     shiny::tableOutput("biogeobears_install_plan_table")
   )
 }
@@ -3679,91 +3679,91 @@ shiny_default_num_cores <- function() {
 
 wizard_step_data <- function(default_config, default_output, example_project_dir) {
   shiny::tabPanel(
-    "1 \u00b7 \u6570\u636e",
+    "1 \u00b7 Data",
     shiny::tags$div(
       class = "ibgb-choice-card",
-      shiny::tags$div(class = "ibgb-control-title", "\u4f7f\u7528\u4f60\u81ea\u5df1\u7684\u6570\u636e"),
-      shiny::textInput("wizard_project_name", "\u9879\u76ee\u540d", value = "my_clade"),
+      shiny::tags$div(class = "ibgb-control-title", "Use your own data"),
+      shiny::textInput("wizard_project_name", "Project name", value = "my_clade"),
       shiny::tags$div(
         class = "ibgb-upload-row",
         shiny::fileInput(
           "wizard_tree",
-          "\u7cfb\u7edf\u6811\u6587\u4ef6",
+          "Tree file",
           accept = c(".nwk", ".newick", ".tree", ".tre")
         ),
-        shiny::downloadButton("download_tree_template", "\u6a21\u677f")
+        shiny::downloadButton("download_tree_template", "Template")
       ),
       shiny::tags$div(
         class = "ibgb-upload-row",
-        shiny::fileInput("wizard_geography", "\u5206\u5e03\u77e9\u9635 CSV", accept = ".csv"),
-        shiny::downloadButton("download_geography_template", "\u6a21\u677f")
+        shiny::fileInput("wizard_geography", "Geography matrix CSV", accept = ".csv"),
+        shiny::downloadButton("download_geography_template", "Template")
       ),
       shiny::tags$div(
         class = "ibgb-upload-row",
-        shiny::fileInput("wizard_regions", "\u533a\u57df\u4fe1\u606f CSV", accept = ".csv"),
-        shiny::downloadButton("download_regions_template", "\u6a21\u677f")
+        shiny::fileInput("wizard_regions", "Regions CSV", accept = ".csv"),
+        shiny::downloadButton("download_regions_template", "Template")
       ),
       shiny::tags$div(
         class = "ibgb-home-note",
-        "\u6ca1\u6709\u6570\u636e\uff1f\u70b9\u6bcf\u4e2a\u4e0a\u4f20\u6846\u53f3\u4fa7\u7684\u201c\u6a21\u677f\u201d\u4e0b\u8f7d\u2014\u2014\u5b83\u4eec\u5c31\u662f\u5185\u7f6e\u793a\u4f8b\u6570\u636e\uff08\u51e0\u4e2a\u7269\u79cd\u3001\u51e0\u4e2a\u533a\u57df\uff09\uff0c\u6539\u6210\u4f60\u81ea\u5df1\u7684\u6570\u636e\u540e\u518d\u4e0a\u4f20\u3002"
+        "No data yet? Use the \"Template\" button beside each upload \u2014 they are the built-in example data (a few species, a few areas). Edit them into your own data and upload."
       ),
       shiny_collapsible_section(
-        "\u9ad8\u7ea7\u7ea6\u675f\uff08\u53ef\u9009\uff0c\u65f6\u95f4\u5206\u5c42\u7b49\u9ad8\u7ea7\u5206\u6790\u7528\uff09",
+        "Advanced constraints (optional; for time-stratified and similar analyses)",
         shiny::tags$p(
           class = "ibgb-home-note",
-          "\u8fd9\u4e9b\u6587\u4ef6\u7528\u4e8e\u65f6\u95f4\u5206\u5c42\u3001\u6269\u6563\u4e58\u6570\u3001\u533a\u57df\u76f8\u90bb\u7b49\u9ad8\u7ea7\u5206\u6790\uff0c\u4e00\u822c\u7528\u4e0d\u5230\uff0c\u53ef\u7559\u7a7a\u3002\u6bcf\u4e2a\u4e0a\u4f20\u6846\u53f3\u4fa7\u7684\u201c\u6a21\u677f\u201d\u53ef\u4e0b\u8f7d\u793a\u4f8b\u683c\u5f0f\u3002"
+          "These files drive time stratification, dispersal multipliers, area adjacency and similar advanced analyses. Most analyses do not need them \u2014 leave blank. The \"Template\" button beside each upload downloads the expected format."
         ),
         shiny_wizard_constraint_inputs()
       ),
-      shiny::numericInput("wizard_max_range_size", "\u6700\u5927\u5206\u5e03\u533a\u6570\u91cf", value = 3L, min = 1L, step = 1L),
+      shiny::numericInput("wizard_max_range_size", "Maximum range size", value = 3L, min = 1L, step = 1L),
       shiny::uiOutput("state_space_note"),
       shiny::checkboxGroupInput(
         "wizard_models",
-        "\u8981\u8fd0\u884c\u7684\u6a21\u578b",
+        "Models to fit",
         choices = valid_models(),
         selected = valid_models()
       ),
       shiny::numericInput(
         "wizard_num_cores",
-        "CPU \u6838\u6570\uff08\u5e76\u884c\u52a0\u901f\u6a21\u578b\u62df\u5408\uff09",
+        "CPU cores (parallelises model fitting)",
         value = shiny_default_num_cores(), min = 1L, step = 1L
       ),
       shiny::tags$div(
         class = "ibgb-home-note",
-        "\u591a\u6838\u53ea\u52a0\u901f\u6a21\u578b\u62df\u5408\uff1b\u6838\u6570\u4e0d\u8981\u8d85\u8fc7\u672c\u673a CPU \u6838\u6570\u3002\u5927\u72b6\u6001\u7a7a\u95f4\uff08\u533a\u57df\u591a\u3001max_range \u5927\uff09\u65f6\u63d0\u9ad8\u6838\u6570\u6536\u76ca\u660e\u663e\u3002"
+        "Extra cores speed up model fitting only. Do not exceed the machine's core count. The gain is largest for big state spaces (many areas, large max_range)."
       ),
-      shiny::tags$div(class = "ibgb-key-files-title", "\u7ed3\u679c\u4fdd\u5b58\u4f4d\u7f6e"),
+      shiny::tags$div(class = "ibgb-key-files-title", "Where results are saved"),
       shiny::tags$div(
         class = "ibgb-output-row",
-        shiny::textInput("output_dir", "\u6240\u6709\u7ed3\u679c\u4fdd\u5b58\u5230", value = default_output),
-        shiny::actionButton("choose_output_dir", "\u9009\u62e9")
+        shiny::textInput("output_dir", "Save all results to", value = default_output),
+        shiny::actionButton("choose_output_dir", "Browse")
       ),
       shiny::tags$div(
         class = "ibgb-home-note",
-        "\u8fd0\u884c\u540e\u4f1a\u5728\u8fd9\u4e2a\u76ee\u5f55\u4e0b\u751f\u6210 tables\u3001figures\u3001reports\u3001logs\u3002\u4e0a\u4f20\u6570\u636e\u540e\u4e0b\u65b9\u4f1a\u663e\u793a\u6982\u51b5\uff0c\u786e\u8ba4\u65e0\u8bef\u5c31\u5230\u201c\u5206\u6790\u201d\u6807\u7b7e\u8fd0\u884c\u3002"
+        "The run writes tables, figures, reports and logs into this directory. After uploading, an overview appears below \u2014 check it, then go to the Analysis tab to run."
       )
     ),
     shiny::tags$div(
       class = "ibgb-choice-card",
-      shiny::tags$div(class = "ibgb-control-title", "\u6570\u636e\u6982\u51b5"),
+      shiny::tags$div(class = "ibgb-control-title", "Data overview"),
       shiny::tags$p(
         class = "ibgb-home-note",
-        "\u4e0a\u4f20\u6570\u636e\u540e\u8fd9\u91cc\u663e\u793a\u6982\u51b5\uff08\u7c7b\u4f3c RASP\uff09\uff1a\u6811\u91cc\u6709\u591a\u5c11\u4e2a tip\u3001\u6bcf\u4e2a\u533a\u57df\u6709\u591a\u5c11\u7269\u79cd\u3001\u5206\u5e03\u533a\u5927\u5c0f\u5982\u4f55\u5206\u5e03\u3002\u70b9\u201c\u68c0\u67e5\u8f93\u5165\u201d\u505a\u4e00\u81f4\u6027\u6821\u9a8c\u3002"
+        "After uploading, an overview appears here (as in RASP): how many tips the tree has, how many species occupy each area, and how range sizes are distributed. Click \"Check inputs\" for the consistency checks."
       ),
-      shiny_action_grid(shiny::actionButton("validate", "\u68c0\u67e5\u8f93\u5165")),
+      shiny_action_grid(shiny::actionButton("validate", "Check inputs")),
       shiny::tableOutput("data_overview_table"),
       shiny::tags$div(
         class = "ibgb-two-col",
         shiny::tags$div(
-          shiny::tags$div(class = "ibgb-key-files-title", "\u5404\u533a\u57df\u7269\u79cd\u6570"),
+          shiny::tags$div(class = "ibgb-key-files-title", "Species per area"),
           shiny::tableOutput("region_occupancy_table")
         ),
         shiny::tags$div(
-          shiny::tags$div(class = "ibgb-key-files-title", "\u5206\u5e03\u533a\u5927\u5c0f\u5206\u5e03"),
+          shiny::tags$div(class = "ibgb-key-files-title", "Range-size distribution"),
           shiny::tableOutput("range_size_table")
         )
       ),
-      shiny::tags$div(class = "ibgb-key-files-title", "\u8f93\u5165\u9a8c\u8bc1"),
+      shiny::tags$div(class = "ibgb-key-files-title", "Input validation"),
       shiny::tableOutput("validation_table")
     ),
     shiny::tags$div(
@@ -3775,60 +3775,60 @@ wizard_step_data <- function(default_config, default_output, example_project_dir
 
 wizard_step_analysis <- function() {
   shiny::tabPanel(
-    "2 \u00b7 \u5206\u6790",
+    "2 \u00b7 Analysis",
     shiny_control_section(
-      "\u8fd0\u884c",
-      shiny_action_grid(shiny::actionButton("run", "\u70b9\u51fb\u5f00\u59cb\u5206\u6790")),
+      "Run",
+      shiny_action_grid(shiny::actionButton("run", "Start the analysis")),
       shiny::tags$div(
         class = "ibgb-home-note",
-        "\u8fd0\u884c\u7ed3\u675f\u540e\u5230\u201c3 \u00b7 \u5355\u4e00\u7c7b\u7fa4\u7ed3\u679c\u201d\u6807\u7b7e\u67e5\u770b\u7ed3\u679c\uff1b\u9700\u8981\u56fe\u6587\u62a5\u544a\u65f6\u5728\u90a3\u91cc\u70b9\u201c\u751f\u6210\u62a5\u544a\u201d\uff0c\u518d\u4e0b\u8f7d\u3002"
+        "When the run finishes, open the \"3. Single clade\" tab for the results; build and download the report from there if you need one."
       )
     ),
-    shiny::checkboxInput("dry_run", "\u8bd5\u8fd0\u884c\uff1a\u53ea\u68c0\u67e5\uff0c\u4e0d\u771f\u6b63\u8fd0\u884c BioGeoBEARS", value = TRUE),
+    shiny::checkboxInput("dry_run", "Dry run: check only, do not actually run BioGeoBEARS", value = TRUE),
     shiny_collapsible_section(
-      "BSM \u968f\u673a\u6620\u5c04",
+      "BSM stochastic mapping",
       shiny::tags$div(
         class = "ibgb-home-note",
-        "\u52fe\u9009\u540e\u624d\u4f1a\u751f\u6210\u4e8b\u4ef6\u7edf\u8ba1\u3001\u751f\u7269\u5730\u7406\u8fc7\u7a0b\u7efc\u5408\u3001\u8fc7\u7a0b\u901f\u7387\u968f\u65f6\u95f4\u7b49\u7ed3\u679c\uff08\u8de8\u7c7b\u7fa4\u6574\u5408\u7528\u7684 process_rates_through_time.csv \u548c region_process_rates_through_time.csv \u4e5f\u5728\u8fd9\u91cc\u4ea7\u751f\uff09\u3002\u4e0d\u52fe\u9009\u5219\u53ea\u505a\u6a21\u578b\u62df\u5408\u548c\u7956\u5148\u5206\u5e03\u4f30\u8ba1\u3002"
+        "Only with this checked does the run produce event statistics, the process synthesis and rates through time (including process_rates_through_time.csv and region_process_rates_through_time.csv, which the cross-clade synthesis needs). Unchecked, the run fits models and estimates ancestral ranges only."
       ),
-      shiny::checkboxInput("run_stochastic_mapping", "\u8fd0\u884c BSM \u968f\u673a\u6620\u5c04", value = FALSE),
+      shiny::checkboxInput("run_stochastic_mapping", "Run BSM stochastic mapping", value = FALSE),
       shiny::selectInput(
         "stochastic_mapping_model",
-        "BSM \u4f7f\u7528\u7684\u6a21\u578b",
+        "Model used for BSM",
         choices = c(
-          "\u6700\u4f18\u7edf\u8ba1\u6a21\u578b" = "best",
-          "\u6700\u4f18\u975e +J \u6a21\u578b" = "best_non_j",
-          "\u6700\u4f18 +J \u6a21\u578b" = "best_plus_j",
-          "\u6240\u6709\u5df2\u5b8c\u6210\u6a21\u578b" = "all"
+          "Best-fitting model" = "best",
+          "Best non-+J model" = "best_non_j",
+          "Best +J model" = "best_plus_j",
+          "All fitted models" = "all"
         ),
         selected = "best"
       ),
-      shiny::numericInput("stochastic_mapping_replicates", "BSM \u6620\u5c04\u6b21\u6570", value = 100L, min = 1L, step = 1L),
-      shiny::numericInput("stochastic_mapping_seed", "BSM \u968f\u673a\u79cd\u5b50", value = 1L, min = 1L, step = 1L)
+      shiny::numericInput("stochastic_mapping_replicates", "BSM replicates", value = 100L, min = 1L, step = 1L),
+      shiny::numericInput("stochastic_mapping_seed", "BSM random seed", value = 1L, min = 1L, step = 1L)
     )
   )
 }
 
 wizard_step_results <- function() {
   shiny::tabPanel(
-    "3. \u5355\u7c7b\u7fa4\u5206\u6790",
+    "3. Single clade",
     shiny_primary_results_body(),
     shiny_control_section(
-      "\u5bfc\u51fa",
+      "Export",
       shiny::tags$div(
         class = "ibgb-downloads",
-        shiny::downloadButton("download_bundle", "\u4e0b\u8f7d\u7ed3\u679c\u538b\u7f29\u5305\uff08\u5168\u90e8\u7ed3\u679c\u6587\u4ef6\uff09")
+        shiny::downloadButton("download_bundle", "Download result bundle (all result files)")
       ),
       shiny::tags$div(
         class = "ibgb-home-note",
-        "\u4e0b\u8f7d\u538b\u7f29\u5305\u83b7\u53d6\u8be5\u7c7b\u7fa4\u7684\u5168\u90e8\u7ed3\u679c\u6587\u4ef6\uff08\u8868\u683c\u3001\u56fe\u3001\u65e5\u5fd7\uff09\u3002\u4e8b\u4ef6\u7edf\u8ba1\u4e0e\u56fe\u6587\u62a5\u544a\u90fd\u5728\u201c4 \u00b7 \u8de8\u7c7b\u7fa4\u201d\u91cc\uff0c\u9488\u5bf9\u591a\u7c7b\u7fa4\u6574\u5408\u7ed3\u679c\u751f\u6210\u3002"
+        "The bundle contains every result file for this clade (tables, figures, logs). Event statistics and the illustrated report live in \"4. Multi-clade synthesis\", where they are produced for the integrated results."
       )
     ),
     shiny_collapsible_section(
-      "\u7ed3\u679c\u6587\u4ef6\u8bf4\u660e\uff08\u4e0b\u8f7d\u538b\u7f29\u5305\u540e\u5bf9\u7167\u67e5\u770b\uff09",
+      "What each result file is (read alongside the downloaded bundle)",
       shiny::tags$p(
         class = "ibgb-home-note",
-        "\u201c\u4e0b\u8f7d\u7ed3\u679c\u538b\u7f29\u5305\u201d\u91cc\u5305\u542b\u4e0b\u5217\u6587\u4ef6\u3002\u8fd9\u5f20\u8868\u8bf4\u660e\u6bcf\u4e2a\u7ed3\u679c\u6587\u4ef6\u5bf9\u5e94\u4ec0\u4e48\u7ed3\u679c\uff1b\u5b8c\u6574\u8868\u683c\u548c\u9ad8\u6e05\u56fe\u7247\u90fd\u5728\u538b\u7f29\u5305\u91cc\uff0c\u65e0\u9700\u5728\u8fd9\u91cc\u9010\u4e2a\u5c55\u5f00\u3002"
+        "The result bundle contains the files below. This table says what each one holds; the full tables and high-resolution figures are all in the bundle, so there is no need to expand them here."
       ),
       shiny::tableOutput("output_file_legend_table")
     )
@@ -3859,39 +3859,39 @@ wizard_step_cross_clade <- function() {
   preview <- function(id, height = "460px") shiny::div(class = "ibgb-preview", shiny::imageOutput(id, height = height))
   card <- function(title, ...) shiny::tags$div(class = "ibgb-choice-card", shiny::tags$div(class = "ibgb-control-title", title), ...)
   shiny::tabPanel(
-    "4. \u591a\u7c7b\u7fa4\u6574\u5408",
+    "4. Multi-clade synthesis",
     shiny::tags$div(
       class = "ibgb-next-action",
-      shiny::tags$div(class = "ibgb-next-action-title", "\u628a\u591a\u4e2a\u7c7b\u7fa4\u6574\u5408\u5230\u4e00\u8d77"),
+      shiny::tags$div(class = "ibgb-next-action-title", "Bring several clades together"),
       shiny::tags$div(
         class = "ibgb-next-action-detail",
-        "\u6bcf\u4e2a\u7c7b\u7fa4\u5148\u5728\u201c3 \u00b7 \u5355\u4e00\u7c7b\u7fa4\u7ed3\u679c\u201d\u91cc\u4e0b\u8f7d\u5b83\u7684\u7ed3\u679c\u538b\u7f29\u5305\uff08.zip\uff0c\u9700\u52fe\u9009\u5e76\u8dd1\u8fc7 BSM\uff09\u3002\u5728\u4e0b\u9762\u4e00\u6b21\u6027\u6279\u91cf\u4e0a\u4f20\u591a\u4e2a\u7c7b\u7fa4\u7684\u538b\u7f29\u5305\uff0c\u672c\u9875\u4f1a\u81ea\u52a8\u8bfb\u53d6\u5e76\u751f\u6210\u8de8\u7c7b\u7fa4\u6574\u5408\u540e\u7684\u5168\u90e8\u7ed3\u679c\u4e0e\u62a5\u544a\u3002\u5efa\u8bae\u5148\u628a\u6bcf\u4e2a\u538b\u7f29\u5305\u91cd\u547d\u540d\u4e3a\u7c7b\u7fa4\u540d\uff08\u5982 Muridae.zip\uff09\u3002"
+        "Download each clade's result bundle from \"3. Single clade\" first (.zip; BSM must have been enabled and run). Upload all of them below in one go and this page reads them and builds the full integrated results and report. Renaming each bundle to its clade name (e.g. Muridae.zip) is recommended."
       )
     ),
     card(
-      "1 \u00b7 \u6279\u91cf\u4e0a\u4f20\u5404\u7c7b\u7fa4\u7684\u7ed3\u679c\u538b\u7f29\u5305",
-      shiny::fileInput("cross_clade_bundles", "\u4e0a\u4f20\u5404\u7c7b\u7fa4\u7684\u7ed3\u679c\u538b\u7f29\u5305\uff08.zip\uff0c\u53ef\u591a\u9009\uff09", multiple = TRUE, accept = ".zip"),
+      "1 \u00b7 Upload the clades' result bundles",
+      shiny::fileInput("cross_clade_bundles", "Upload result bundles (.zip; select several)", multiple = TRUE, accept = ".zip"),
       shiny::uiOutput("cross_clade_status")
     ),
-    card("2 \u00b7 \u751f\u7269\u5730\u7406\u8fc7\u7a0b\u7efc\u5408\uff08\u8de8\u7c7b\u7fa4\u52a0\u603b\uff09", preview("cc_synth_plot")),
-    card("3 \u00b7 \u8fc7\u7a0b\u901f\u7387\u968f\u65f6\u95f4 \u00b7 \u603b\u4f53\uff08\u6bcf\u7c7b\u7fa4\u4e00\u6761\u66f2\u7ebf\uff09", preview("cross_clade_plot", "520px")),
-    card("4 \u00b7 \u8fc7\u7a0b\u901f\u7387\u968f\u65f6\u95f4 \u00b7 \u5206\u533a\u57df\uff08in-situ / \u8fc1\u5165 / \u8fc1\u51fa\uff09", preview("cross_clade_region_plot", "460px")),
-    card("5 \u00b7 \u6e90\u2192\u53d7\u4f53\u4ea4\u6362\u77e9\u9635\uff08\u5bf9\u89d2=in-situ\uff0c\u975e\u5bf9\u89d2=\u6269\u6563\uff09", shiny::tableOutput("cc_exchange_table")),
-    card("6 \u00b7 \u533a\u57df\u95f4\u6269\u6563\u7f51\u7edc", preview("cc_network_plot", "520px")),
-    card("7 \u00b7 \u5404\u533a\u8fc1\u5165 / \u8fc1\u51fa\uff08immigration / emigration\uff09", preview("cc_budget_plot", "440px")),
-    card("8 \u00b7 \u4e8b\u4ef6\u7edf\u8ba1\u660e\u7ec6", shiny::tableOutput("cc_esum_table")),
+    card("2 \u00b7 Biogeographic process synthesis (summed across clades)", preview("cc_synth_plot")),
+    card("3 \u00b7 Process rates through time \u00b7 overall (one curve per clade)", preview("cross_clade_plot", "520px")),
+    card("4 \u00b7 Process rates through time \u00b7 by region (in-situ / immigration / emigration)", preview("cross_clade_region_plot", "460px")),
+    card("5 \u00b7 Source-to-recipient exchange matrix (diagonal = in-situ, off-diagonal = dispersal)", shiny::tableOutput("cc_exchange_table")),
+    card("6 \u00b7 Dispersal network between areas", preview("cc_network_plot", "520px")),
+    card("7 \u00b7 Immigration / emigration per area", preview("cc_budget_plot", "440px")),
+    card("8 \u00b7 Event statistics", shiny::tableOutput("cc_esum_table")),
     shiny::tags$div(
       class = "ibgb-choice-card",
-      shiny::tags$div(class = "ibgb-control-title", "\u5bfc\u51fa\u4e0e\u62a5\u544a"),
+      shiny::tags$div(class = "ibgb-control-title", "Export and report"),
       shiny::tags$div(
         class = "ibgb-home-note",
-        "\u4e0b\u8f7d\u5168\u90e8\u6574\u5408\u7ed3\u679c\uff08\u5404\u7c7b CSV + \u56fe\uff09\uff0c\u6216\u751f\u6210\u4e00\u4efd\u542b\u4ee5\u4e0a\u5168\u90e8\u56fe\u8868\u7684\u53ef\u5206\u4eab HTML \u62a5\u544a\u3002\u5148\u70b9\u201c\u751f\u6210\u62a5\u544a\u201d\uff0c\u518d\u70b9\u201c\u4e0b\u8f7d\u62a5\u544a\u201d\u3002"
+        "Download every integrated result (CSVs and figures), or build a shareable HTML report containing all of the panels above. Build the report first, then download it."
       ),
       shiny::tags$div(
         class = "ibgb-downloads",
-        shiny::downloadButton("download_cross_clade", "\u4e0b\u8f7d\u5168\u90e8\u6574\u5408\u7ed3\u679c\uff08CSV + \u56fe\uff09"),
-        shiny::actionButton("render_xclade_report", "\u751f\u6210\u62a5\u544a"),
-        shiny::downloadButton("download_xclade_report", "\u4e0b\u8f7d\u62a5\u544a")
+        shiny::downloadButton("download_cross_clade", "Download all integrated results (CSV + figures)"),
+        shiny::actionButton("render_xclade_report", "Build report"),
+        shiny::downloadButton("download_xclade_report", "Download report")
       ),
       shiny::verbatimTextOutput("xclade_report_status")
     )
@@ -3900,10 +3900,10 @@ wizard_step_cross_clade <- function() {
 
 wizard_step_help <- function() {
   shiny::tabPanel(
-    "\u5173\u4e8e\u4e0e\u5f15\u7528",
-    shiny::tags$div(class = "ibgb-key-files-title", "\u8f6f\u4ef6\u72b6\u6001"),
+    "About and citation",
+    shiny::tags$div(class = "ibgb-key-files-title", "Software status"),
     shiny::tableOutput("about_table"),
-    shiny::tags$div(class = "ibgb-key-files-title", "BioGeoBEARS \u5f15\u7528"),
+    shiny::tags$div(class = "ibgb-key-files-title", "BioGeoBEARS citation"),
     shiny::verbatimTextOutput("citation_text")
   )
 }

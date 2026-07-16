@@ -154,9 +154,9 @@ test_that("Shiny guided workflow table highlights the next ordinary-user action"
     dry_run = TRUE
   )
 
-  expect_equal(names(workflow), c("步骤", "状态", "下一步", "说明"))
-  expect_equal(workflow$状态[match("数据来源", workflow$步骤)], "已就绪")
-  expect_match(workflow$下一步[match("输入检查", workflow$步骤)], "检查输入", fixed = TRUE)
+  expect_equal(names(workflow), c("Step", "Status", "Next step", "Detail"))
+  expect_equal(workflow$Status[match("Data source", workflow$Step)], "Ready")
+  expect_match(workflow[["Next step"]][match("Input check", workflow$Step)], "Check inputs", fixed = TRUE)
 
   own_workflow <- shiny_guided_workflow_table(
     state,
@@ -164,8 +164,8 @@ test_that("Shiny guided workflow table highlights the next ordinary-user action"
     config_path = config,
     dry_run = TRUE
   )
-  expect_equal(own_workflow$状态[match("数据来源", own_workflow$步骤)], "需要操作")
-  expect_match(own_workflow$下一步[match("数据来源", own_workflow$步骤)], "上传系统树", fixed = TRUE)
+  expect_equal(own_workflow$Status[match("Data source", own_workflow$Step)], "Action needed")
+  expect_match(own_workflow[["Next step"]][match("Data source", own_workflow$Step)], "Upload the tree", fixed = TRUE)
 
   state$validation <- data.frame(check = "tree_file", ok = TRUE, stringsAsFactors = FALSE)
   paths <- create_project(tempfile("ibgb-shiny-guided-workflow-"))
@@ -181,9 +181,9 @@ test_that("Shiny guided workflow table highlights the next ordinary-user action"
     dry_run = TRUE
   )
 
-  expect_equal(workflow$状态[match("Dry run", workflow$步骤)], "已就绪")
-  expect_equal(workflow$状态[match("真实运行", workflow$步骤)], "等待")
-  expect_match(workflow$下一步[match("真实运行", workflow$步骤)], "安装 BioGeoBEARS", fixed = TRUE)
+  expect_equal(workflow$Status[match("Dry run", workflow$Step)], "Ready")
+  expect_equal(workflow$Status[match("Real run", workflow$Step)], "Waiting")
+  expect_match(workflow[["Next step"]][match("Real run", workflow$Step)], "BioGeoBEARS must be installed", fixed = TRUE)
 
   state$result$dry_run <- FALSE
   state$result$model_comparison <- data.frame(
@@ -206,8 +206,8 @@ test_that("Shiny guided workflow table highlights the next ordinary-user action"
     dry_run = FALSE
   )
 
-  expect_equal(workflow$状态[match("查看结果", workflow$步骤)], "已就绪")
-  expect_equal(workflow$状态[match("导出分享", workflow$步骤)], "部分完成")
+  expect_equal(workflow$Status[match("Review results", workflow$Step)], "Ready")
+  expect_equal(workflow$Status[match("Export and share", workflow$Step)], "Partly complete")
 })
 
 test_that("Shiny project wizard helpers resolve uploads, previews, and defaults", {
@@ -249,9 +249,9 @@ test_that("Shiny project wizard helpers resolve uploads, previews, and defaults"
     wizard_regions = regions_upload
   ))
 
-  expect_equal(names(preview), c("文件", "状态", "摘要", "下一步"))
-  expect_true(all(preview$状态 == "可读取"))
-  expect_match(preview$摘要[preview$文件 == "分布矩阵 CSV"], "species", fixed = TRUE)
+  expect_equal(names(preview), c("File", "Status", "Summary", "Next step"))
+  expect_true(all(preview$Status == "Readable"))
+  expect_match(preview$Summary[preview$File == "Geography matrix CSV"], "species", fixed = TRUE)
 })
 
 test_that("Shiny validation table and input templates are user-facing", {
@@ -299,7 +299,7 @@ test_that("Wizard data step is a single own-data card with merged output locatio
     shiny::actionButton("open_user_guide", "Open user guide")
   ))
 
-  expect_match(panel_html, "数据", fixed = TRUE)
+  expect_match(panel_html, "Data", fixed = TRUE)
   # Own-data inputs and templates are present, with each template inline in an
   # upload row beside its file input.
   expect_match(panel_html, "wizard_tree", fixed = TRUE)
@@ -307,7 +307,7 @@ test_that("Wizard data step is a single own-data card with merged output locatio
   expect_match(panel_html, "download_geography_template", fixed = TRUE)
   expect_match(panel_html, "ibgb-upload-row", fixed = TRUE)
   # Advanced constraint uploads and their inline templates live on the data step.
-  expect_match(panel_html, "高级约束", fixed = TRUE)
+  expect_match(panel_html, "Advanced constraints", fixed = TRUE)
   expect_match(panel_html, "wizard_constraint_times_file", fixed = TRUE)
   expect_match(panel_html, "download_constraint_dispersal_multipliers_file", fixed = TRUE)
   # Output location is merged into this step with an inline picker; the raw YAML
@@ -318,7 +318,7 @@ test_that("Wizard data step is a single own-data card with merged output locatio
   expect_match(panel_html, "ibgb-output-row", fixed = TRUE)
   expect_match(panel_html, "display:none", fixed = TRUE)
   # The RASP-style overview (formerly a separate tab) is merged into this step.
-  expect_match(panel_html, "概况", fixed = TRUE)
+  expect_match(panel_html, "overview", fixed = TRUE)
   expect_match(panel_html, "validate", fixed = TRUE)
   expect_match(panel_html, "data_overview_table", fixed = TRUE)
   expect_match(panel_html, "region_occupancy_table", fixed = TRUE)
@@ -343,9 +343,9 @@ test_that("Analysis step is the run action, a bare dry-run toggle, and the BSM f
 
   analysis_html <- as.character(wizard_step_analysis())
   # A single primary run action (renamed) and a bare dry-run checkbox.
-  expect_match(analysis_html, "点击开始分析", fixed = TRUE)
+  expect_match(analysis_html, "Start the analysis", fixed = TRUE)
   expect_match(analysis_html, "dry_run", fixed = TRUE)
-  expect_match(analysis_html, "BSM 随机映射", fixed = TRUE)
+  expect_match(analysis_html, "BSM stochastic mapping", fixed = TRUE)
   expect_match(analysis_html, "run_stochastic_mapping", fixed = TRUE)
   expect_match(analysis_html, "stochastic_mapping_replicates", fixed = TRUE)
   expect_match(analysis_html, "stochastic_mapping_model", fixed = TRUE)
@@ -354,7 +354,7 @@ test_that("Analysis step is the run action, a bare dry-run toggle, and the BSM f
   expect_false(grepl("value=\"DEC\"", analysis_html, fixed = TRUE))
   # The run-options fold and its extra toggles, plus the report button, config
   # editor, env-install fold, and constraint inputs, were removed from this step.
-  expect_false(grepl("运行选项", analysis_html, fixed = TRUE))
+  expect_false(grepl("Run options", analysis_html, fixed = TRUE))
   expect_false(grepl("resume_completed_models", analysis_html, fixed = TRUE))
   expect_false(grepl("retry_failed_only", analysis_html, fixed = TRUE))
   expect_false(grepl("render_report", analysis_html, fixed = TRUE))
@@ -396,7 +396,7 @@ test_that("Results step is single-clade, slims exports, and shows a file legend"
   testthat::skip_if_not_installed("shiny")
 
   ui <- as.character(wizard_step_results())
-  expect_match(ui, "单类群分析", fixed = TRUE)
+  expect_match(ui, "Single clade", fixed = TRUE)
   expect_false(grepl("ibgb-step-intro", ui, fixed = TRUE))
   # Only the result bundle is downloaded here; the report moved to the
   # cross-clade tab (it targets the integrated multi-clade results).
@@ -425,7 +425,7 @@ test_that("Cross-clade step takes bundle uploads and shows integrated panels", {
   testthat::skip_if_not_installed("shiny")
 
   ui <- as.character(wizard_step_cross_clade())
-  expect_match(ui, "多类群整合", fixed = TRUE)
+  expect_match(ui, "Multi-clade synthesis", fixed = TRUE)
   # One result-bundle zip per clade drives everything.
   expect_match(ui, "cross_clade_bundles", fixed = TRUE)
   # Integrated panels: synthesis, rates (overall + region), exchange matrix,
@@ -454,7 +454,7 @@ test_that("Help step becomes an about-and-citation panel", {
   testthat::skip_if_not_installed("shiny")
 
   ui <- as.character(wizard_step_help())
-  expect_match(ui, "关于与引用", fixed = TRUE)
+  expect_match(ui, "About and citation", fixed = TRUE)
   expect_match(ui, "citation_text", fixed = TRUE)
   expect_match(ui, "about_table", fixed = TRUE)
   # The troubleshooting block and report-environment table were removed.
@@ -590,8 +590,8 @@ test_that("Single-clade results body keeps only single-clade-meaningful views", 
 
   ui_html <- as.character(shiny_primary_results_body())
 
-  expect_match(ui_html, "祖先分布重建图", fixed = TRUE)
-  expect_match(ui_html, "模型比较表", fixed = TRUE)
+  expect_match(ui_html, "Ancestral range reconstruction", fixed = TRUE)
+  expect_match(ui_html, "Model comparison", fixed = TRUE)
   # Event / BSM panels have moved to the cross-clade tab.
   expect_false(grepl("primary_bsm_event_summary_table", ui_html, fixed = TRUE))
   expect_false(grepl("primary_figure_bsm_dispersal_network", ui_html, fixed = TRUE))
@@ -603,7 +603,7 @@ test_that("Wizard shell renders all steps including elevated cross-clade", {
   ui_html <- as.character(iBGB_app_ui("analysis.yml", "results/out", "example"))
 
   expect_match(ui_html, "wizard_nav", fixed = TRUE)
-  expect_match(ui_html, "跨类群", fixed = TRUE)
+  expect_match(ui_html, "Multi-clade", fixed = TRUE)
   expect_match(ui_html, "cross_clade_bundles", fixed = TRUE)
   expect_match(ui_html, "data_overview_table", fixed = TRUE)
   expect_match(ui_html, "status", fixed = TRUE)
@@ -1476,11 +1476,11 @@ test_that("figure dashboard helpers expose named workflow figures", {
   image <- shiny_named_figure_image(state, "model_comparison")
 
   expect_equal(shiny_named_figure_path(state, "model_comparison"), as_path(png_path))
-  expect_equal(dashboard$status[match("模型比较", dashboard$figure)], "Available")
-  expect_equal(dashboard$preview[match("模型比较", dashboard$figure)], "Shown below")
-  expect_equal(dashboard$status[match("根状态概率", dashboard$figure)], "Missing")
+  expect_equal(dashboard$status[match("Model comparison", dashboard$figure)], "Available")
+  expect_equal(dashboard$preview[match("Model comparison", dashboard$figure)], "Shown below")
+  expect_equal(dashboard$status[match("Root-state probabilities", dashboard$figure)], "Missing")
   expect_match(
-    dashboard$missing_reason[match("根状态概率", dashboard$figure)],
+    dashboard$missing_reason[match("Root-state probabilities", dashboard$figure)],
     "Expected PNG was not found",
     fixed = TRUE
   )
@@ -1507,7 +1507,7 @@ test_that("figure dashboard reports failed figure generation with next steps", {
   state$manifest <- NULL
 
   dashboard <- shiny_figure_dashboard_table(state)
-  row <- dashboard[dashboard$figure == "节点状态敏感性", , drop = FALSE]
+  row <- dashboard[dashboard$figure == "Node-state sensitivity", , drop = FALSE]
 
   expect_equal(row$status, "Failed")
   expect_equal(row$preview, "Not shown")
