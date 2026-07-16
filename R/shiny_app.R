@@ -218,7 +218,7 @@ iBGB_shiny_server <- function(input, output, session) {
 
       shiny::observeEvent(input$open_user_guide, {
         run_app_action(state, {
-          guide <- open_user_guide(browse = TRUE, language = "zh-CN")
+          guide <- open_user_guide(browse = TRUE)
           append_app_message(state, paste("User guide:", guide))
         })
       })

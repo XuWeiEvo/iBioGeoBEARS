@@ -1,7 +1,8 @@
 # iBiogeobears Ordinary-User Quick Start
 
-This guide is for first-time users who want to run one single-clade
-BioGeoBEARS analysis through `iBiogeobears`.
+This guide is for first-time users who want to run a BioGeoBEARS analysis
+through `iBiogeobears` — one clade, and then several clades integrated
+together.
 
 `iBiogeobears` does not bundle BioGeoBEARS. BioGeoBEARS must be installed
 separately before real model execution. You can still run dry-run checks and
@@ -89,7 +90,7 @@ tables/model_sensitivity.csv
 tables/model_run_status.csv
 ```
 
-## 4. Use The Shiny Runner
+## 4. Use The Shiny App
 
 Install Shiny if needed:
 
@@ -112,29 +113,65 @@ create_windows_launcher()
 After that, double-click `start-iBiogeobears.bat` on the Desktop instead of
 opening RStudio and typing `launch_app()`.
 
-Recommended GUI flow:
+The app is a five-step wizard. The interface is English; so is everything the
+run writes.
 
-1. Click `Create example project` or use `New project wizard`.
-2. Click `Refresh setup checks`.
-3. Keep `Dry run` checked and click `Run workflow`.
-4. Fix any validation problems.
-5. Uncheck `Dry run` only when BioGeoBEARS is installed.
-6. Click `Run workflow`.
-7. Click `Render report`.
-8. Click `Create bundle if missing`.
-9. Click `Create diagnostic bundle` if you need help debugging.
+### 1 · Data
+
+1. Upload your tree (Newick), geography CSV, and regions CSV. The **Template**
+   button beside each upload downloads a working example to edit.
+2. Set **Maximum range size**. It must be at least the largest range any taxon
+   actually occupies, which the data overview reports.
+3. Choose the **Models to fit**. All six are selected by default; fitting fewer
+   is much faster (`DEC` and `DEC+J` are the usual pair).
+4. Set **CPU cores**. Extra cores speed up model fitting only.
+5. Optionally open **Advanced constraints** for time stratification, dispersal
+   multipliers, distances, allowed areas, adjacency or area sizes.
+6. Click **Check inputs** and read the data overview and validation table.
+
+Watch the state-space note under **Maximum range size**. Runtime is driven by
+the state count, `sum(choose(n_areas, 0:max_range))`, not by the number of
+tips — eleven areas at `max_range = 4` is 562 states, and each likelihood
+evaluation scales with the square of that. If the note warns that the space is
+large, raise **CPU cores** and fit fewer models.
+
+### 2 · Analysis
+
+1. Keep **Dry run** checked for a check-only pass; it does not need
+   BioGeoBEARS.
+2. Uncheck **Dry run** for a real run.
+3. Enable **Run BSM stochastic mapping** if you want the event and process
+   outputs — the process synthesis, event statistics, rates through time, and
+   the tables the multi-clade synthesis needs. Without it the run only fits
+   models and estimates ancestral ranges.
+4. Click **Start the analysis**.
+
+A large run prints no progress bar. If it seems stuck, check the state-space
+note and the number of models first — it is almost always compute, not a hang.
+
+### 3. Single clade
+
+The ancestral-range reconstruction and the model comparison appear here. Click
+**Download result bundle** for every table, figure and log for this clade. That
+bundle is also what the next step consumes.
+
+### 4. Multi-clade synthesis
+
+See section 6.
 
 ## 5. Use Your Own Data
-
-The easiest path is the Shiny `New project wizard`.
 
 Required files:
 
 - Newick tree file.
-- Geography CSV with one row per taxon and one column per area.
-- Regions CSV describing area labels.
+- Geography CSV with one row per taxon and one column per area. Area codes must
+  be single characters (`A`, `B`, `C`, …) for BSM.
+- Regions CSV giving the full name of each area, used to label the output.
 
-Always run a dry check before real BioGeoBEARS execution:
+Tip labels and geography taxon names must match exactly, including
+capitalisation.
+
+From the console:
 
 ```r
 project <- create_analysis_project(
@@ -152,7 +189,28 @@ dry <- run_workflow(
 )
 ```
 
-## 6. If Something Fails
+## 6. Integrate Several Clades
+
+This is what `iBiogeobears` adds over running BioGeoBEARS directly.
+
+1. Analyse each clade separately **with BSM enabled**.
+2. Download each clade's result bundle from **3. Single clade** and rename it
+   to the clade name (e.g. `Muridae.zip`).
+3. Open **4. Multi-clade synthesis** and upload all the bundles at once.
+
+The tab reads every clade's standardized tables and builds the integrated
+results: the process synthesis summed across clades; process rates through
+time, overall and resolved by region (in-situ speciation / immigration /
+emigration); a source-to-recipient exchange matrix; the dispersal network and
+each area's immigration/emigration budget; and event statistics. Export every
+integrated table and figure, or build a shareable HTML report, from the bottom
+of the same tab.
+
+Clades must use comparable time units and the same area codes. Each clade's own
+inference is untouched: the synthesis re-presents the stochastic maps you
+already ran, it never re-estimates anything.
+
+## 7. If Something Fails
 
 First inspect:
 
@@ -190,11 +248,19 @@ Common fixes:
   `repair_step` column.
 - One model failed: open `tables/model_run_status.csv`, inspect the failed
   model log path, then rerun with `retry_failed_only = TRUE`.
+- The run takes far longer than expected: this is normally the state space, not
+  a hang. Check the note under **Maximum range size**, fit fewer models, and
+  raise **CPU cores**.
+- A constrained run fails: constraint matrix files are an area-name header
+  followed by rows of plain numbers, with no row labels, and one block per time
+  bin. Times are time-bin bottoms — the oldest must be older than the tree root,
+  and no boundary may sit exactly on a node date. The data step checks all of
+  this up front.
 - `+J` caution appears: this is not an execution error. It means the best or
   near-best statistical model includes founder-event jump dispersal and should
   be interpreted cautiously.
 
-## 7. Stable-Release Readiness Check
+## 8. Stable-Release Readiness Check
 
 Before sharing the package with ordinary users, maintainers should run:
 

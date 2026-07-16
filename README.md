@@ -24,8 +24,8 @@ install.packages(c("devtools", "rexpokit", "cladoRcpp"))
 devtools::install_github("nmatzke/BioGeoBEARS", dependencies = FALSE)
 ```
 
-The **“环境与安装”** panel at the top of the app checks BioGeoBEARS and can
-install it for you.
+The **Environment and installation** panel at the top of the app checks
+BioGeoBEARS and can install it for you.
 
 ## Quick start (GUI)
 
@@ -37,22 +37,31 @@ launch_app()
 
 The app is a five-step wizard:
 
-1. **Data (数据)** — upload your tree (Newick), geography CSV, and regions CSV.
-   Each upload has an inline **模板** button that downloads a working example to
-   edit; optional advanced constraint files sit in a collapsed section. A data
-   overview (tips, species per region, range sizes) and input validation appear
-   below. Your uploads drive the analysis directly — there is no separate
-   "create project" step.
-2. **Analysis (分析)** — click **点击开始分析**. Keep **试运行 (dry run)** on for a
-   check-only pass; uncheck it for a real BioGeoBEARS run. Enable **运行 BSM
-   随机映射** to also produce the event/process outputs (and the cross-clade
-   inputs). A report is generated automatically after a real run.
-3. **Single-clade results (单一类群结果)** — previews of the ancestral-range
-   reconstruction, model comparison, the biogeographic process synthesis, event
-   statistics, and the dispersal arrow-network + heatmap. Download the full
-   result bundle or the report here.
-4. **Cross-clade (跨类群)** — see below.
-5. **About (关于与引用)** — version, citation, and environment.
+1. **1 · Data** — upload your tree (Newick), geography CSV, and regions CSV.
+   Each upload has an inline **Template** button that downloads a working
+   example to edit; optional advanced constraint files sit in a collapsed
+   section. Set **Maximum range size**, the **Models to fit**, and **CPU cores**
+   here. A data overview (tips, species per area, range sizes) and input
+   validation appear below. Your uploads drive the analysis directly — there is
+   no separate "create project" step.
+2. **2 · Analysis** — click **Start the analysis**. Keep **Dry run** on for a
+   check-only pass; uncheck it for a real BioGeoBEARS run. Enable **Run BSM
+   stochastic mapping** to also produce the event/process outputs (and the
+   inputs the cross-clade synthesis needs).
+3. **3. Single clade** — the ancestral-range reconstruction and the model
+   comparison, plus **Download result bundle** (every table, figure and log for
+   this clade).
+4. **4. Multi-clade synthesis** — see below.
+5. **About and citation** — version, citation, and environment.
+
+### Watch the state space
+
+Runtime is dominated by the state space, which is
+`sum(choose(n_areas, 0:max_range))` — not by the number of tips. Eleven areas at
+`max_range = 4` is 562 states and each likelihood evaluation scales with the
+square of that, so fitting all six models on one core can take hours. The data
+step prints the state count and warns when it gets large; raising **CPU cores**
+and fitting fewer models are the two effective levers.
 
 ## Quick start (script)
 
@@ -70,17 +79,27 @@ render_report(result, format = "html")
 
 ## Cross-clade integration (headline feature)
 
-Analyse several clades **with BSM enabled**, then integrate their biogeographic
-event rates through time. Each clade writes
-`tables/process_rates_through_time.csv` (and a per-region companion) only when
-stochastic mapping was run.
+Analyse several clades **with BSM enabled**, download each clade's result
+bundle from the **3. Single clade** step, then integrate them.
 
-In the GUI, the **跨类群** tab takes a batch (multi-file) upload of each clade's
-`process_rates_through_time.csv`. It plots one panel per biogeographic process
-with a curve per clade and a **95% CI** band (the 2.5–97.5% percentiles across
-stochastic maps), and exports the combined table. Per-region rates are uploaded
-and compared the same way. Rename each file to the clade name (e.g.
-`Anolis.csv`); clades must use comparable time units.
+In the GUI, the **4. Multi-clade synthesis** tab takes a batch (multi-file)
+upload of one **result bundle (`.zip`) per clade** — rename each to its clade
+name (e.g. `Muridae.zip`). It reads every clade's standardized tables and builds
+the integrated results:
+
+- biogeographic process synthesis, summed across clades;
+- process rates through time, overall (one curve per clade) and resolved by
+  region (in-situ speciation / immigration / emigration, pooled across clades);
+- a source-to-recipient **exchange matrix** (diagonal = in-situ speciation,
+  off-diagonal = dispersal, with per-area immigration/emigration totals);
+- the inter-area dispersal network and each area's immigration/emigration
+  budget;
+- event statistics, plus a one-click export of every integrated table and
+  figure and a shareable HTML report.
+
+Clades must use comparable time units and area codes. Every clade's own
+inference is left untouched — the synthesis re-presents each clade's stochastic
+maps in a shared vocabulary, it never re-estimates anything.
 
 From the console:
 
@@ -100,11 +119,13 @@ plot_region_process_rates_across_clades(combined_region)
 ## Outputs and BSM
 
 A run writes `tables/`, `figures/`, `reports/`, and `logs/` under the chosen
-output directory, plus a portable archive via `bundle_results(result)`. The
-biogeographic **process** outputs (per-process synthesis, region budgets, rates
-through time, dispersal routes, and a `bsm_qc.csv` reliability check) are
-BioGeoBEARS' own stochastic-mapping event counts, relabelled into named
-processes — so they are produced only when BSM is enabled:
+output directory, plus a portable archive via `bundle_results(result)`. All
+output — tables, figures, reports and bundles — is English regardless of
+anything else. The biogeographic **process** outputs (per-process synthesis,
+region budgets, rates through time, dispersal routes, and a `bsm_qc.csv`
+reliability check) are BioGeoBEARS' own stochastic-mapping event counts,
+relabelled into named processes — so they are produced only when BSM is
+enabled:
 
 ```yaml
 analysis:
@@ -119,14 +140,27 @@ Model selection is not a "lowest AICc wins" tool: the report and app separate
 statistical fit from biological interpretation, especially when a `+J` model is
 best or near-best.
 
+## Advanced constraints
+
+Time stratification, dispersal multipliers, distances, allowed areas, area
+adjacency and area-of-areas are optional uploads on the data step (templates
+included). Each matrix file is an area-name header followed by rows of **plain
+numbers** — no row labels — with one block per time bin. Supplying a distances
+file frees the distance-decay exponent `x`; supplying a times file makes the run
+time-stratified. Times are time-bin **bottoms**: the oldest must be older than
+the tree root, and no bin boundary may fall exactly on a node date. The data
+step checks all of this before the run rather than letting BioGeoBEARS abort
+mid-way.
+
 ## Reports (HTML / PDF)
 
-Generate the summary report on demand — click **生成报告** on the results step
-after a run, or call `render_report(result, format = "html")` (or `"pdf"`, or
-`"source"`). Report rendering is kept separate from the run so it never blocks
-the analysis; and if the tools are missing, `render_report()` still writes the
-`.qmd` source and returns its path, so **a missing renderer never blocks the run
-or loses results** — you just get the source instead of a rendered HTML/PDF.
+Generate the multi-clade report on demand — click **Build report** on the
+**4. Multi-clade synthesis** step, or call `render_report(result, format =
+"html")` (or `"pdf"`, or `"source"`) for a single clade. Report rendering is
+kept separate from the run so it never blocks the analysis; and if the tools are
+missing, `render_report()` still writes the `.qmd` source and returns its path,
+so **a missing renderer never blocks the run or loses results** — you just get
+the source instead of a rendered HTML/PDF.
 
 **HTML reports** need the Quarto command-line tool plus the `quarto` R package:
 
@@ -151,9 +185,10 @@ Check what is available (and the exact next step for anything missing) with:
 check_report_environment(c("source", "html", "pdf"))
 ```
 
-The same status appears in the app's top **“环境与安装”** panel. If you only
-need the numbers and figures, the source report plus the downloadable result
-bundle are enough — HTML/PDF are for a formatted, shareable write-up.
+The same status appears in the app's top **Environment and installation** panel.
+If you only need the numbers and figures, the source report plus the
+downloadable result bundle are enough — HTML/PDF are for a formatted, shareable
+write-up.
 
 ## Citation and license
 

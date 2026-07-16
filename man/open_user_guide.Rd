@@ -4,21 +4,18 @@
 \alias{open_user_guide}
 \title{Open the ordinary-user quick-start guide}
 \usage{
-open_user_guide(browse = interactive(), language = c("en", "zh-CN", "zh"))
+open_user_guide(browse = interactive())
 }
 \arguments{
 \item{browse}{Logical. If \code{TRUE}, open the guide with \code{\link[utils:browseURL]{utils::browseURL()}}.
 Defaults to \code{interactive()}.}
-
-\item{language}{Character. Guide language, either \code{"en"}, \code{"zh-CN"}, or
-\code{"zh"}. Defaults to \code{"en"}.}
 }
 \value{
 The absolute path to the installed guide.
 }
 \description{
-Opens or returns the installed Markdown guide for first-time users. English
-and simplified Chinese guides are included. The guide covers installation
-checks, the bundled example project, the Shiny runner, result bundles,
-diagnostic bundles, and common recovery steps.
+Opens or returns the installed Markdown guide for first-time users. The guide
+covers installation checks, the bundled example project, the Shiny app,
+multi-clade synthesis, result bundles, diagnostic bundles, and common
+recovery steps.
 }
