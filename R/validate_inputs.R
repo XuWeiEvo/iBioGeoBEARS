@@ -67,6 +67,28 @@ validate_inputs <- function(config, base_dir = dirname(config$.config_file %||% 
       is.numeric(config$inputs$max_range_size) && config$inputs$max_range_size <= ncol(geography$matrix),
       paste0("max_range_size=", config$inputs$max_range_size, "; area_count=", ncol(geography$matrix))
     )
+    # BioGeoBEARS cannot represent a taxon whose range is wider than
+    # max_range_size, and rejects the whole run rather than that one taxon.
+    range_widths <- rowSums(geography$matrix, na.rm = TRUE)
+    widest_range <- if (length(range_widths) > 0L) max(range_widths) else 0L
+    oversized_taxa <- if (is.numeric(config$inputs$max_range_size)) {
+      geography$taxa[range_widths > config$inputs$max_range_size]
+    } else {
+      character()
+    }
+    add_check(
+      "max_range_size_covers_observed_ranges",
+      is.numeric(config$inputs$max_range_size) && length(oversized_taxa) == 0L,
+      paste0(
+        "max_range_size=", config$inputs$max_range_size %||% "unset",
+        "; widest observed range=", widest_range,
+        if (length(oversized_taxa) > 0L) {
+          paste0("; taxa above the limit: ", format_taxon_list(oversized_taxa))
+        } else {
+          ""
+        }
+      )
+    )
   }
   if (!is.null(tree) && !is.null(geography)) {
     missing_from_geography <- setdiff(tree$tip.label, geography$taxa)
@@ -176,6 +198,7 @@ validation_check_catalog <- function() {
       "geography_area_values_binary",
       "geography_each_species_has_area",
       "max_range_size_within_area_count",
+      "max_range_size_covers_observed_ranges",
       "tree_geography_species_match",
       "regions_cover_geography_areas",
       "models_supported",
@@ -202,6 +225,7 @@ validation_check_catalog <- function() {
       "Geography area values are binary",
       "Every taxon occurs in at least one area",
       "Maximum range size fits the area count",
+      "Maximum range size covers every observed range",
       "Tree and geography taxon names match",
       "Regions CSV covers every geography area",
       "Selected models are supported",
@@ -228,6 +252,7 @@ validation_check_catalog <- function() {
       "Use only 0 and 1 in all geography area columns.",
       "Assign at least one area with value 1 to every taxon.",
       "Set maximum range size no higher than the number of geography areas.",
+      "Raise maximum range size to at least the widest range in the geography CSV, or merge areas so that no taxon exceeds it.",
       "Make tree tip names and geography taxon names identical, including capitalization.",
       "Add one regions CSV row for every geography area column.",
       "Select at least one model from the supported model list.",
@@ -260,6 +285,16 @@ read_geography_for_validation <- function(path) {
   suppressWarnings(mode(area_matrix) <- "numeric")
   row.names(area_matrix) <- taxa
   list(taxa = taxa, matrix = area_matrix)
+}
+
+format_taxon_list <- function(taxa, max_shown = 8L) {
+  if (length(taxa) <= max_shown) {
+    return(paste(taxa, collapse = ", "))
+  }
+  paste0(
+    paste(taxa[seq_len(max_shown)], collapse = ", "),
+    ", and ", length(taxa) - max_shown, " more"
+  )
 }
 
 format_species_mismatch <- function(missing_from_geography, missing_from_tree) {

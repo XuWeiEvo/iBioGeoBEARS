@@ -90,3 +90,51 @@ test_that("validate_inputs catches common configuration errors", {
   expect_false(lookup[["models_not_duplicated"]])
   expect_false(lookup[["advanced_constraint_files_exist"]])
 })
+
+test_that("validate_inputs rejects a max range size narrower than the data", {
+  # BioGeoBEARS aborts the whole run when any taxon is wider than
+  # max_range_size, so this has to be caught before the models are fitted.
+  cfg <- read_config(system.file("templates", "analysis.yml", package = "BioGeoSyn"))
+  temp_dir <- tempfile("bgs-maxrange-")
+  dir.create(temp_dir)
+
+  geography <- file.path(temp_dir, "geography.csv")
+  writeLines(c(
+    "species,A,B,C,D",
+    "sp1,1,0,0,0",
+    "sp2,1,1,1,1",
+    "sp3,1,1,1,0"
+  ), geography)
+  tree <- file.path(temp_dir, "tree.nwk")
+  writeLines("((sp1:1,sp2:1):1,sp3:2);", tree)
+
+  cfg$inputs$tree_file <- tree
+  cfg$inputs$geography_file <- geography
+  cfg$inputs$regions_file <- NULL
+  cfg$advanced$constraints <- NULL
+
+  cfg$inputs$max_range_size <- 3
+  checks <- validate_inputs(cfg)
+  row <- checks[checks$check == "max_range_size_covers_observed_ranges", , drop = FALSE]
+  expect_equal(nrow(row), 1L)
+  expect_false(row$ok)
+  # The detail must name the offending taxon, not just report a count.
+  expect_match(row$detail, "sp2", fixed = TRUE)
+  expect_match(row$detail, "widest observed range=4", fixed = TRUE)
+  expect_false(row$next_step == "No action needed.")
+  # A too-narrow range is not the same failure as exceeding the area count.
+  expect_true(checks$ok[checks$check == "max_range_size_within_area_count"])
+
+  cfg$inputs$max_range_size <- 4
+  relaxed <- validate_inputs(cfg)
+  expect_true(relaxed$ok[relaxed$check == "max_range_size_covers_observed_ranges"])
+})
+
+test_that("every validation check has a catalogued label and next step", {
+  cfg <- read_config(system.file("templates", "analysis.yml", package = "BioGeoSyn"))
+  checks <- validate_inputs(cfg)
+  catalog <- validation_check_catalog()
+
+  expect_equal(nrow(catalog), length(unique(catalog$check)))
+  expect_true(all(checks$check %in% catalog$check))
+})

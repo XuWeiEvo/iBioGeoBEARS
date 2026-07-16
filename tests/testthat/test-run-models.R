@@ -1,3 +1,40 @@
+test_that("a run where every model failed reports what BioGeoBEARS said", {
+  # Regression: the raw status table used to be returned as if it were a model
+  # comparison, so the real error was dropped and the first consumer failed on
+  # the missing delta_aicc/has_j columns instead.
+  raw_table <- data.frame(
+    model = c("DEC", "DEC+J", "DIVALIKE"),
+    status = c("failed", "failed", "failed"),
+    error_message = c(
+      "max_tipsize=4 > inputs$max_range_size=3",
+      "max_tipsize=4 > inputs$max_range_size=3",
+      "something else broke"
+    ),
+    stringsAsFactors = FALSE
+  )
+
+  msg <- all_models_failed_message(raw_table)
+
+  expect_match(msg, "max_tipsize=4 > inputs$max_range_size=3", fixed = TRUE)
+  expect_match(msg, "something else broke", fixed = TRUE)
+  # Models sharing one cause are grouped rather than repeated.
+  expect_match(msg, "DEC, DEC+J: max_tipsize", fixed = TRUE)
+  expect_match(msg, "model_run_status.csv", fixed = TRUE)
+})
+
+test_that("all-models-failed reporting survives a missing error column", {
+  raw_table <- data.frame(
+    model = c("DEC", "DEC+J"),
+    status = c("skipped", "failed"),
+    stringsAsFactors = FALSE
+  )
+
+  msg <- all_models_failed_message(raw_table)
+
+  expect_match(msg, "no error recorded", fixed = TRUE)
+  expect_match(msg, "skipped", fixed = TRUE)
+})
+
 test_that("run_models returns a dry-run plan", {
   cfg <- list(models = list(run = c("DEC", "DEC+J")))
   paths <- list(raw_biogeobears = tempfile("raw-bgb-"))

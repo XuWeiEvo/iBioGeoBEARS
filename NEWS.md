@@ -18,6 +18,14 @@ as the analytical centerpiece for reporting and publication.
   counts per process, coloured by process class.
 - Surfaced the process synthesis as the headline of the report's stochastic
   mapping section and documented the new table and figure.
+- Added a `max_range_size_covers_observed_ranges` validation check. BioGeoBEARS
+  rejects an entire run when any taxon occupies more areas than
+  `max_range_size`, so the check now catches this before any model is fitted and
+  names the taxa that exceed the limit.
+- Fixed a run where every model failed reporting `comparison is missing required
+  columns: delta_aicc, has_j` from the figure code. The raw status table was
+  returned as if it were a model comparison, which discarded the error
+  BioGeoBEARS had actually reported; the run now stops with that error instead.
 
 # BioGeoSyn 1.0.0
 

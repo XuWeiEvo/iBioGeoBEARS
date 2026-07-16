@@ -97,8 +97,7 @@ run_models <- function(config, project_paths, execute = FALSE) {
 
   completed <- raw_table[raw_table$status == "completed", , drop = FALSE]
   if (nrow(completed) == 0L) {
-    attr(raw_table, "run_status") <- raw_table
-    return(raw_table)
+    stop(all_models_failed_message(raw_table), call. = FALSE)
   }
 
   standardized_tables <- standardize_biogeobears_outputs(
@@ -154,6 +153,39 @@ run_models <- function(config, project_paths, execute = FALSE) {
   attr(comparison, "run_status") <- raw_table
   attr(comparison, "standardized_tables") <- standardized_tables
   comparison
+}
+
+# Without this, a run where every model failed would hand the raw status table
+# on as if it were a model comparison, and the first thing to touch it would
+# fail on the missing columns instead of reporting what BioGeoBEARS said.
+all_models_failed_message <- function(raw_table) {
+  models <- as.character(raw_table$model)
+  status <- if ("status" %in% names(raw_table)) {
+    as.character(raw_table$status)
+  } else {
+    rep("unknown", length(models))
+  }
+  reason <- if ("error_message" %in% names(raw_table)) {
+    as.character(raw_table$error_message)
+  } else {
+    rep(NA_character_, length(models))
+  }
+  unreported <- is.na(reason) | !nzchar(reason)
+  reason[unreported] <- paste0("no error recorded; status was '", status[unreported], "'")
+
+  grouped <- split(models, reason)
+  lines <- vapply(
+    names(grouped),
+    function(msg) paste0("  - ", paste(grouped[[msg]], collapse = ", "), ": ", msg),
+    character(1),
+    USE.NAMES = FALSE
+  )
+  paste0(
+    "No BioGeoBEARS model completed, so there is no model comparison to report.\n",
+    "BioGeoBEARS reported:\n",
+    paste(lines, collapse = "\n"),
+    "\nPer-model status was written to tables/model_run_status.csv."
+  )
 }
 
 prepare_biogeobears_inputs <- function(config, project_paths) {
