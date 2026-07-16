@@ -1,9 +1,14 @@
 *.Rcheck/
 *.tar.gz
-BioGeoSyn-scaffold.zip
+*-scaffold.zip
 .RData
 .Rhistory
 .Rproj.user/
 .Ruserdata
 # Office lock files (e.g. ~$notes.docx) — always junk
 ~$*
+
+# Local-only working material — deliberately not published to GitHub
+paper/
+example data/
+BioGeoBEARS 系统介绍.docx
