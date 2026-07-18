@@ -128,6 +128,39 @@ read_bundle_table <- function(zip_path, table) {
   tryCatch(utils::read.csv(f, stringsAsFactors = FALSE), error = function(e) NULL)
 }
 
+# The cross-clade integration is built entirely from BSM stochastic-mapping
+# tables. A bundle from a run without BSM has none of them, so report which
+# uploaded bundles are missing them - that is the usual reason integration is
+# empty, and the raw "nothing to report" error does not make it clear.
+bundle_has_cross_clade_data <- function(zip_path) {
+  if (is.null(zip_path) || !nzchar(zip_path) || !file.exists(zip_path)) {
+    return(FALSE)
+  }
+  entries <- tryCatch(basename(utils::unzip(zip_path, list = TRUE)$Name),
+                      error = function(e) character())
+  markers <- c("biogeographic_process_summary.csv", "process_rates_through_time.csv",
+               "bsm_event_summary.csv", "bsm_dispersal_routes.csv")
+  any(markers %in% entries)
+}
+
+# Names of the uploaded bundles that carry no cross-clade (BSM) tables.
+bundles_missing_cross_clade_data <- function(zip_paths, clade_names = NULL) {
+  zip_paths <- as.character(zip_paths %||% character())
+  if (length(zip_paths) == 0L) {
+    return(character())
+  }
+  clade_names <- as.character(clade_names %||% rep(NA_character_, length(zip_paths)))
+  missing <- !vapply(zip_paths, bundle_has_cross_clade_data, logical(1))
+  labels <- vapply(seq_along(zip_paths), function(i) {
+    if (length(clade_names) >= i && !is.na(clade_names[[i]]) && nzchar(clade_names[[i]])) {
+      clade_names[[i]]
+    } else {
+      derive_clade_name(zip_paths[[i]])
+    }
+  }, character(1))
+  labels[missing]
+}
+
 # Read one table from several bundles, keep a single model per clade, tag clade.
 read_clade_bundle_tables <- function(zip_paths, clade_names, table) {
   zip_paths <- as.character(zip_paths %||% character())
@@ -518,7 +551,14 @@ render_cross_clade_report <- function(x, file = NULL) {
   keys <- c("synthesis", "rates", "region_rates", "exchange_long",
             "routes", "budgets", "event_times", "event_summary")
   if (!any(vapply(keys, has, logical(1)))) {
-    stop("No cross-clade results to report; upload clade bundles first.", call. = FALSE)
+    stop(
+      "No cross-clade results found in the uploaded bundles. The integrated ",
+      "results are built from BSM stochastic-mapping outputs, so each bundle ",
+      "must come from a single-clade run with \"Run BSM stochastic mapping\" ",
+      "enabled. Re-run the clades with BSM on, then download and upload the new ",
+      "bundles.",
+      call. = FALSE
+    )
   }
 
   embed_plot <- function(plot, width, height) {

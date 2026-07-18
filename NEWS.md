@@ -18,6 +18,15 @@ as the analytical centerpiece for reporting and publication.
   counts per process, coloured by process class.
 - Surfaced the process synthesis as the headline of the report's stochastic
   mapping section and documented the new table and figure.
+- Fixed the single-clade result bundle download always returning the first
+  clade's archive. The cached bundle, report and diagnostics paths were not
+  invalidated when a new clade was run or loaded, so every download served the
+  stale archive; they are now cleared whenever the workflow result changes.
+- Made the cross-clade tab explain why an upload yields nothing. The integrated
+  results are built from BSM stochastic-mapping tables, so bundles from runs
+  without BSM produced an empty result and a misleading "upload clade bundles
+  first" error. The upload status now names bundles that lack BSM outputs, and
+  the report error tells the user to re-run those clades with BSM enabled.
 - Raised the Shiny upload limit from its 5 MB default to 1 GB per file
   (`options(biogeosyn.maxUploadSizeMB=)` to change), so uploading result bundles
   - especially several at once to the cross-clade tab - no longer fails with

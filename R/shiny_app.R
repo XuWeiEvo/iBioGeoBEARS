@@ -310,6 +310,11 @@ bgs_shiny_server <- function(input, output, session) {
             retry_failed_only = isTRUE(input$retry_failed_only)
           )
           state$result <- result
+          # A new run (or a reload of a different project) supersedes any bundle,
+          # report or diagnostics archive built from the previous result. Clear
+          # them so the next download rebuilds from THIS result - otherwise every
+          # download returns the first clade's archive.
+          reset_derived_result_exports(state)
           state$validation <- result$validation
           state$model_table <- result$model_run_status
           state$manifest <- result$workflow_manifest
@@ -626,6 +631,27 @@ bgs_shiny_server <- function(input, output, session) {
         b <- clade_bundles()
         if (is.null(b)) {
           return(shiny::tags$div(class = "bgs-home-note", "No result bundles uploaded yet. For each clade, upload the result bundle (.zip) downloaded from \"3. Single clade\"."))
+        }
+        missing <- bundles_missing_cross_clade_data(b$paths, b$names)
+        if (length(missing) == length(b$paths)) {
+          return(shiny::tags$div(
+            class = "bgs-status error",
+            paste0(
+              "None of the ", length(b$paths), " uploaded bundles contain cross-clade results. ",
+              "These come from BSM stochastic mapping, so each clade must be re-run with ",
+              "\"Run BSM stochastic mapping\" enabled before its bundle can be integrated here."
+            )
+          ))
+        }
+        if (length(missing) > 0L) {
+          return(shiny::tags$div(
+            class = "bgs-status error",
+            paste0(
+              "Integrated ", length(b$paths) - length(missing), " of ", length(b$paths),
+              " clades. These bundles have no BSM outputs and were skipped (re-run them with ",
+              "\"Run BSM stochastic mapping\" enabled): ", paste(missing, collapse = ", "), "."
+            )
+          ))
         }
         shiny::tags$div(class = "bgs-status info", paste0("Integrated ", length(b$paths), " clades."))
       })
@@ -1210,6 +1236,17 @@ report_preview_path <- function(state) {
     return(NULL)
   }
   as_path(path)
+}
+
+# Archives (bundle, report, diagnostics) are cached on `state` and lazily
+# rebuilt only when their slot is NULL. They are derived from `state$result`, so
+# when the result changes they must be invalidated or downloads keep serving the
+# archive built for the previous (e.g. first) clade.
+reset_derived_result_exports <- function(state) {
+  state$bundle <- NULL
+  state$report <- NULL
+  state$diagnostic_bundle <- NULL
+  invisible(state)
 }
 
 resolve_bundle_file <- function(state) {

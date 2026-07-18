@@ -31,6 +31,21 @@ test_that("bgs_max_upload_bytes lifts the default upload cap", {
   expect_false(is.na(bgs_max_upload_bytes()))
 })
 
+test_that("reset_derived_result_exports clears stale archives on a new result", {
+  # Regression: downloads used to return the first clade's bundle because the
+  # cached archive paths were never invalidated when a new clade was run.
+  state <- new.env()
+  state$bundle <- "clade1_results.zip"
+  state$report <- "clade1_report.html"
+  state$diagnostic_bundle <- "clade1_diagnostics.zip"
+
+  reset_derived_result_exports(state)
+
+  expect_null(state$bundle)
+  expect_null(state$report)
+  expect_null(state$diagnostic_bundle)
+})
+
 test_that("the server raises shiny.maxRequestSize before uploads", {
   testthat::skip_if_not_installed("shiny")
   old <- getOption("shiny.maxRequestSize")

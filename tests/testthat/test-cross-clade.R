@@ -171,6 +171,56 @@ test_that("render_cross_clade_report writes a self-contained HTML with figures",
   expect_error(render_cross_clade_report(list()), "No cross-clade results")
 })
 
+write_bundle_zip <- function(clade, tables) {
+  root <- tempfile(paste0("bgs-bundle-", clade, "-"))
+  tdir <- file.path(root, "tables")
+  dir.create(tdir, recursive = TRUE, showWarnings = FALSE)
+  for (name in names(tables)) {
+    utils::write.csv(tables[[name]], file.path(tdir, name), row.names = FALSE)
+  }
+  zipfile <- file.path(tempdir(), paste0(clade, ".zip"))
+  unlink(zipfile)
+  zip_relative_files(root, zipfile, file.path("tables", names(tables)))
+  zipfile
+}
+
+test_that("bundle_has_cross_clade_data detects BSM-derived tables", {
+  # A bundle from a run WITH BSM carries the cross-clade tables.
+  with_bsm <- write_bundle_zip("WithBSM", list(
+    "biogeographic_process_summary.csv" = data.frame(process = "vicariance", mean = 1),
+    "model_comparison.csv" = data.frame(model = "DEC", AICc = 10)
+  ))
+  # A bundle from a run WITHOUT BSM has only the non-BSM tables.
+  no_bsm <- write_bundle_zip("NoBSM", list(
+    "model_comparison.csv" = data.frame(model = "DEC", AICc = 10),
+    "node_state_summary.csv" = data.frame(node_index = 1, best_state = "A")
+  ))
+
+  expect_true(bundle_has_cross_clade_data(with_bsm))
+  expect_false(bundle_has_cross_clade_data(no_bsm))
+  expect_false(bundle_has_cross_clade_data("does-not-exist.zip"))
+})
+
+test_that("bundles_missing_cross_clade_data names only the BSM-free bundles", {
+  with_bsm <- write_bundle_zip("Amolops", list(
+    "bsm_event_summary.csv" = data.frame(event_type = "d", mean_count = 2)
+  ))
+  no_bsm <- write_bundle_zip("Rana", list(
+    "model_comparison.csv" = data.frame(model = "DEC", AICc = 10)
+  ))
+
+  missing <- bundles_missing_cross_clade_data(c(with_bsm, no_bsm), c("Amolops", "Rana"))
+  expect_equal(missing, "Rana")
+
+  # No uploads -> nothing missing.
+  expect_length(bundles_missing_cross_clade_data(character()), 0L)
+})
+
+test_that("render_cross_clade_report explains the BSM requirement when empty", {
+  # The message must point at BSM, since that is the real cause.
+  expect_error(render_cross_clade_report(list()), "BSM stochastic")
+})
+
 test_that("keep_first_model drops extra models so cross-clade curves are single", {
   root <- tempfile("bgs-multimodel-")
   tables <- file.path(root, "Anolis", "tables")
