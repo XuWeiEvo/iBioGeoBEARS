@@ -13,6 +13,20 @@ launch_app <- function(config = NULL, output_dir = NULL, launch.browser = TRUE, 
   shiny::runApp(app, launch.browser = launch.browser, ...)
 }
 
+# Shiny caps uploads at 5 MB by default. A single clade's result bundle
+# (figures plus the raw BioGeoBEARS and BSM RDS files) already exceeds that, and
+# the cross-clade tab takes several bundles at once, so the default makes those
+# uploads fail with "Maximum upload size exceeded". Raise it to a generous
+# local-desktop limit, overridable with options(biogeosyn.maxUploadSizeMB=).
+bgs_max_upload_bytes <- function() {
+  mb <- suppressWarnings(as.numeric(getOption("biogeosyn.maxUploadSizeMB", 1024)))
+  if (length(mb) != 1L || !is.finite(mb) || mb <= 0) {
+    mb <- 1024
+  }
+  # Cap so the byte count stays within R's integer range (< 2 GiB).
+  as.integer(min(mb, 2000) * 1024 * 1024)
+}
+
 create_bgs_shiny_app <- function(config = NULL, output_dir = NULL) {
   check_shiny_available()
 
@@ -149,6 +163,10 @@ shiny_figure_panel <- function(title, output_id) {
 }
 
 bgs_shiny_server <- function(input, output, session) {
+  # Lift the 5 MB upload cap so result bundles can be uploaded (see
+  # bgs_max_upload_bytes()). Set here so it is in force before any upload.
+  options(shiny.maxRequestSize = bgs_max_upload_bytes())
+
   state <- shiny::reactiveValues(
         result = NULL,
         validation = NULL,

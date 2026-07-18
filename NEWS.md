@@ -18,6 +18,10 @@ as the analytical centerpiece for reporting and publication.
   counts per process, coloured by process class.
 - Surfaced the process synthesis as the headline of the report's stochastic
   mapping section and documented the new table and figure.
+- Raised the Shiny upload limit from its 5 MB default to 1 GB per file
+  (`options(biogeosyn.maxUploadSizeMB=)` to change), so uploading result bundles
+  - especially several at once to the cross-clade tab - no longer fails with
+  "Maximum upload size exceeded".
 - Added a single-most-likely-range view of the ancestral reconstruction
   alongside the probability pies. `plot_node_state_summary(style = "single")`
   draws one solid, area-code-labelled disc per internal node (text colour is

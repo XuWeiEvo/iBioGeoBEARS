@@ -9,6 +9,42 @@ test_that("planned_model_table summarizes configured models", {
   expect_equal(plan$status, rep("planned", 3L))
 })
 
+test_that("bgs_max_upload_bytes lifts the default upload cap", {
+  old <- getOption("biogeosyn.maxUploadSizeMB")
+  on.exit(options(biogeosyn.maxUploadSizeMB = old), add = TRUE)
+
+  # Default is far above Shiny's 5 MB, and stays a valid (in-range) integer.
+  options(biogeosyn.maxUploadSizeMB = NULL)
+  bytes <- bgs_max_upload_bytes()
+  expect_true(bytes > 5 * 1024^2)
+  expect_type(bytes, "integer")
+  expect_false(is.na(bytes))
+
+  # Honours an override.
+  options(biogeosyn.maxUploadSizeMB = 200)
+  expect_equal(bgs_max_upload_bytes(), as.integer(200 * 1024 * 1024))
+
+  # Falls back on a nonsensical value and never overflows the integer range.
+  options(biogeosyn.maxUploadSizeMB = -3)
+  expect_equal(bgs_max_upload_bytes(), as.integer(1024 * 1024 * 1024))
+  options(biogeosyn.maxUploadSizeMB = 1e9)
+  expect_false(is.na(bgs_max_upload_bytes()))
+})
+
+test_that("the server raises shiny.maxRequestSize before uploads", {
+  testthat::skip_if_not_installed("shiny")
+  old <- getOption("shiny.maxRequestSize")
+  on.exit(options(shiny.maxRequestSize = old), add = TRUE)
+
+  # Simulate Shiny's default cap, then confirm the running server lifts it so
+  # result-bundle uploads no longer fail with "Maximum upload size exceeded".
+  options(shiny.maxRequestSize = 5 * 1024^2)
+  shiny::testServer(bgs_shiny_server, {
+    expect_equal(getOption("shiny.maxRequestSize"), bgs_max_upload_bytes())
+    expect_true(getOption("shiny.maxRequestSize") > 5 * 1024^2)
+  })
+})
+
 test_that("create_bgs_shiny_app builds a Shiny app when shiny is installed", {
   testthat::skip_if_not_installed("shiny")
 
