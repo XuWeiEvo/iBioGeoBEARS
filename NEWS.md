@@ -18,6 +18,12 @@ as the analytical centerpiece for reporting and publication.
   counts per process, coloured by process class.
 - Surfaced the process synthesis as the headline of the report's stochastic
   mapping section and documented the new table and figure.
+- Added a single-most-likely-range view of the ancestral reconstruction
+  alongside the probability pies. `plot_node_state_summary(style = "single")`
+  draws one solid, area-code-labelled disc per internal node (text colour is
+  chosen for contrast against each fill), which stays legible on large trees
+  where the pies blur together. The single-clade results tab now shows both
+  views and the workflow writes `node_state_summary_*_single` figures.
 - Added a `max_range_size_covers_observed_ranges` validation check. BioGeoBEARS
   rejects an entire run when any taxon occupies more areas than
   `max_range_size`, so the check now catches this before any model is fitted and

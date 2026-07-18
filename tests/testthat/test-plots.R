@@ -54,6 +54,59 @@ test_that("plot_node_state_summary draws node pies from the state distribution",
   expect_s3_class(plot, "ggplot")
 })
 
+test_that("plot_node_state_summary draws single most-likely-range markers", {
+  tree_nodes <- data.frame(
+    node_index = c(1L, 2L, 3L),
+    node_type = c("tip", "tip", "internal"),
+    node_label = c("sp1", "sp2", "node_3"),
+    parent_node_index = c(3L, 3L, NA_integer_),
+    edge_length = c(1, 1, NA_real_),
+    is_root = c(FALSE, FALSE, TRUE)
+  )
+  node_state_summary <- data.frame(
+    model = "DEC", location = "branch_top_at_node",
+    node_index = c(1L, 2L, 3L),
+    best_state = c("A", "B", "AB"),
+    best_probability = c(0.9, 0.8, 0.6)
+  )
+
+  plot <- plot_node_state_summary(tree_nodes, node_state_summary, style = "single")
+  expect_s3_class(plot, "ggplot")
+  # The single style renames the figure title away from the pie wording.
+  expect_match(plot$labels$title, "Most likely ancestral range", fixed = TRUE)
+})
+
+test_that("high_contrast_text keeps area codes readable on every hue", {
+  # Dark blue needs white text; a pale fill needs dark text.
+  expect_equal(high_contrast_text("#0072B2"), "#ffffff")
+  expect_equal(high_contrast_text("#eaf2fb"), bgs_palette()$ink)
+  # Vectorised over several fills.
+  out <- high_contrast_text(c("#000000", "#ffffff"))
+  expect_equal(out, c("#ffffff", bgs_palette()$ink))
+})
+
+test_that("node_state_single_markers shrinks multi-area codes to fit the disc", {
+  layout <- data.frame(
+    node_index = c(1L, 2L, 3L, 4L),
+    node_type = c("tip", "internal", "internal", "internal"),
+    xp = c(1, 0.5, 0.3, 0),
+    x = c(1, 0.5, 0.3, 0),
+    y = c(1, 2, 1.5, 1.2),
+    best_state = c("A", "A", "AB", "ABC"),
+    stringsAsFactors = FALSE
+  )
+  markers <- node_state_single_markers(layout, 0.42)
+
+  # Tips are excluded; only the three internal nodes get discs.
+  expect_equal(nrow(markers), 3L)
+  expect_false("A" %in% markers$state[markers$y == 1])
+  # The three-letter code gets a smaller font than the single letter.
+  size_a <- markers$text_size[markers$state == "A"]
+  size_abc <- markers$text_size[markers$state == "ABC"]
+  expect_true(size_abc < size_a)
+  expect_true(all(markers$text_size >= 1.5))
+})
+
 test_that("plot_node_state_sensitivity returns a ggplot", {
   node_state_sensitivity <- data.frame(
     location = rep("branch_top_at_node", 3L),
@@ -240,6 +293,54 @@ test_that("select_node_state_plot_models returns non-duplicated model roles", {
 
   expect_equal(selected$figure, c("node_state_summary_best_model", "node_state_summary_best_plus_j"))
   expect_equal(selected$model, c("DEC", "DEC+J"))
+})
+
+test_that("generate_figures writes a single-range companion for each node figure", {
+  out <- tempfile("bgs-single-")
+  paths <- create_project(out)
+  comparison <- data.frame(
+    model = c("DEC", "DEC+J"),
+    model_family = c("DEC", "DEC"),
+    has_j = c(FALSE, TRUE),
+    logLik = c(-10, -9),
+    num_params = c(2L, 3L),
+    AIC = c(24, 24),
+    AICc = c(30, 36),
+    delta_aicc = c(0, 6),
+    aicc_weight = c(0.95, 0.05),
+    caution_flag = c("none", "none"),
+    interpretation_note = c("", "")
+  )
+  tree_nodes <- data.frame(
+    node_index = c(1L, 2L, 3L),
+    node_type = c("tip", "tip", "internal"),
+    node_label = c("sp1", "sp2", "node_3"),
+    parent_node_index = c(3L, 3L, NA_integer_),
+    edge_length = c(1, 1, NA_real_),
+    is_root = c(FALSE, FALSE, TRUE)
+  )
+  standardized_tables <- list(
+    tree_nodes = tree_nodes,
+    node_state_summary = data.frame(
+      model = "DEC", location = "branch_top_at_node",
+      node_index = c(1L, 2L, 3L),
+      best_state = c("A", "B", "AB"),
+      best_probability = c(0.9, 0.8, 0.6)
+    ),
+    ancestral_state_probabilities = data.frame(
+      model = "DEC", location = "branch_top_at_node",
+      node_index = c(1L, 2L, 3L, 3L),
+      state = c("A", "B", "AB", "A"),
+      probability = c(1, 1, 0.6, 0.4),
+      stringsAsFactors = FALSE
+    )
+  )
+
+  manifest <- generate_figures(comparison, standardized_tables, paths, formats = "png")
+
+  expect_true(any(manifest$figure == "node_state_summary_best_model" & manifest$status == "created"))
+  expect_true(any(manifest$figure == "node_state_summary_best_model_single" & manifest$status == "created"))
+  expect_true(file.exists(file.path(paths$figures, "node_state_summary_best_model_single.png")))
 })
 
 test_that("plot_bsm_dispersal_network returns a ggraph/ggplot", {

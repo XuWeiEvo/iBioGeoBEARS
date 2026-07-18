@@ -67,7 +67,12 @@ shiny_primary_results_body <- function() {
       class = "bgs-primary-result",
       shiny::tags$h4("1. Ancestral range reconstruction"),
       shiny::tags$p("Start from the reconstruction under the best-fitting model, then read it alongside the model comparison and the +J caution."),
-      shiny::div(class = "bgs-preview", shiny::imageOutput("primary_figure_node_best"))
+      shiny::tags$p(
+        class = "bgs-home-note",
+        "Two views of the same tree. The pie version shows the full probability of every range at each node; the single-range version shows just the most likely range as one colour with its area code, which stays legible on large trees."
+      ),
+      shiny::div(class = "bgs-preview", shiny::imageOutput("primary_figure_node_best")),
+      shiny::div(class = "bgs-preview", shiny::imageOutput("primary_figure_node_best_single"))
     ),
     shiny::tags$div(
       class = "bgs-primary-result",
@@ -730,6 +735,10 @@ bgs_shiny_server <- function(input, output, session) {
 
       output$primary_figure_node_best <- shiny::renderImage({
         shiny_named_figure_image(state, "node_state_summary_best_model")
+      }, deleteFile = FALSE)
+
+      output$primary_figure_node_best_single <- shiny::renderImage({
+        shiny_named_figure_image(state, "node_state_summary_best_model_single")
       }, deleteFile = FALSE)
 
       output$figure_node_non_j <- shiny::renderImage({
@@ -2113,7 +2122,8 @@ output_file_legend <- function() {
     ),
     rows(
       "Figures (figures/)",
-      "node_state_summary_best_model" = "Ancestral ranges at every node under the best model (the headline figure).",
+      "node_state_summary_best_model" = "Ancestral ranges at every node under the best model, as probability pies (the headline figure).",
+      "node_state_summary_best_model_single" = "The same reconstruction shown as one colour + area code per node (the single most likely range).",
       "biogeographic_process_synthesis" = "Biogeographic process synthesis (the key publication figure).",
       "model_comparison" = "Model comparison figure.",
       "region_process_budget" = "Diverging bar chart of each area's dispersal budget.",
@@ -3051,6 +3061,7 @@ shiny_dashboard_figures <- function() {
       "model_comparison",
       "root_state_probabilities",
       "node_state_summary_best_model",
+      "node_state_summary_best_model_single",
       "node_state_summary_best_non_j",
       "node_state_summary_best_plus_j",
       "node_state_sensitivity",
@@ -3059,7 +3070,8 @@ shiny_dashboard_figures <- function() {
     display_label = c(
       "Model comparison",
       "Root-state probabilities",
-      "Node states, best model",
+      "Node states, best model (pies)",
+      "Node states, best model (single range)",
       "Node states, best non-+J model",
       "Node states, best +J model",
       "Node-state sensitivity",

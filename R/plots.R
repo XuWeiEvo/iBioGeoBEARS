@@ -325,10 +325,17 @@ plot_root_state_probabilities <- function(root_state_probabilities, top_n = 8L) 
 #' @param node_radius Numeric radius of the node pies (and fallback points) in
 #'   tip-spacing units. Larger values make the pie wedges easier to see, which
 #'   helps when most nodes are reconstructed with high confidence (near-solid
-#'   pies) and only a few carry visible uncertainty. Defaults to `0.28`.
+#'   pies) and only a few carry visible uncertainty. Defaults to `0.28`
+#'   (`"pie"`) or `0.42` (`"single"`, to leave room for the area code).
+#' @param style Marker style at each node. `"pie"` (default) draws a pie of the
+#'   full state probability distribution. `"single"` draws one solid circle per
+#'   node, coloured by the single most likely range and labelled with that
+#'   range's area code in the centre - a cleaner read for large trees where the
+#'   pies become hard to tell apart.
 #' @return A ggplot object.
 #' @export
-plot_node_state_summary <- function(tree_nodes, node_state_summary, ancestral_state_probabilities = NULL, model = NULL, location = "branch_top_at_node", label_tips = TRUE, label_internal_nodes = TRUE, node_radius = 0.28) {
+plot_node_state_summary <- function(tree_nodes, node_state_summary, ancestral_state_probabilities = NULL, model = NULL, location = "branch_top_at_node", label_tips = TRUE, label_internal_nodes = TRUE, node_radius = 0.28, style = c("pie", "single")) {
+  style <- match.arg(style)
   node_required <- c("node_index", "node_type", "node_label", "parent_node_index", "edge_length")
   summary_required <- c("model", "location", "node_index", "best_state", "best_probability")
   missing_nodes <- setdiff(node_required, names(tree_nodes))
@@ -391,13 +398,19 @@ plot_node_state_summary <- function(tree_nodes, node_state_summary, ancestral_st
     data.frame(x = ed$parent_xp, y = ed$parent_y, xend = ed$parent_xp, yend = ed$y, stringsAsFactors = FALSE)
   )
 
-  radius <- suppressWarnings(as.numeric(node_radius))
+  default_radius <- if (identical(style, "single")) 0.42 else 0.28
+  radius <- if (missing(node_radius)) default_radius else suppressWarnings(as.numeric(node_radius))
   if (length(radius) != 1L || !is.finite(radius) || radius <= 0) {
-    radius <- 0.28
+    radius <- default_radius
   }
-  pie_df <- node_state_pie_wedges(ancestral_state_probabilities, layout, model, location, radius)
+
+  single_style <- identical(style, "single")
+  pie_df <- if (single_style) NULL else node_state_pie_wedges(ancestral_state_probabilities, layout, model, location, radius)
+  marker_df <- if (single_style) node_state_single_markers(layout, radius) else NULL
 
   tip_rows <- layout[layout$node_type == "tip", , drop = FALSE]
+  # Tips show the observed range after the name in both styles: pies label tips
+  # this way, and the single style draws discs only at internal nodes.
   tip_rows$tip_display <- paste0(tip_rows$node_label, "  [", tip_rows$best_state_label, "]")
 
   # Choose which ranges appear in the legend. With many areas the number of
@@ -410,7 +423,14 @@ plot_node_state_summary <- function(tree_nodes, node_state_summary, ancestral_st
   legend_threshold <- 0.2
   max_legend <- 24L
   ap_cols <- c("model", "location", "state", "probability")
-  if (!is.null(pie_df) && nrow(pie_df) > 0L && !is.null(ancestral_state_probabilities) &&
+  if (single_style) {
+    # The legend lists the ranges actually used as best states, most common
+    # first; the on-node letters already say which is which, so this is only a
+    # colour key.
+    counts <- sort(table(marker_df$state), decreasing = TRUE)
+    fill_levels <- names(counts)
+    total_ranges <- length(fill_levels)
+  } else if (!is.null(pie_df) && nrow(pie_df) > 0L && !is.null(ancestral_state_probabilities) &&
       all(ap_cols %in% names(ancestral_state_probabilities))) {
     apl <- ancestral_state_probabilities
     apl <- apl[apl$model == model & apl$location == location &
@@ -433,11 +453,23 @@ plot_node_state_summary <- function(tree_nodes, node_state_summary, ancestral_st
   }
   legend_truncated <- length(fill_levels) < total_ranges
   legend_breaks <- if (legend_truncated) fill_levels else ggplot2::waiver()
-  legend_subtitle <- if (legend_truncated) {
+  legend_subtitle <- if (single_style) {
+    if (legend_truncated) {
+      sprintf("Internal nodes show the single most likely range as an area code; tips show observed ranges. %d ranges used, legend shows the %d most common.",
+              total_ranges, length(fill_levels))
+    } else {
+      "Internal nodes show the single most likely range as an area code; tips show observed ranges in brackets."
+    }
+  } else if (legend_truncated) {
     sprintf("%d ranges reconstructed; legend shows the %d reaching >=%d%% at some node - tip ranges are labelled at the tips.",
             total_ranges, length(fill_levels), round(legend_threshold * 100))
   } else {
     NULL
+  }
+  plot_title <- if (single_style) {
+    paste("Most likely ancestral range:", model)
+  } else {
+    paste("Ancestral ranges:", model)
   }
 
   plot <- ggplot2::ggplot() +
@@ -449,7 +481,20 @@ plot_node_state_summary <- function(tree_nodes, node_state_summary, ancestral_st
       lineend = "round"
     )
 
-  if (!is.null(pie_df)) {
+  if (single_style) {
+    plot <- plot +
+      ggforce::geom_circle(
+        data = marker_df,
+        ggplot2::aes(x0 = x0, y0 = y0, r = r, fill = state),
+        colour = bgs_palette()$ink, linewidth = 0.2
+      ) +
+      ggplot2::geom_text(
+        data = marker_df,
+        ggplot2::aes(x = x0, y = y0, label = state),
+        colour = marker_df$text_colour, size = marker_df$text_size,
+        fontface = "bold"
+      )
+  } else if (!is.null(pie_df)) {
     plot <- plot +
       ggforce::geom_arc_bar(
         data = pie_df,
@@ -491,7 +536,7 @@ plot_node_state_summary <- function(tree_nodes, node_state_summary, ancestral_st
     ) +
     ggplot2::coord_fixed(clip = "off") +
     ggplot2::labs(
-      title = paste("Ancestral ranges:", model),
+      title = plot_title,
       subtitle = legend_subtitle,
       x = "Time before present",
       y = NULL,
@@ -546,6 +591,63 @@ node_state_pie_wedges <- function(ancestral_state_probabilities, layout, model, 
     return(NULL)
   }
   do.call(rbind, pieces)
+}
+
+# One labelled circle per internal node for the "single" style: the single most
+# likely range as a solid disc, with that range's area code sitting in the
+# centre. Tips carry observed (not reconstructed) ranges, so they are left to
+# the tip labels; this also stops big discs from colliding with their parent
+# node on short terminal branches.
+node_state_single_markers <- function(layout, radius) {
+  keep <- layout[!is.na(layout$best_state) & layout$node_type != "tip", , drop = FALSE]
+  if (nrow(keep) == 0L) {
+    return(NULL)
+  }
+  x0 <- if ("xp" %in% names(keep)) keep$xp else keep$x
+  df <- data.frame(
+    x0 = x0,
+    y0 = keep$y,
+    r = radius,
+    state = as.character(keep$best_state),
+    stringsAsFactors = FALSE
+  )
+  df <- df[!is.na(df$x0) & !is.na(df$y0), , drop = FALSE]
+  if (nrow(df) == 0L) {
+    return(NULL)
+  }
+
+  # Match the fill scale_fill_bgs() will apply: discrete_scale colours the
+  # sorted levels in order, so we colour the same way to pick a legible text
+  # colour for each disc.
+  levels_used <- sort(unique(df$state))
+  fills <- bgs_qual_colors(length(levels_used))
+  names(fills) <- levels_used
+  df$text_colour <- high_contrast_text(fills[df$state])
+
+  # Shrink the code so multi-area ranges still fit inside the disc.
+  code_len <- nchar(df$state)
+  base_size <- 3.4 * (radius / 0.42)
+  df$text_size <- pmax(1.5, base_size * pmin(1, 1.7 / pmax(1, code_len)))
+  df
+}
+
+# Pick black or white text for each fill colour by whichever gives the higher
+# WCAG contrast ratio, so area codes stay readable on every palette hue.
+high_contrast_text <- function(fill_hex, dark = bgs_palette()$ink) {
+  lum <- relative_luminance(fill_hex)
+  dark_lum <- relative_luminance(dark)
+  contrast <- function(a, b) (pmax(a, b) + 0.05) / (pmin(a, b) + 0.05)
+  ifelse(contrast(lum, 1) >= contrast(lum, dark_lum), "#ffffff", dark)
+}
+
+relative_luminance <- function(hex) {
+  rgb <- grDevices::col2rgb(hex) / 255
+  linearise <- function(ch) ifelse(ch <= 0.03928, ch / 12.92, ((ch + 0.055) / 1.055)^2.4)
+  lin <- apply(rgb, 2L, linearise)
+  if (is.null(dim(lin))) {
+    lin <- matrix(lin, nrow = 3L)
+  }
+  as.numeric(0.2126 * lin[1L, ] + 0.7152 * lin[2L, ] + 0.0722 * lin[3L, ])
 }
 
 #' Plot node-state sensitivity between non-+J and +J models
@@ -641,11 +743,22 @@ generate_figures <- function(model_comparison, standardized_tables, project_path
   if (nrow(node_table) > 0L && nrow(tree_nodes) > 0L) {
     node_plot_models <- select_node_state_plot_models(model_comparison)
     for (i in seq_len(nrow(node_plot_models))) {
-      plots[[node_plot_models$figure[[i]]]] <- plot_node_state_summary(
+      figure <- node_plot_models$figure[[i]]
+      model_name <- node_plot_models$model[[i]]
+      plots[[figure]] <- plot_node_state_summary(
         tree_nodes = tree_nodes,
         node_state_summary = node_table,
         ancestral_state_probabilities = ancestral_probs,
-        model = node_plot_models$model[[i]]
+        model = model_name
+      )
+      # Companion "single most likely range" view of the same tree: one solid,
+      # area-code-labelled disc per node instead of a probability pie.
+      plots[[paste0(figure, "_single")]] <- plot_node_state_summary(
+        tree_nodes = tree_nodes,
+        node_state_summary = node_table,
+        ancestral_state_probabilities = ancestral_probs,
+        model = model_name,
+        style = "single"
       )
     }
   }

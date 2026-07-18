@@ -12,7 +12,8 @@ plot_node_state_summary(
   location = "branch_top_at_node",
   label_tips = TRUE,
   label_internal_nodes = TRUE,
-  node_radius = 0.28
+  node_radius = 0.28,
+  style = c("pie", "single")
 )
 }
 \arguments{
@@ -41,7 +42,14 @@ ignored (internal nodes are shown as pies).}
 \item{node_radius}{Numeric radius of the node pies (and fallback points) in
 tip-spacing units. Larger values make the pie wedges easier to see, which
 helps when most nodes are reconstructed with high confidence (near-solid
-pies) and only a few carry visible uncertainty. Defaults to \code{0.28}.}
+pies) and only a few carry visible uncertainty. Defaults to \code{0.28}
+(\code{"pie"}) or \code{0.42} (\code{"single"}, to leave room for the area code).}
+
+\item{style}{Marker style at each node. \code{"pie"} (default) draws a pie of the
+full state probability distribution. \code{"single"} draws one solid circle per
+node, coloured by the single most likely range and labelled with that
+range's area code in the centre - a cleaner read for large trees where the
+pies become hard to tell apart.}
 }
 \value{
 A ggplot object.
