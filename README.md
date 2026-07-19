@@ -1,6 +1,8 @@
 # BioGeoSyn
 
 [![R-CMD-check](https://github.com/XuWeiEvo/BioGeoSyn/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/XuWeiEvo/BioGeoSyn/actions/workflows/R-CMD-check.yaml)
+[![test-coverage](https://github.com/XuWeiEvo/BioGeoSyn/actions/workflows/test-coverage.yaml/badge.svg)](https://github.com/XuWeiEvo/BioGeoSyn/actions/workflows/test-coverage.yaml)
+[![codecov](https://codecov.io/gh/XuWeiEvo/BioGeoSyn/branch/main/graph/badge.svg)](https://codecov.io/gh/XuWeiEvo/BioGeoSyn)
 
 `BioGeoSyn` wraps [BioGeoBEARS](http://phylo.wikidot.com/biogeobears) in a
 reproducible, step-by-step GUI with standardized output tables, publication
