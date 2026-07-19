@@ -1,6 +1,7 @@
 *.Rcheck/
 *.tar.gz
 *-scaffold.zip
+*-anonymised-for-review.zip
 .RData
 .Rhistory
 .Rproj.user/
