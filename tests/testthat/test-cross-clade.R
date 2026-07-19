@@ -308,6 +308,53 @@ test_that("dispersal_routes_from_event_times slices by period and partitions the
   expect_equal(sp(neo), 1)    # the 10-Ma event
 })
 
+test_that("rebin_rates_to_common_grid carries confidence bounds through", {
+  data <- data.frame(
+    region = "R", process_label = "Immigration",
+    bin_start = c(0, 5), bin_end = c(5, 10), bin_midpoint = c(2.5, 7.5),
+    mean_count = c(4, 2), ci_lower = c(3, 1), ci_upper = c(6, 4)
+  )
+  out <- rebin_rates_to_common_grid(data, bin_width = 5,
+                                    value_cols = c("mean_count", "ci_lower", "ci_upper"))
+  expect_true(all(c("mean_count", "ci_lower", "ci_upper") %in% names(out)))
+  # Totals of each column are conserved.
+  expect_equal(sum(out$mean_count), 6)
+  expect_equal(sum(out$ci_lower), 4)
+  expect_equal(sum(out$ci_upper), 10)
+})
+
+test_that("region_budget_from_routes sums incoming and outgoing routes", {
+  routes <- data.frame(
+    model = "All clades", route_type = "all_dispersal",
+    source_region = c("A", "A", "B"),
+    target_region = c("B", "C", "A"),
+    mean_count = c(5, 3, 2),
+    stringsAsFactors = FALSE
+  )
+  budget <- region_budget_from_routes(routes)
+  expect_true(all(c("region", "immigration", "emigration", "net_dispersal_flux") %in% names(budget)))
+  a <- budget[budget$region == "A", ]
+  expect_equal(a$emigration, 8)          # A -> B (5) and A -> C (3)
+  expect_equal(a$immigration, 2)         # B -> A (2)
+  expect_equal(a$net_dispersal_flux, -6) # net source
+  expect_null(region_budget_from_routes(NULL))
+})
+
+test_that("plot_bsm_dispersal_network keeps only the strongest routes", {
+  routes <- data.frame(
+    model = "All clades", route_type = "all_dispersal",
+    source_region = c("A", "B", "C", "D"),
+    target_region = c("B", "C", "D", "A"),
+    mean_count = c(10, 8, 6, 1),
+    stringsAsFactors = FALSE
+  )
+  # Capping at 2 edges must still build and must drop the weakest routes.
+  p <- plot_bsm_dispersal_network(routes, max_edges = 2)
+  expect_s3_class(p, "ggplot")
+  # Full graph still builds with all edges when uncapped.
+  expect_s3_class(plot_bsm_dispersal_network(routes, max_edges = Inf), "ggplot")
+})
+
 test_that("bgs_period_window maps names to half-open windows", {
   expect_equal(bgs_period_window("Total"), list(from = Inf, to = -Inf))
   expect_equal(bgs_period_window("Neogene"), list(from = 23.03, to = 2.58))

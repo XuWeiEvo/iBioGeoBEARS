@@ -18,6 +18,15 @@ as the analytical centerpiece for reporting and publication.
   counts per process, coloured by process class.
 - Surfaced the process synthesis as the headline of the report's stochastic
   mapping section and documented the new table and figure.
+- Further refined the cross-clade tab. The overall rates figure now shows all
+  processes in one panel on a log axis; the region-resolved figure is log-scaled
+  by default; both carry a summed 95% interval band (the confidence bounds are
+  re-binned onto the shared grid alongside the mean). Panels 3 and 4 have separate
+  time-bin-width controls. The dispersal network now draws only its strongest
+  routes (default 25) with larger labels, so dense all-to-all graphs no longer
+  make different geological periods look alike, and the per-area budget beside it
+  is derived from the same period- and region-filtered routes, so the network and
+  budget stay in sync; the two are stacked vertically for legibility.
 - Reworked the cross-clade tab. The overall process-rates figure now pools all
   clades onto a shared time grid (one curve per process) instead of drawing one
   curve per clade; `plot_process_rates_across_clades(pooled = TRUE)` exposes this,

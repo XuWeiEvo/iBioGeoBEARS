@@ -326,24 +326,39 @@ plot_process_rates_across_clades <- function(combined_rates, process = NULL,
   }
 
   if (isTRUE(pooled)) {
-    pooled_df <- rebin_rates_to_common_grid(data, bin_width = bin_width,
-                                            group_cols = c("process_label"))
+    pooled_df <- rebin_rates_to_common_grid(
+      data, bin_width = bin_width, group_cols = c("process_label"),
+      value_cols = c("mean_count", "ci_lower", "ci_upper")
+    )
     if (nrow(pooled_df) == 0L) {
       stop("combined_rates has no rows to plot.", call. = FALSE)
     }
+    # All processes in one panel, coloured by process, on a log axis (a signed
+    # pseudo-log that keeps zeros) so the very different-magnitude processes are
+    # comparable; a summed 95% band accompanies each curve when available.
+    plot <- ggplot2::ggplot(pooled_df, ggplot2::aes(x = bin_midpoint, y = mean_count, colour = process_label))
+    has_ci <- all(c("ci_lower", "ci_upper") %in% names(pooled_df))
+    if (has_ci) {
+      plot <- plot + ggplot2::geom_ribbon(
+        ggplot2::aes(ymin = ci_lower, ymax = ci_upper, fill = process_label),
+        alpha = 0.12, colour = NA
+      )
+    }
+    plot <- plot +
+      ggplot2::geom_line(linewidth = 0.8) +
+      ggplot2::geom_point(size = 1.2) +
+      ggplot2::scale_x_reverse() +
+      ggplot2::scale_y_continuous(trans = scales::pseudo_log_trans(base = 10)) +
+      scale_colour_bgs()
+    if (has_ci) plot <- plot + scale_fill_bgs() + ggplot2::guides(fill = "none")
     return(
-      ggplot2::ggplot(pooled_df, ggplot2::aes(x = bin_midpoint, y = mean_count, colour = process_label)) +
-        ggplot2::geom_line(linewidth = 0.8) +
-        ggplot2::geom_point(size = 1.1) +
-        ggplot2::scale_x_reverse() +
-        scale_colour_bgs() +
-        ggplot2::facet_wrap(stats::as.formula("~ process_label"), scales = "free_y") +
-        ggplot2::guides(colour = "none") +
+      plot +
         ggplot2::labs(
           x = "Time before present (Ma)",
-          y = "Mean events per stochastic map (summed across clades)",
+          y = "Mean events per stochastic map (summed across clades), log scale",
+          colour = "Process",
           title = "Cross-clade process rates through time",
-          subtitle = sprintf("One panel per process; all clades pooled on %g-Ma bins", bin_width)
+          subtitle = sprintf("All clades pooled on %g-Ma bins; log y-axis, band = summed 95%% interval", bin_width)
         ) +
         theme_bgs()
     )
@@ -458,17 +473,23 @@ combine_clade_rate_files <- function(files, clade_names, required, empty) {
 # fixed-bin approach used in the source literature (e.g. 5-Ma bins).
 rebin_rates_to_common_grid <- function(data, bin_width = 5,
                                         group_cols = c("region", "process_label"),
-                                        value_col = "mean_count") {
+                                        value_cols = "mean_count") {
   bin_width <- suppressWarnings(as.numeric(bin_width))
   if (length(bin_width) != 1L || !is.finite(bin_width) || bin_width <= 0) {
     bin_width <- 5
+  }
+  # Carry the confidence bounds through the same re-binning when present, so a
+  # pooled curve gets a summed 95% interval alongside its mean.
+  value_cols <- intersect(value_cols, names(data))
+  if (length(value_cols) == 0L) {
+    return(data.frame())
   }
   if (!all(c("bin_start", "bin_end") %in% names(data))) {
     data$bin_start <- data$bin_midpoint
     data$bin_end <- data$bin_midpoint
   }
-  data[[value_col]] <- suppressWarnings(as.numeric(data[[value_col]]))
-  data <- data[!is.na(data[[value_col]]) & !is.na(data$bin_start) & !is.na(data$bin_end), , drop = FALSE]
+  for (vc in value_cols) data[[vc]] <- suppressWarnings(as.numeric(data[[vc]]))
+  data <- data[!is.na(data[[value_cols[[1L]]]]) & !is.na(data$bin_start) & !is.na(data$bin_end), , drop = FALSE]
   if (nrow(data) == 0L) {
     return(data.frame())
   }
@@ -479,7 +500,6 @@ rebin_rates_to_common_grid <- function(data, bin_width = 5,
   pieces <- lapply(seq_len(nrow(data)), function(i) {
     s <- min(data$bin_start[i], data$bin_end[i])
     e <- max(data$bin_start[i], data$bin_end[i])
-    val <- data[[value_col]][i]
     if (e > s) {
       overlap <- pmax(0, pmin(e, grid_starts + bin_width) - pmax(s, grid_starts))
       frac <- overlap / (e - s)
@@ -492,9 +512,15 @@ rebin_rates_to_common_grid <- function(data, bin_width = 5,
       return(NULL)
     }
     g <- data[i, group_cols, drop = FALSE]
+    vals <- lapply(value_cols, function(vc) {
+      v <- data[[vc]][i]
+      if (is.na(v)) 0 else v * frac[keep]
+    })
+    names(vals) <- value_cols
     cbind(
       g[rep(1L, sum(keep)), , drop = FALSE],
-      data.frame(grid_bin = which(keep), value = val * frac[keep]),
+      data.frame(grid_bin = which(keep)),
+      as.data.frame(vals),
       row.names = NULL
     )
   })
@@ -504,7 +530,7 @@ rebin_rates_to_common_grid <- function(data, bin_width = 5,
   }
   long <- do.call(rbind, pieces)
   agg <- stats::aggregate(
-    list(mean_count = long$value),
+    long[, value_cols, drop = FALSE],
     by = c(long[, group_cols, drop = FALSE], list(grid_bin = long$grid_bin)),
     FUN = function(x) sum(x, na.rm = TRUE)
   )
@@ -530,13 +556,13 @@ rebin_rates_to_common_grid <- function(data, bin_width = 5,
 #'   continents).
 #' @param bin_width Width, in time units (millions of years), of the shared
 #'   time bins clades are pooled into. Defaults to 5.
-#' @param log_y Logical. If `TRUE`, draw the event-count axis on a log scale
-#'   (a signed pseudo-log that keeps zeros), as in the source literature.
-#'   Defaults to `FALSE`.
+#' @param log_y Logical. If `TRUE` (the default), draw the event-count axis on a
+#'   log scale (a signed pseudo-log that keeps zeros), as in the source
+#'   literature.
 #' @return A ggplot object.
 #' @export
 plot_region_process_rates_across_clades <- function(combined_region_rates, process = NULL,
-                                                     regions = NULL, bin_width = 5, log_y = FALSE) {
+                                                     regions = NULL, bin_width = 5, log_y = TRUE) {
   required <- c("clade", "region", "process_label", "bin_midpoint", "mean_count")
   missing <- setdiff(required, names(combined_region_rates))
   if (length(missing) > 0L) {
@@ -557,14 +583,24 @@ plot_region_process_rates_across_clades <- function(combined_region_rates, proce
     stop("combined_region_rates has no rows to plot.", call. = FALSE)
   }
 
-  pooled <- rebin_rates_to_common_grid(data, bin_width = bin_width,
-                                       group_cols = c("region", "process_label"))
+  pooled <- rebin_rates_to_common_grid(
+    data, bin_width = bin_width, group_cols = c("region", "process_label"),
+    value_cols = c("mean_count", "ci_lower", "ci_upper")
+  )
   if (nrow(pooled) == 0L) {
     stop("combined_region_rates has no rows to plot.", call. = FALSE)
   }
 
   y_lab <- "Mean events per stochastic map (summed across clades)"
-  plot <- ggplot2::ggplot(pooled, ggplot2::aes(x = bin_midpoint, y = mean_count, colour = process_label)) +
+  plot <- ggplot2::ggplot(pooled, ggplot2::aes(x = bin_midpoint, y = mean_count, colour = process_label))
+  has_ci <- all(c("ci_lower", "ci_upper") %in% names(pooled))
+  if (has_ci) {
+    plot <- plot + ggplot2::geom_ribbon(
+      ggplot2::aes(ymin = ci_lower, ymax = ci_upper, fill = process_label),
+      alpha = 0.12, colour = NA
+    )
+  }
+  plot <- plot +
     ggplot2::geom_line(linewidth = 0.8) +
     ggplot2::geom_point(size = 1.1) +
     ggplot2::scale_x_reverse()
@@ -574,16 +610,18 @@ plot_region_process_rates_across_clades <- function(combined_region_rates, proce
     plot <- plot + ggplot2::scale_y_continuous(trans = scales::pseudo_log_trans(base = 10))
     y_lab <- paste0(y_lab, ", log scale")
   }
+  plot <- plot + scale_colour_bgs()
+  if (has_ci) plot <- plot + scale_fill_bgs() + ggplot2::guides(fill = "none")
   plot +
-    scale_colour_bgs() +
     ggplot2::facet_wrap(stats::as.formula("~ region"), scales = "free_y") +
     ggplot2::labs(
       x = "Time before present (Ma)",
       y = y_lab,
       colour = "Process",
       title = "Cross-clade region-resolved process rates through time",
-      subtitle = sprintf("One panel per region; each process a curve, pooled across clades on %g-Ma bins%s",
-                         bin_width, if (isTRUE(log_y)) ", log y-axis" else "")
+      subtitle = sprintf("One panel per region; each process a curve, pooled across clades on %g-Ma bins%s%s",
+                         bin_width, if (isTRUE(log_y)) ", log y-axis" else "",
+                         if (has_ci) ", band = summed 95% interval" else "")
     ) +
     theme_bgs()
 }
@@ -670,6 +708,28 @@ dispersal_routes_from_event_times <- function(event_times, from = Inf, to = -Inf
   routes$route_type <- "all_dispersal"
   routes$model <- "All clades"
   routes[, c("model", "route_type", "source_region", "target_region", "mean_count")]
+}
+
+# Per-region immigration/emigration budget from a dispersal-route table (as
+# consumed by plot_region_process_budget). Derived from the same routes the
+# network shows so that the two stay in sync as the period and region selection
+# change. Emigration = outgoing routes; immigration = incoming routes.
+region_budget_from_routes <- function(routes) {
+  need <- c("source_region", "target_region", "mean_count")
+  if (is.null(routes) || nrow(routes) == 0L || !all(need %in% names(routes))) {
+    return(NULL)
+  }
+  emig <- stats::aggregate(list(emigration = routes$mean_count), by = list(region = routes$source_region), FUN = sum)
+  immig <- stats::aggregate(list(immigration = routes$mean_count), by = list(region = routes$target_region), FUN = sum)
+  budget <- merge(emig, immig, by = "region", all = TRUE)
+  budget$emigration[is.na(budget$emigration)] <- 0
+  budget$immigration[is.na(budget$immigration)] <- 0
+  budget$local_extinction <- 0
+  budget$total_dispersal <- budget$immigration + budget$emigration
+  budget$net_dispersal_flux <- budget$immigration - budget$emigration
+  budget$model <- "All clades"
+  budget[, c("model", "region", "immigration", "emigration", "local_extinction",
+             "total_dispersal", "net_dispersal_flux")]
 }
 
 empty_combined_rates_table <- function() {

@@ -195,9 +195,15 @@ plot_bsm_dispersal_routes <- function(bsm_dispersal_routes, route_type = "all_di
 #' @param model Optional model name; defaults to the first model present.
 #' @param subtitle Optional subtitle; defaults to `route_type`. Used to label a
 #'   geological period when the network is sliced by time.
+#' @param max_edges Maximum number of directed routes to draw, keeping the
+#'   strongest by mean count. With every region-pair drawn the circular graph
+#'   becomes an unreadable hairball in which different time periods look alike;
+#'   showing only the dominant flows makes those differences visible. Defaults
+#'   to 25; use `Inf` to draw every route.
 #' @return A ggraph/ggplot object.
 #' @export
-plot_bsm_dispersal_network <- function(bsm_dispersal_routes, route_type = "all_dispersal", model = NULL, subtitle = NULL) {
+plot_bsm_dispersal_network <- function(bsm_dispersal_routes, route_type = "all_dispersal", model = NULL,
+                                       subtitle = NULL, max_edges = 25L) {
   required <- c("route_type", "source_region", "target_region", "mean_count")
   missing <- setdiff(required, names(bsm_dispersal_routes))
   if (length(missing) > 0L) {
@@ -217,28 +223,42 @@ plot_bsm_dispersal_network <- function(bsm_dispersal_routes, route_type = "all_d
   }
 
   edges <- stats::aggregate(mean_count ~ source_region + target_region, data = data, FUN = sum)
-  nodes <- data.frame(name = sort(unique(c(edges$source_region, edges$target_region))), stringsAsFactors = FALSE)
+  # Keep the strongest routes so the dominant flows (which differ between
+  # periods) stand out; every node is still drawn, even if some have no kept edge.
+  n_keep <- suppressWarnings(as.numeric(max_edges))
+  if (length(n_keep) == 1L && is.finite(n_keep) && nrow(edges) > n_keep) {
+    edges <- edges[order(-edges$mean_count), , drop = FALSE][seq_len(n_keep), , drop = FALSE]
+  }
+  all_regions <- sort(unique(c(bsm_dispersal_routes$source_region, bsm_dispersal_routes$target_region)))
+  all_regions <- all_regions[!is.na(all_regions) & nzchar(all_regions)]
+  nodes <- data.frame(name = sort(unique(c(all_regions, edges$source_region, edges$target_region))), stringsAsFactors = FALSE)
   graph <- igraph::graph_from_data_frame(edges, directed = TRUE, vertices = nodes)
+
+  shown <- if (is.finite(n_keep) && n_keep < nrow(stats::aggregate(mean_count ~ source_region + target_region, data = data, FUN = sum))) {
+    sprintf("%s (%d strongest routes)", subtitle %||% route_type, nrow(edges))
+  } else {
+    subtitle %||% route_type
+  }
 
   ggraph::ggraph(graph, layout = "circle") +
     ggraph::geom_edge_arc(
       ggplot2::aes(width = mean_count),
-      strength = 0.12, alpha = 0.6, colour = "#D55E00",
-      arrow = grid::arrow(length = grid::unit(3.2, "mm"), type = "closed"),
-      start_cap = ggraph::circle(6, "mm"), end_cap = ggraph::circle(6, "mm")
+      strength = 0.12, alpha = 0.7, colour = "#D55E00",
+      arrow = grid::arrow(length = grid::unit(3.4, "mm"), type = "closed"),
+      start_cap = ggraph::circle(7, "mm"), end_cap = ggraph::circle(7, "mm")
     ) +
-    ggraph::geom_node_point(ggplot2::aes(colour = name), size = 9, show.legend = FALSE) +
-    ggraph::geom_node_text(ggplot2::aes(label = name), repel = TRUE, size = 3.3, colour = bgs_palette()$ink) +
-    ggraph::scale_edge_width(range = c(0.4, 3.2), name = "Mean count") +
+    ggraph::geom_node_point(ggplot2::aes(colour = name), size = 10, show.legend = FALSE) +
+    ggraph::geom_node_text(ggplot2::aes(label = name), repel = TRUE, size = 4.4, fontface = "bold", colour = bgs_palette()$ink) +
+    ggraph::scale_edge_width(range = c(0.5, 4), name = "Mean count") +
     scale_colour_bgs() +
-    ggplot2::labs(title = "BSM dispersal network", subtitle = subtitle %||% route_type) +
+    ggplot2::labs(title = "BSM dispersal network", subtitle = shown) +
     ggplot2::coord_fixed(clip = "off") +
-    ggplot2::theme_void(base_size = 12) +
+    ggplot2::theme_void(base_size = 13) +
     ggplot2::theme(
-      plot.title = ggplot2::element_text(face = "bold", size = ggplot2::rel(1.15), colour = bgs_palette()$ink),
-      plot.subtitle = ggplot2::element_text(size = ggplot2::rel(0.9), colour = bgs_palette()$muted, margin = ggplot2::margin(b = 8)),
+      plot.title = ggplot2::element_text(face = "bold", size = ggplot2::rel(1.2), colour = bgs_palette()$ink),
+      plot.subtitle = ggplot2::element_text(size = ggplot2::rel(0.95), colour = bgs_palette()$muted, margin = ggplot2::margin(b = 8)),
       legend.position = "bottom",
-      plot.margin = ggplot2::margin(10, 18, 10, 18)
+      plot.margin = ggplot2::margin(12, 22, 12, 22)
     )
 }
 

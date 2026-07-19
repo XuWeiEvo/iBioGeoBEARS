@@ -8,7 +8,8 @@ plot_bsm_dispersal_network(
   bsm_dispersal_routes,
   route_type = "all_dispersal",
   model = NULL,
-  subtitle = NULL
+  subtitle = NULL,
+  max_edges = 25L
 )
 }
 \arguments{
@@ -20,6 +21,12 @@ plot_bsm_dispersal_network(
 
 \item{subtitle}{Optional subtitle; defaults to \code{route_type}. Used to label a
 geological period when the network is sliced by time.}
+
+\item{max_edges}{Maximum number of directed routes to draw, keeping the
+strongest by mean count. With every region-pair drawn the circular graph
+becomes an unreadable hairball in which different time periods look alike;
+showing only the dominant flows makes those differences visible. Defaults
+to 25; use \code{Inf} to draw every route.}
 }
 \value{
 A ggraph/ggplot object.

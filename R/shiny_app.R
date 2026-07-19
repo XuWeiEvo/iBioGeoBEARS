@@ -669,21 +669,20 @@ bgs_shiny_server <- function(input, output, session) {
         }, deleteFile = TRUE)
       }
       output$cc_synth_plot <- cc_image(cc_synth, plot_biogeographic_process_synthesis, 8, 4.8)
-      output$cc_budget_plot <- cc_image(cc_budgets, plot_region_process_budget, 7.5, 4.5)
 
-      cc_shared_bin_width <- function() {
-        bw <- suppressWarnings(as.numeric(input$cc_bin_width))
-        if (length(bw) != 1L || !is.finite(bw) || bw <= 0) 5 else bw
+      cc_bin_width <- function(id, default = 5) {
+        bw <- suppressWarnings(as.numeric(input[[id]]))
+        if (length(bw) != 1L || !is.finite(bw) || bw <= 0) default else bw
       }
 
-      # Overall process rates: clades pooled onto a shared time grid, one curve
-      # per process (no per-clade split).
+      # Overall process rates: clades pooled onto a shared time grid, all
+      # processes in one panel on a log axis.
       output$cross_clade_plot <- shiny::renderImage({
         d <- cc_rates()
         shiny::req(d)
         shiny::validate(shiny::need(nrow(d) > 0, "No data to plot."))
         plot <- tryCatch(
-          plot_process_rates_across_clades(d, pooled = TRUE, bin_width = cc_shared_bin_width()),
+          plot_process_rates_across_clades(d, pooled = TRUE, bin_width = cc_bin_width("cc_bin_width_overall")),
           error = function(e) NULL
         )
         shiny::validate(shiny::need(!is.null(plot), "The figure could not be produced."))
@@ -705,8 +704,8 @@ bgs_shiny_server <- function(input, output, session) {
         }
       })
 
-      # By-region rates: one panel per region, three process curves, pooled onto
-      # a shared time grid whose width and region set the user controls.
+      # By-region rates: one panel per region, three process curves on a log
+      # axis, pooled onto a shared time grid.
       output$cross_clade_region_plot <- shiny::renderImage({
         d <- cc_rrates()
         shiny::req(d)
@@ -716,10 +715,7 @@ bgs_shiny_server <- function(input, output, session) {
           regions <- NULL
         }
         plot <- tryCatch(
-          plot_region_process_rates_across_clades(
-            d, regions = regions, bin_width = cc_shared_bin_width(),
-            log_y = isTRUE(input$cc_region_log)
-          ),
+          plot_region_process_rates_across_clades(d, regions = regions, bin_width = cc_bin_width("cc_bin_width_region")),
           error = function(e) NULL
         )
         shiny::validate(shiny::need(!is.null(plot), "The figure could not be produced (no rows for the chosen regions)."))
@@ -728,27 +724,45 @@ bgs_shiny_server <- function(input, output, session) {
         list(src = path, contentType = "image/png", width = "100%")
       }, deleteFile = TRUE)
 
-      # Dispersal network, sliced to the chosen geological period from the
-      # per-event times (Total = all events).
-      output$cc_network_plot <- shiny::renderImage({
+      # The dispersal network and the per-area budget both derive from the SAME
+      # period- and region-filtered routes, so they change together.
+      cc_network_routes <- shiny::reactive({
         et <- cc_etimes()
         shiny::req(et)
-        period <- input$cc_network_period %||% "Total"
-        window <- bgs_period_window(period)
+        window <- bgs_period_window(input$cc_network_period %||% "Total")
         routes <- dispersal_routes_from_event_times(et, window$from, window$to)
         regions <- input$cc_network_regions
         if (!is.null(regions) && length(regions) > 0L && !is.null(routes)) {
           routes <- routes[routes$source_region %in% regions & routes$target_region %in% regions, , drop = FALSE]
         }
+        routes
+      })
+
+      output$cc_network_plot <- shiny::renderImage({
+        routes <- cc_network_routes()
         shiny::validate(shiny::need(!is.null(routes) && nrow(routes) > 0,
           "No between-region dispersal events among the chosen regions in this period."))
+        period <- input$cc_network_period %||% "Total"
         plot <- tryCatch(
           plot_bsm_dispersal_network(routes, subtitle = period_network_subtitle(period)),
           error = function(e) NULL
         )
         shiny::validate(shiny::need(!is.null(plot), "The network could not be produced."))
         path <- tempfile(fileext = ".png")
-        ggplot2::ggsave(path, plot, width = 6.5, height = 5.5, dpi = 150)
+        ggplot2::ggsave(path, plot, width = 7.5, height = 6.5, dpi = 150)
+        list(src = path, contentType = "image/png", width = "100%")
+      }, deleteFile = TRUE)
+
+      output$cc_budget_plot <- shiny::renderImage({
+        routes <- cc_network_routes()
+        shiny::validate(shiny::need(!is.null(routes) && nrow(routes) > 0,
+          "No dispersal among the chosen regions in this period."))
+        budget <- region_budget_from_routes(routes)
+        shiny::validate(shiny::need(!is.null(budget) && nrow(budget) > 0, "No budget to plot."))
+        plot <- tryCatch(plot_region_process_budget(budget), error = function(e) NULL)
+        shiny::validate(shiny::need(!is.null(plot), "The budget could not be produced."))
+        path <- tempfile(fileext = ".png")
+        ggplot2::ggsave(path, plot, width = 7.5, height = 5, dpi = 150)
         list(src = path, contentType = "image/png", width = "100%")
       }, deleteFile = TRUE)
 
@@ -4012,32 +4026,32 @@ wizard_step_cross_clade <- function() {
       shiny::uiOutput("cross_clade_status")
     ),
     card("2 \u00b7 Biogeographic process synthesis (summed across clades)", preview("cc_synth_plot")),
-    card("3 \u00b7 Process rates through time \u00b7 overall (all clades pooled)",
+    card("3 \u00b7 Process rates through time \u00b7 overall (all clades pooled, all processes, log y-axis)",
       shiny::tags$div(
         class = "bgs-inline-controls",
-        shiny::numericInput("cc_bin_width", "Time-bin width (Ma)", value = 5, min = 1, max = 25, step = 1, width = "170px")
+        shiny::numericInput("cc_bin_width_overall", "Time-bin width (Ma)", value = 5, min = 1, max = 25, step = 1, width = "170px")
       ),
       preview("cross_clade_plot", "520px")),
-    card("4 \u00b7 Process rates through time \u00b7 by region (one panel per region; in-situ / immigration / emigration)",
+    card("4 \u00b7 Process rates through time \u00b7 by region (one panel per region; in-situ / immigration / emigration; log y-axis)",
       shiny::tags$div(
         class = "bgs-inline-controls",
-        shiny::checkboxInput("cc_region_log", "Log y-axis", value = TRUE)
+        shiny::numericInput("cc_bin_width_region", "Time-bin width (Ma)", value = 5, min = 1, max = 25, step = 1, width = "170px")
       ),
-      shiny::tags$div(class = "bgs-home-note", "Shares the time-bin width above. Uncheck regions to focus the figure (e.g. drop the non-Asian continents)."),
+      shiny::tags$div(class = "bgs-home-note", "Uncheck regions to focus the figure (e.g. drop the non-Asian continents)."),
       shiny::checkboxGroupInput("cc_regions", NULL, choices = character(), inline = TRUE),
       preview("cross_clade_region_plot", "620px")),
-    card("5 \u00b7 Dispersal between areas (network and per-area budget)",
+    card("5 \u00b7 Dispersal between areas (network and per-area budget, in sync)",
       shiny::tags$div(
         class = "bgs-inline-controls",
         shiny::selectInput("cc_network_period", "Geological period",
           choices = geological_period_choices(), selected = "Total", width = "200px")
       ),
-      shiny::tags$div(class = "bgs-home-note", "Uncheck regions to restrict the network to a subset of areas."),
+      shiny::tags$div(class = "bgs-home-note", "The network and the budget below both respond to the period and the regions selected here. Uncheck regions to restrict to a subset of areas."),
       shiny::checkboxGroupInput("cc_network_regions", NULL, choices = character(), inline = TRUE),
-      shiny::fluidRow(
-        shiny::column(7, shiny::tags$div(class = "bgs-control-title", "Dispersal network"), preview("cc_network_plot", "460px")),
-        shiny::column(5, shiny::tags$div(class = "bgs-control-title", "Immigration / emigration per area"), preview("cc_budget_plot", "460px"))
-      )),
+      shiny::tags$div(class = "bgs-control-title", "Dispersal network"),
+      preview("cc_network_plot", "620px"),
+      shiny::tags$div(class = "bgs-control-title", "Immigration / emigration per area"),
+      preview("cc_budget_plot", "420px")),
     shiny::tags$div(
       class = "bgs-choice-card",
       shiny::tags$div(class = "bgs-control-title", "Export and report"),

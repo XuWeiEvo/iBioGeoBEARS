@@ -485,8 +485,9 @@ test_that("Cross-clade step takes bundle uploads and shows integrated panels", {
   expect_match(ui, "cc_synth_plot", fixed = TRUE)
   expect_match(ui, "cross_clade_plot", fixed = TRUE)
   expect_match(ui, "cross_clade_region_plot", fixed = TRUE)
-  expect_match(ui, "cc_bin_width", fixed = TRUE)
-  expect_match(ui, "cc_region_log", fixed = TRUE)
+  # Panels 3 and 4 have independent time-bin-width controls.
+  expect_match(ui, "cc_bin_width_overall", fixed = TRUE)
+  expect_match(ui, "cc_bin_width_region", fixed = TRUE)
   expect_match(ui, "cc_regions", fixed = TRUE)
   expect_match(ui, "cc_network_period", fixed = TRUE)
   expect_match(ui, "cc_network_regions", fixed = TRUE)

@@ -9,7 +9,7 @@ plot_region_process_rates_across_clades(
   process = NULL,
   regions = NULL,
   bin_width = 5,
-  log_y = FALSE
+  log_y = TRUE
 )
 }
 \arguments{
@@ -25,9 +25,9 @@ continents).}
 \item{bin_width}{Width, in time units (millions of years), of the shared
 time bins clades are pooled into. Defaults to 5.}
 
-\item{log_y}{Logical. If \code{TRUE}, draw the event-count axis on a log scale
-(a signed pseudo-log that keeps zeros), as in the source literature.
-Defaults to \code{FALSE}.}
+\item{log_y}{Logical. If \code{TRUE} (the default), draw the event-count axis on a
+log scale (a signed pseudo-log that keeps zeros), as in the source
+literature.}
 }
 \value{
 A ggplot object.
